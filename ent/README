@@ -1,0 +1,14 @@
+This is just a little game writen with Python, and it can be treated as an Easter egg.
+
+It is a pity that the game is unfinished. I had planned 10 chapters for the game, and only 3 chapters is made up so far.
+The first 3 chapters are respectively Gluttonous Snake, Tetris and Break the Bricks, while some new elements are added, hmmm...
+
+Use "python ./game.py" or just "./game.py" to start the game.
+
+You can choose a slot to create a new record, and choose a difficulty to begin the chapter 1. 
+The next chapter will be unlocked after achieving level 10 in the current chapter.
+The progress will be recorded, and it will be loaded while opening the game next time.
+
+Have a good time!
+#
+PS: the idea to put this game within DFPSR is inspired by a chat with Pan Zhichen, and according to him there is also an Easter egg in the routine RPPPS.

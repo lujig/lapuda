@@ -1,0 +1,136 @@
+# The parameters in tempo2 which have not been integrated into dfpsr
+#
+# brake index
+brake			param_brake			BRAKE
+#
+# mode change
+mode_switch		param_stateSwitchT 
+#
+# DM have a suddenly increasing/decreasing and then exponentially recovering
+expep			param_expep			EXPEP_
+expindex		param_expindex			EXPINDEX_
+expph			param_expph			EXPPH_
+exptau			param_exptau			EXPTAU_
+#
+# timing residual have a Gaussian-shape bulge
+gausep			param_gausep			GAUSEP_
+gausamp		param_gausamp			GAUSAMP_
+gaussig		param_gaussig			GAUSSIG_
+gausindex		param_gausindex		GAUSINDEX_
+# 
+# the ToA have time jumps resulted from the observation or source
+obs.obsNjump		obsn.obsNjump
+obs.jump		obsn.jump
+obs.obsNfdjump		obsn.obsNfdjump
+obs.fdjump		obsn.fdjump
+njumps			psr.nJumps			JUMP, SATJUMP
+jumpSAT		psr.jumpSAT
+jumpval		psr.jumpVal
+nfdjumps		psr.nfdJumps			FDJUMP
+fdjumpidx		psr.fdjumpIdx
+fdjumpval		psr.fdjumpVal
+#
+# extra phase due to whitening procedures (Hobbs et al., 2004, MNRAS, 353, 1311)
+wave_epoch		param_waveepoch		WAVEEPOCH
+wave_om		param_wave_om			WAVE_OM, WAVE_FREQ
+wave_om_dm		param_wave_om_dm		WAVDM_OM
+nwhite			psr.nwhite				
+wave_scale		psr.wave_scale			WAVE_SCALE
+wave_sin		psr.wave_sine			WAVE_SIN, WAVE
+wave_cos		psr.wave_cos			WAVE_COS, WAVE
+wave_sin_dm		psr.wave_sine_dm		WAVDM
+wave_cos_dm		psr.wave_cos_dm		WAVDM
+#
+# quadrupolar wave signal
+quad_om		param_quad_om			QUAD_OM
+quadepoch		psr.quadEpoch			QUAD_EPOCH
+quadra			psr.quadRA			QUAD_POS
+quaddec		psr.quadDEC			QUAD_POS
+nquad			psr.nQuad
+quad_aplus_r		psr.quad_aplus_r		QUAD
+quad_aplus_r		psr.quad_aplus_r		QUAD
+quad_across_r		psr.quad_across_r		QUAD
+quad_across_i		psr.quad_across_i		QUAD
+gwsrc_psrdist		psr.gwsrc_psrdist		GW_PSR_DIST
+#
+# eccentric binary gravitational wave signal
+gwecc			param_gwecc			GWECC_AMP
+gwecc_ra		psr.gwecc_ra			GWECC_POSITION
+gwecc_dec		psr.gwecc_dec			GWECC_POSITION
+gwecc_orbital_period	psr.gwecc_orbital_period	GWECC_ORBITAL_PERIOD
+gwecc_e		psr.gwecc_e			GWECC_E
+gwecc_theta_0		psr.gwecc_theta_0		GWECC_THETA_0
+gwecc_epoch		psr.gwecc_epoch		GWECC_EPOCH
+gwecc_psrdist		psr.gwecc_psrdist		GWECC_PSR_DIST
+gwecc_m1		psr.gwecc_m1			GWECC_MASS
+gwecc_m2		psr.gwecc_m2			GWECC_MASS
+gwecc_pulsar_term_on	psr.gwecc_pulsarTermOn		GWECC_PSRTERM
+#
+# gravitational wave signal
+gwsingle		param_gwsingle			GW_SINGLE
+cgw			param_cgw			CGW_FREQ
+gwsrc_epoch		psr.gwsrc_epoch		GW_EPOCH
+gwsrc_ra		psr.gwsrc_ra			GW_POSITION
+gwsrc_dec		psr.gwsrc_dec			GW_POSITION
+gwsrc_psrdist		psr.gwsrc_psrdist		GW_PSR_DIST
+gwsrc_aplus_r		psr.gwsrc_aplus_r		GW_APLUS
+gwsrc_aplus_i		psr.gwsrc_aplus_i		GW_APLUS
+gwsrc_across_r		psr.gwsrc_across_r		GW_ACROSS
+gwsrc_across_i		psr.gwsrc_across_i		GW_ACROSS
+cgw_h0			psr.cgw_h0			CGW_H0
+cgw_cosinc		psr.cgw_cosinc			CGW_COSINC
+cgw_angpol		psr.cgw_angpol			CGW_ANGPOL
+cgw_mc			psr.cgw_mc			CGW_MC
+#
+# GWM (gravitational wave memory) model (Wang, J. B. et al., 2015, MNRAS, 446, 1657) 
+amp			param_gwm_amp			GWM_AMP, GWM_A1, GWM_A2
+gwm_epoch		psr.gwm_epoch			GWM_EPOCH
+gwm_raj		psr.gwm_raj			GWM_POSITION
+gwm_decj		psr.gwm_decj			GWM_POSITION
+gwm_phi		psr.gwm_phi			GWM_PHI
+gwm_dphase		psr.gwm_dphase			GWM_DPHASE
+quad_ifunc_geom_p	psr.quad_ifunc_geom_p	
+quad_ifunc_geom_c	psr.quad_ifunc_geom_c	
+#
+# gravitational wave signal caused by a single cosmic string
+gwcs_amp		param_gwcs_amp			GWCS_A1, GWCS_A2
+gwcs_raj		psr.gwcs_raj			GWCS_POSITION
+gwcs_decj		psr.gwcs_decj			GWCS_POSITION
+gwcs_epoch		psr.gwcs_epoch			GWCS_EPOCH
+gwcs_width		psr.gwcs_width			GWCS_WIDTH
+gwcs_geom_p		psr.gwcs_geom_p
+gwcs_geom_c		psr.gwcs_geom_c
+#
+# extra phase due to the clock offset
+clk_offsT		psr.clk_offsT			TEL_CLK_OFFS
+clk_offsV		psr.clk_offsV			TEL_CLK_OFFS
+#
+# extra phase due to the interpolation
+ifunc			param_ifunc			SIFUNC
+ifuncT			psr.ifuncT			IFUNC
+ifuncV			psr.ifuncV			IFUNC
+#
+# geometrical fitting function for gravitational wave (Ryan, Fintan D.)
+quad_ifunc_p		param_quad_ifunc_p		QIFUNC_p
+quad_ifunc_p_ra	psr.quad_ifunc_p_RA		QIFUNC_POS_p
+quad_ifunc_p_dec	psr.quad_ifunc_p_DEC		QIFUNC_POS_p
+quad_ifuncT_p		psr.quad_ifuncT_p		QIFUNC_p
+quad_ifuncV_p		psr.quad_ifuncV_p		QIFUNC_p
+quad_ifunc_c		param_quad_ifunc_c		QIFUNC_c
+quad_ifunc_c_ra	psr.quad_ifunc_c_RA		QIFUNC_POS_c
+quad_ifunc_c_dec	psr.quad_ifunc_c_DEC		QIFUNC_POS_c
+quad_ifuncT_c		psr.quad_ifuncT_c		QIFUNC_c
+quad_ifuncV_c		psr.quad_ifuncV_c		QIFUNC_c
+simflag		psr.simflag				
+rasim			psr.rasim				
+decsim			psr.decsim				
+#
+# geometrical fitting function for gravitational burst (Ryan, Fintan D.)
+gwb_amp		param_gwb_amp			GWB_AMP, GWB_A1, GWB_A2
+gwb_raj		psr.gwb_raj			GWB_POSITION
+gwb_decj		psr.gwb_decj			GWB_POSITION
+gwb_geom_p		psr.gwb_geom_p			
+gwb_geom_c		psr.gwb_geom_c			
+gwb_epoch		psr.gwb_epoch			GWB_EPOCH
+gwb_width		psr.gwb_width			GWB_WIDTH
+
