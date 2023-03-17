@@ -2,6 +2,15 @@ import numpy as np
 import numpy.fft as fft
 import scipy.optimize as so
 #
+def reco(x):
+	dirname=os.path.split(os.path.realpath(__file__))[0]
+	with open(dirname+'/conventions/aliase.txt') as f:
+		names=f.readlines()
+	for i in names:
+		if x in i.split('    '):
+			return i.split()[0]
+	return x
+#
 def shift(y,x):
 	ffts=y*np.exp(x*1j)
 	fftr=fft.irfft(ffts)

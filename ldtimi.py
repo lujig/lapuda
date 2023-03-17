@@ -110,7 +110,7 @@ def merge(time,dt,dterr,freq,dm,dmerr,period,jj1,se):
 	period2=np.array(period2)
 	jj2=np.array(jj2)
 	se2=np.array(se2)
-	return te.times(te.time(date2,sec2)),dt2,dt2err,freq2,dm2,dmerr2,period2,jj2,se2
+	return te.times(te.time(date2,sec2,scale=info['telename'])),dt2,dt2err,freq2,dm2,dmerr2,period2,jj2,se2
 #
 def psrfit(psr,paras,time,dt,toae,freq,jj,se):
 	psrt=pm.psr_timing(psr,time,freq)
@@ -249,7 +249,7 @@ def adjust():
 		se=select_list[-1]
 		freq=(freq_start+freq_end)/2
 		nt=len(date)
-		time=te.times(te.time(date,sec))
+		time=te.times(te.time(date,sec,scale=info['telename']))
 		psr=psr0.copy()
 		psrt=pm.psr_timing(psr,time,freq)
 		phase=psrt.phase

@@ -36,7 +36,7 @@ def poly(x,*p):
 	return y+p[-1]
 #
 dirname=os.path.split(os.path.realpath(__file__))[0]
-outfile=dirname+'/conventions/local2gps.txt'
+outfile=dirname+'/clock/FAST.txt'
 if args.rewrite:
 	d0=open(outfile,'w+')
 	d0.close()
@@ -52,7 +52,7 @@ else:
 str0='FAST_CLOCKDIFF-'
 l0=len(str0)
 deltat=50
-flist=os.listdir(dirname+'/clock')
+flist=os.listdir(dirname+'/clock/FAST_tmp')
 t0=[]
 dt0=[]
 for i in flist:
@@ -62,7 +62,7 @@ for i in flist:
 		if int(date[:4])<endyr: continue
 		if len(date)==6:
 			if int(date[:4])==endyr and int(date[-2:])<endmo: continue
-	tmp=np.genfromtxt(dirname+'/clock/'+i,skip_header=21)
+	tmp=np.genfromtxt(dirname+'/clock/FAST_tmp/'+i,skip_header=21)
 	if not args.rewrite:
 		if tmp[-1,0]-endunix<=50: continue
 	t0.extend(np.int64(tmp[:,0]))

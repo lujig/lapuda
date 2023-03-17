@@ -446,11 +446,26 @@ for s in np.arange(nchan_res):
 			result/=result.max(1).reshape(-1,1)
 			nc=2
 			pca=PCA(n_components=nc)
-			coeff=pca.fit_transform(result)[:,0]
-			x1=pca.components_[0]
-			#mean=((res1.reshape(-1,1)@x1.reshape(1,-1)).T+pca.mean_.reshape(-1,1)).mean(1)
-			mean=pca.mean_
-			prof[s]=np.array([mean,x1])
+			def resi(x):
+				knk,cin,dk=x[:nc*nsub],x[nc*sub:nc*nsub+nc*nbin],x[nc*nsub+nc*nbin:]
+				kk=knk.reshape(nsub,nc)
+				cc=cin.reshape(nc,nbin)
+				pp=np.fft.irfft(np.fft.rfft(kk@cc,axis=1)*np.exp(2j*np.pi*np.arange(nb)*dk.reshape(-1,1)),axis=1)
+				return (result-pp).reshape(-1)
+			c0=np.concatenate((pca.mean_,pca.components_[:nc-1]),axis=0)
+			k0=np.array([[1]+[0]*(nc-1)]*nsub).reshape(-1)
+			d0=np.zeros(nsub)
+			p0=np.concatenate((k0,c0,d0),axis=0)
+			res=so.leastsq(resi,x0=p0,full_output=True)
+			knk,cin,dk=res[0][:nc*nsub],res[0][nc*sub:nc*nsub+nc*nbin],res[0][nc*nsub+nc*nbin:]
+			kk=knk.reshape(nsub,nc)
+			cc=cin.reshape(nc,nbin)
+			#coeff=pca.fit_transform(result)[:,0]
+			#x1=pca.components_[0]
+			#mean=pca.mean_
+			#prof[s]=np.array([mean,x1])
+			coeff=kk[:,1]/kk[:,0]
+			prof=cc[:2]
 			kmax,kmin=np.max(coeff),np.min(coeff)
 			krange.append(str(kmin*1.3-kmax*0.3)+','+str(kmax*1.3-kmin*0.3))
 		else:

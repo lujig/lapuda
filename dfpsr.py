@@ -475,7 +475,7 @@ else:
 	chebx_test0=nc.chebpts1(args.ncoeff)
 	chebx_test=np.concatenate(([-1],chebx_test0,[1]),axis=0)
 	second_test=(chebx_test+1)/2*nbin0*tsamp+file_time[0][:-1].sum()-delay+offs_sub-tsamp*nsblk/2.0
-	time_test=te.time(file_time[0][-1]*np.ones(args.ncoeff+2),second_test,scale='local')
+	time_test=te.time(file_time[0][-1]*np.ones(args.ncoeff+2),second_test,scale=telename)
 	times_test=te.times(time_test)
 	timing_test_end=pm.psr_timing(psr,times_test,freq_end)
 	timing_test_start=pm.psr_timing(psr,times_test,freq_start)
@@ -488,7 +488,7 @@ else:
 	roots=nc.chebroots(cheb_end)
 	roots=np.real(roots[np.isreal(roots)])
 	root=roots[np.argmin(np.abs(roots))]
-	stt_time_test=te.time(file_time[0][-1],(root+1)/2*nbin0*tsamp+file_time[0][:-1].sum()-delay+offs_sub-tsamp*nsblk/2.0,scale='local')
+	stt_time_test=te.time(file_time[0][-1],(root+1)/2*nbin0*tsamp+file_time[0][:-1].sum()-delay+offs_sub-tsamp*nsblk/2.0,scale=telename)
 	stt_sec=stt_time_test.second[0]
 	stt_date=stt_time_test.date[0]
 	info['phase0']=int(phase_start)

@@ -86,7 +86,7 @@ if type(args.save) is list:
 date,sec,toae,dt,dterr,freq_start,freq_end,dm,dmerr,period=data[jj].T
 freq=(freq_start+freq_end)/2
 nt=len(date)
-time=te.times(te.time(date,sec))
+time=te.times(te.time(date,sec,scale=info['telename']))
 psrt=pm.psr_timing(psr,time,freq)
 phase=psrt.phase
 dt=phase.offset
@@ -144,7 +144,7 @@ def merge(date,sec,dt,dterr,freq,dm,period):
 #
 if args.merge!=0:
 	date,sec,dt,dterr,freq,dm,dmerr,period=merge(date,sec,dt,dterr,freq,dm,period)
-time=te.times(te.time(date,sec))
+time=te.times(te.time(date,sec,scale=info['telename']))
 #
 paras=args.fit.split(',')
 #

@@ -20,7 +20,7 @@ dirname=os.path.split(os.path.realpath(__file__))[0]
 #
 def update_leap():
 	# utc2tai, leap second
-	a=ur.urlopen('https://hpiers.obspm.fr/eop-pc/earthor/utc/UTC-offsets_tab.html').readlines()
+	a=ur.urlopen('http://hpiers.obspm.fr/eop-pc/earthor/utc/UTC-offsets_tab.html').readlines()
 	b=list(map(lambda x:x.strip().decode(),a))
 	lenb=len(b)
 	for i in range(lenb):
@@ -59,7 +59,7 @@ def show_leap(ax):
 #
 def update_polarmotion():
 	# utc2ut1
-	a=ur.urlopen('https://hpiers.obspm.fr/eoppc/eop/eopc04/eopc04.62-now').readlines()
+	a=ur.urlopen('http://hpiers.obspm.fr/eoppc/eop/eopc04/eopc04.1962-now').readlines()
 	b=list(map(lambda x:x.strip().decode(),a))
 	lenb=len(b)
 	for i in range(lenb):
@@ -95,7 +95,7 @@ def show_pmxy(ax):
 #
 def update_tai2ut1():
 	# tai2ut1
-	a=ur.urlopen('https://hpiers.obspm.fr/eoppc/eop/eopc04/eopc04.62-now').readlines()
+	a=ur.urlopen('http://hpiers.obspm.fr/eoppc/eop/eopc04/eopc04.1962-now').readlines()
 	b=list(map(lambda x:x.strip().decode(),a))
 	lenb=len(b)
 	for i in range(lenb):

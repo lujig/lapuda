@@ -2,6 +2,7 @@ import numpy as np
 import time_eph as te
 import subprocess as sp
 import psr_read as pr
+import adfunc as af
 #
 dm_const=4148.8064224
 dm_const_si=7437506.761
@@ -41,7 +42,14 @@ class psr_timing:
 		else:
 			self.tropo_delay=np.zeros(self.time.size)
 			return
-		pressure=92.5 #101.325 is the normal value # unit in kPa
+		values=np.loadtxt(dirname+'/conventions/'+'pressure_humidity.txt',dtype='|S30')
+		if hasattr(self.time,'local'):
+			if af.reco(self.time.local.scale) in values[:,0]:
+				pressure=np.float64(values[:,1][values[:,0]==self.time.local.scale.encode()]
+			else:
+				pressure=101.325
+		else:
+			pressure=101.325 #101.325 is the normal value # unit in kPa
 		zenith_delay_hydrostatic = 0.022768 * pressure / (te.sl * (1.0-0.00266*np.cos(self.time.site_grs80.y) -2.8e-7*self.time.site_grs80.z))
 		#
 		avgs_a=[1.2769934e-3, 1.2683230e-3, 1.2465397e-3, 1.2196049e-3, 1.2045996e-3]

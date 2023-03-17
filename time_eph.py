@@ -4,6 +4,7 @@ import struct as st
 import datetime as dt
 import os
 import copy as cp
+import adfunc as af
 #
 ephname='DE436.1950.2050'
 sl=299792458.0
@@ -436,7 +437,7 @@ class vector:
 		return np.array([self.x,self.y,self.z]).T
 #
 class time:
-	def __init__(self,date,second,scale='local',unit=86400):
+	def __init__(self,date,second,scale='FAST',unit=86400):
 		date=np.array(date).reshape(-1)
 		second=np.array(second).reshape(-1)
 		size=np.array(date).size
@@ -503,23 +504,23 @@ class time:
 		self.second=np.float64(secondresi)
 	#
 	def local2unix(self):
-		if self.scale=='local':
+		if self.scale not in time_scales:
 			unit=1
 			date=np.int64((self.date-40587)*86400+self.second)
 			second=self.second%unit
 			return time(date,second,'unix',unit)			
 	#
-	def unix2local(self):
+	def unix2local(self,scale):
 		if self.scale=='unix':
 			unit=86400
 			date,second=np.divmod(self.date,86400)
 			date+=40587
 			second=np.float64(second)+self.second
-			return time(date,second,'local',unit)			
+			return time(date,second,scale,unit)			
 	#
 	def local2utc(self):
-		if self.scale=='local':
-			f=open(dirname+'/conventions/'+'local2gps.txt')
+		if self.scale not in time_scales:
+			f=open(dirname+'/clock/'+self.scale+'.txt')
 			t0=np.int64(f.read(10))
 			t1=np.int64(f.read(30)[20:])
 			flen=f.seek(0,2)/30
@@ -601,7 +602,7 @@ class time:
 			return (self.date-mjd0)*self.unit*km2+self.second*km2+tdb0
 	#
 	def utc(self):
-		if self.scale=='local':
+		if self.scale not in time_scales:
 			return self.add(self.local2utc(),scale='utc')
 		elif self.scale=='tai':
 			return self.add(self.tai2utc(),scale='utc')
@@ -925,16 +926,22 @@ class times:
 		self.earthvel=self.vel[2]
 		self.earthacc=self.acc[2]
 	#
+	def readpos(self):
+		values=np.loadtxt(dirname+'/conventions/'+'telescopes.txt',dtype='|S30')
+		telename=af.reco(self.local.scale)
+		if telename in values[:,0]
+			return np.float64(values[values[:,0]==telename,1:4])
+		else:
+			raise Exception('The name of the telescope cannot be recognized.')
+	#
 	def sitecalc_old(self): # tempo old method
-		lat,lon,height=25.65295181388,106.856666872,1110.029
-		lon=lon*np.pi/180
-		lat=lat*np.pi/180
-		self.site_grs80=vector(lon,lat,height,center='geo',scale='grs80',coord='equ',unit=1.0,type0='pos')
-		site_itrs=self.site_grs80.copy()
-		site_itrs.grs802itrs()
+		x,y,z=self.readpos()
+		site_itrs=vector(x,y,z,center='geo',scale='itrs',coord='equ',unit=1.0,type0='pos')
+		self.site_grs80=site_itrs.copy()
+		self.site_grs80.itrs2grs80()
+		lat,lon,height=self.site_grs80.x,self.site_grs80.y,self.site_grs80.z
 		if not hasattr(self,'nut'):
 			self.ephem_compute()
-		x,y,z=site_itrs.x,site_itrs.y,site_itrs.z
 		nut=self.nut
 		erad=np.sqrt(x**2+y**2+z**2)
 		hlt=np.arcsin(z/erad)
@@ -967,13 +974,11 @@ class times:
 		self.zenith=sitepos.multi(height/sitepos.length())
 	#
 	def sitecalc(self): #IAU 2000B tempo2 method
-		lat,lon,height=25.65295181388,106.856666872,1110.029
-		lon=lon*np.pi/180
-		lat=lat*np.pi/180
-		self.site_grs80=vector(lon,lat,height,center='geo',scale='grs80',coord='equ',unit=1.0,type0='pos')
-		site_itrs=self.site_grs80.copy()
-		site_itrs.grs802itrs()
-		x,y,z=site_itrs.x,site_itrs.y,site_itrs.z
+		x,y,z=self.readpos()
+		site_itrs=vector(x,y,z,center='geo',scale='itrs',coord='equ',unit=1.0,type0='pos')
+		self.site_grs80=site_itrs.copy()
+		self.site_grs80.itrs2grs80()
+		lat,lon,height=self.site_grs80.x,self.site_grs80.y,self.site_grs80.z
 		zenith_x=height*np.cos(lon)*np.cos(lat)
 		zenith_y=height*np.sin(lon)*np.cos(lat)
 		zenith_z=height*np.sin(lat)
@@ -1079,8 +1084,8 @@ class times:
 		self.zenith=vector(zenith_x_crs,zenith_y_crs,zenith_z_crs,center='geo',scale='si',coord='equ',unit=1,type0='pos')
 		
 		
-
-
+time_scales=['tai','tcb','tdb','utc','tt','ut1','unix','gps','ut1jd','ttjd']
+#
 nutarray=np.array([[ 0, 0, 0, 0,1, -172064161.0, -174666.0, 33386.0, 92052331.0, 9086.0, 15377.0],
 [ 0, 0, 2,-2,2, -13170906.0, -1675.0, -13696.0, 5730336.0, -3015.0, -4587.0],
 [ 0, 0, 2, 0,2,-2276413.0,-234.0, 2796.0, 978459.0,-485.0,1374.0],

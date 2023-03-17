@@ -105,8 +105,9 @@ else:
 filelist=args.filename
 filenum=len(filelist)
 nsub_new=[]
+telename=''
 def ld_check(fname,filetype='Ld file'):
-	global freq_s,freq_e
+	global freq_s,freq_e,tmptele
 	if not os.path.isfile(fname):
 		parser.error(filetype+' name '+fname+' '+'is invalid.')
 	try:
@@ -116,9 +117,13 @@ def ld_check(fname,filetype='Ld file'):
 		parser.error(filetype+' '+fname+' is invalid.')
 	sys.stdout=open(os.devnull,'w')
 	tmpname=pr.psr(finfo['psr_par']).name
+	if not telename: telename=finfo['telename']
+	tmptele=finfo['telename']
 	sys.stdout=sys.__stdout__
 	if psrname!=tmpname:
 		parser.error('The pulsar recorded in '+fname+' is different from the template.')
+	if telename!=tmptele:
+		parser.error('The data should come from the same telescope.')
 	#
 	if 'compressed' in finfo.keys():
 		nchan=finfo['nchan_new']
@@ -223,7 +228,7 @@ if info0['mode']!='template':
 	if not args.freqtoa:
 		if not args.dm_corr and chanend0-chanstart0>1:
 			sys.stdout=open(os.devnull,'w')
-			psr=pm.psr_timing(pr.psr(info0['psr_par']),te.times(te.time(info0['stt_time']+info0['length']/86400,0)),(freq_start0+freq_end0)/2)
+			psr=pm.psr_timing(pr.psr(info0['psr_par']),te.times(te.time(info0['stt_time']+info0['length']/86400,0,scale=info['telename'])),(freq_start0+freq_end0)/2)
 			sys.stdout=sys.__stdout__
 			freq_real0=np.linspace(freq_start0,freq_end0,nchan0+1)[:-1]*psr.vchange.mean()
 			if 'best_dm' in info0.keys():
@@ -349,6 +354,51 @@ def coa(tpdata0,tpdata):
 	dterr=err
 	return [dt,dterr]
 #
+def foa(tpdata0,tpdata):
+	nb=int(min(nbin0,nbin)//2+1)
+	tpdata-=tpdata.mean()
+	tpdata/=tpdata.max()
+	tpdata0-=tpdata0.mean()
+	tpdata0/=tpdata0.max()
+	f0=fft.rfft(tpdata0)[:nb]
+	d0=fft.irfft(f0)
+	f=fft.rfft(tpdata)[:nb]
+	d=fft.irfft(f)
+	tmpnum=np.argmax(fft.irfft(f0*f.conj()))
+	d0=np.append(d0[tmpnum:],d0[:tmpnum])
+	ftmp=1j*np.arange(nb)*(2*np.pi)
+	def fit(x,t,k):
+		return k*fft.irfft(fft.rfft(x)*np.exp(t*ftmp))
+	popt,pcov=so.curve_fit(fit,d,d0,p0=(0.0,1.0))
+	dt=popt[0]-tmpnum/((nb-1)*2)
+	dterr=np.sqrt(pcov[0,0])
+	return [dt,dterr]
+#
+def ftoa(tpdata0,tpdata,comp,kvalue):
+	nb=int(min(nbin0,nbin)//2+1)
+	tpdata-=tpdata.mean()
+	tpdata/=tpdata.max()
+	tpdata0-=tpdata0.mean()
+	comp-=comp.mean()
+	comp/=tpdata0.max()
+	tpdata0/=tpdata0.max()
+	fcomp=fft.rfft(comp)[:nb]
+	dcomp=fft.irfft(fcomp)
+	f0=fft.rfft(tpdata0)[:nb]
+	d0=fft.irfft(f0)
+	f=fft.rfft(tpdata)[:nb]
+	d=fft.irfft(f)
+	tmpnum=np.argmax(fft.irfft((f0+fcomp)*f.conj()))
+	d0=np.append(d0[tmpnum:],d0[:tmpnum])
+	dcomp=np.append(dcomp[tmpnum:],dcomp[:tmpnum])
+	ftmp=1j*np.arange(nb)*(2*np.pi)
+	def fit(x,t,k,k1):
+		return k*fft.irfft(fft.rfft(x)*np.exp(t*ftmp))-k1*dcomp
+	popt,pcov=so.curve_fit(fit,d,d0,p0=(0.0,1.0,0.0))
+	dt=popt[0]-tmpnum/((nb-1)*2)
+	dterr=np.sqrt(pcov[0,0])
+	return [dt,dterr]
+#
 result=np.zeros([nsub_new.sum(),10])
 cumsub=np.append(0,np.cumsum(nsub_new)[:-1])
 discard=[]
@@ -356,6 +406,8 @@ if args.algorithm=='pgs':
 	tfunc=poa
 elif args.algorithm=='corr':
 	tfunc=coa
+elif args.algorithm=='fit':
+	tfunc=foa
 #
 def dmdt(freq,dm,c):
 	return 1/freq**2*pm.dm_const/period0*dm+c
@@ -378,7 +430,7 @@ def toafunc(tpdata0,tpdata,freq=0,comp=[],kv=0):
 				dp_tmp,dperr_tmp=np.zeros([2,nk])
 				kvalue=np.linspace(*kv[i],nk)
 				for ind in np.arange(nk):
-					dp_tmp[ind],dperr_tmp[ind]=tfunc(tp0[i]+kvalue[ind]*comp[i],tp[i])
+					dp_tmp[ind],dperr_tmp[ind]=ftoa(tp0[i],tp[i],comp[i],kvalue[ind])
 				ind=np.argmin(dperr_tmp)
 				dp[i],dperr[i]=dp_tmp[ind],dperr_tmp[ind]
 		dp0=dp%1
@@ -447,16 +499,16 @@ for k in np.arange(filenum):
 		sub_nperiod[-1]=info['sub_nperiod_last']
 		middle=sub_nperiod.cumsum()-sub_nperiod/2
 		time0=info['length']*(nc.chebpts1(20)+1)/2
-		psr=pm.psr_timing(psr0,te.times(te.time(info['stt_date']*np.ones(20,dtype=np.float64),info['stt_sec']+time0)),(freq_start+freq_end)/2)
+		psr=pm.psr_timing(psr0,te.times(te.time(info['stt_date']*np.ones(20,dtype=np.float64),info['stt_sec']+time0,scale=info['telename'])),(freq_start+freq_end)/2)
 		phase1=psr.phase
 		chebc=nc.chebfit(time0,phase1.integer-phase1.integer[0]+phase1.offset,12)
 		chebd=nc.chebder(chebc)
 		time0=np.linspace(0,info['length'],nperiod)
-		psr=pm.psr_timing(psr0,te.times(te.time(info['stt_date']*np.ones(nperiod,dtype=np.float64),info['stt_sec']+time0)),(freq_start+freq_end)/2)
+		psr=pm.psr_timing(psr0,te.times(te.time(info['stt_date']*np.ones(nperiod,dtype=np.float64),info['stt_sec']+time0,scale=info['telename'])),(freq_start+freq_end)/2)
 		phase1=psr.phase
 		phase_start=phase1.integer[0]
 		middle_time=np.interp(middle,phase1.integer-phase0+phase1.offset,time0)[sub_s:sub_e]
-		psr1=pm.psr_timing(psr0,te.times(te.time(info['stt_date']*np.ones(nsub_new[k],dtype=np.float64),info['stt_sec']+middle_time)),(freq_start+freq_end)/2)
+		psr1=pm.psr_timing(psr0,te.times(te.time(info['stt_date']*np.ones(nsub_new[k],dtype=np.float64),info['stt_sec']+middle_time,scale=info['telename'])),(freq_start+freq_end)/2)
 		middle_phase=psr1.phase
 		data1=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]
 		freq_real=(np.linspace(freq_start,freq_end,nchan+1)[:-1]+channel_width/2)*psr.vchange.mean()
@@ -507,7 +559,7 @@ for k in np.arange(filenum):
 				else:
 					kvalue=np.linspace(*kvalue,nk)
 					for ind in np.arange(nk):
-						dp_tmp[ind],dpe_tmp[ind]=toafunc(tpdata0[0]+kvalue[ind]*tpdata0[1],tpdata)
+						dp_tmp[ind],dpe_tmp[ind]=ftoa(tpdata0[0],tpdata,tpdata0[1],kvalue[ind])
 					ind=np.argmin(dpe_tmp)
 					dp,dpe=dp_tmp[ind],dpe_tmp[ind]
 			else:
@@ -519,7 +571,7 @@ for k in np.arange(filenum):
 			roots=nc.chebroots(chebc-([dp0+middle_int]+[0]*12))
 			roots=np.real(roots[np.isreal(roots)])
 			root=roots[np.argmin(np.abs(roots-middle_int*period0))]
-			toa=te.time(info['stt_date'],root+info['stt_sec'])
+			toa=te.time(info['stt_date'],root+info['stt_sec'],scale=info['telename'])
 			period=1/nc.chebval(root,chebd)
 			toae=dpe*period
 			if output=='screen':
@@ -534,11 +586,11 @@ for k in np.arange(filenum):
 		if sub_s==0: middle=sub_nperiod_cumsum[sub_e-1]/2
 		else: middle=(sub_nperiod_cumsum[sub_s-1]+sub_nperiod_cumsum[sub_e-1])/2
 		time0=np.linspace(0,info['length'],12)
-		phase1=pm.psr_timing(psr0,te.times(te.time(info['stt_date']*np.ones(12,dtype=np.float64),info['stt_sec']+time0)),(freq_start+freq_end)/2).phase
+		phase1=pm.psr_timing(psr0,te.times(te.time(info['stt_date']*np.ones(12,dtype=np.float64),info['stt_sec']+time0,scale=info['telename'])),(freq_start+freq_end)/2).phase
 		chebc=nc.chebfit(phase1.integer-phase0+phase1.offset,time0,7)
 		chebd=nc.chebder(chebc)
 		middle_time=nc.chebval(middle,chebc)
-		psr1=pm.psr_timing(psr0,te.times(te.time(info['stt_date'],info['stt_sec']+middle_time)),(freq_start+freq_end)/2)
+		psr1=pm.psr_timing(psr0,te.times(te.time(info['stt_date'],info['stt_sec']+middle_time,scale=info['telename'])),(freq_start+freq_end)/2)
 		data=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]
 		if np.any(np.isnan(data)) or np.any(np.isinf(data)) or np.all(data==0):
 			discard.append(filelist[k])
@@ -585,7 +637,7 @@ for k in np.arange(filenum):
 		middle_int,middle_offs=np.divmod(middle,1)
 		dp0=dp+np.round(middle_offs-dp)
 		root=nc.chebval(dp0+middle_int,chebc)
-		toa=te.time(info['stt_date'],root+info['stt_sec'])
+		toa=te.time(info['stt_date'],root+info['stt_sec'],scale=info['telename'])
 		period=nc.chebval(root,chebd)
 		toae=dpe*period
 		if output=='screen':
@@ -604,11 +656,12 @@ if output=='ld':
 	d1=ld.ld(name+'.ld')
 	d1.write_shape([1,nsub_new.sum()-len(discard),10,1])
 	d1.write_chan(result,0)
-	toainfo={'psr_name':psrname,'history':[command],'file_time':[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())],'mode':'ToA','method':args.algorithm}
+	toainfo={'psr_name':psrname,'history':[command],'file_time':[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())],'mode':'ToA','method':args.algorithm,'telename':telename}
 	d1.write_info(toainfo)
 elif output=='txt':
 	fout=open(name,'w')
 	fout.write(psrname+' ToA\n')
+	fout.write(telename+'\n')
 	for i in result:
 		fout.write('{:28s} {:10s} {:10.2f} {:10.2f} {:13f} {:18f}'.format(str(int(i[0]))+str(i[1]/86400)[1:],"%.3e"%(i[2]/86400),i[5],i[6],i[7],i[9])+'\n')
 	fout.close()
