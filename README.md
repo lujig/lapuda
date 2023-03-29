@@ -1,5 +1,34 @@
-# lapuda
-LAPUDA: LAconic Program Units for pulsar Data Analysis
+# LAPUDA
+**LAPUDA**: LAconic Program Units for pulsar Data Analysis
+
+## Table of Contents
+- [Background](#background)
+- [Install](#install)
+- [Usage](#usage)
+- [Maintainers](#maintainers)
+- [Contributing](#contributing)
+	- [Contributors](#contributors)
+- [License](#license)
+
+## Background
+
+FAST has been under construction for 5 years, and has the potential to provide large quantity pulsar data with high signal-to-noise ratio. The FAST pulsar data format is the search-mode unfold **PSRFITS**. To use these data, we have to do the pre-process on the raw data, such as de-dispersing and folding the data to single pulse mode or sub-integration mode data with known pulsar ephemeris parameters, calibrating the data on polarization and flux with calibration data, remove the radio-frequency interference automatically or interactively, modify the dispersion measure and rotation measure based on the data, obtain timing of arrival with the template, and fitting timing model with ToAs (time of arrival).
+
+The pre-processes listed above are coherent in one continuous line. However, the commonly used software for pre-processing is scattered, and written in different programming languages. As a result, the users need to note and reconcile the parameters used in data-processing with different software. Additionally, some of the software is written in compiled languages such as C and C++, making it difficult for users to check or call the variables in pre-processing. To pre-process FAST pulsar data more conveniently, the program units **LAPUDA** (LAconic Program Units for pulsar Data Analysis) was written. **LAPUDA** is a software written in Python that implements the integrated pre-processing for pulsar data (not only for FAST data), and provides callable modules for the time-space information and pulsar timing model.
+
+## Install
+
+The software LAPUDA can be used directly without install, of course, with some basic dependent packages installed. 
+
+Dependence: 
+
+	Software: PSRCAT (optional)
+
+	Python module: numpy, matplotlib, scipy, astropy, scikit-learn (optional), mpmath (optional) and tkinter
+
+For a better experience, the user can add the programme directory to the environment variable **PATH**, alternatively. 
+
+## Usage
 
 dfpsr.py: 
 	Dedisperse and fold the search mode psrfits file with pulsar name (or PSRCAT ephemris file, or DM and period). The folded file is saved as LD format, which is a new format to save pulsar data and information. The data in LD file always have 4 dimensions (nchan, nsub, nbin, npol).
@@ -56,8 +85,22 @@ psr_timing.py:
 update_cv.py
 	Update the time-depending infomation such like the clock correction data files.
 
-Dependence: 
+## Maintainers
 
-	Software: PSRCAT
+[@JiguangLu](mailto:lujig@nao.cas.cn)
 
-	Python module: numpy, matplotlib, scipy, astropy, mpmath and tkinter
+## Contributing
+
+Including the programme design, development, testing, maintenance.
+
+### Contributors
+
+Shijun Dang
+Yulan Liu
+Jiguang Lu
+Ruian Xu
+Zhengli Wang
+
+## License
+
+[MIT](LICENSE)

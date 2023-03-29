@@ -97,14 +97,9 @@ for psr_name in psrlist:
 		info=d.read_info()
 		if 'rm' in info.keys(): rm0=info['rm'][0]
 		else: rm0=0
-		if 'compressed' in info.keys():
-			nchan=info['nchan_new']
-			nbin=info['nbin_new']
-			nsub=info['nsub_new']
-		else:
-			nchan=info['nchan']
-			nbin=info['nbin']
-			nsub=info['nsub']
+		nchan=info['nchan']
+		nbin=info['nbin']
+		nsub=info['nsub']
 		if len(zchan0):
 			if np.max(zchan0)>=nchan or np.min(zchan0)<0:
 				parser.error('The zapped channel number is overrange.')
@@ -153,7 +148,7 @@ for psr_name in psrlist:
 			subint_end=nsub
 			subint=np.array([subint_start,subint_end])
 		#
-		data0=d.period_scrunch(subint_start,subint_end)
+		data0=d.period_scrunch(subint_start,subint_end)*info['chan_weight'].reshape(-1,1)
 		data0[zchan0]=0
 		data0=data0[chan]
 		i=data0[:,:,0]
@@ -251,7 +246,7 @@ for psr_name in psrlist:
 				info['history']=[command]
 				info['file_time']=[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())]
 			for i in np.arange(nchan):
-				data_tmp=d.read_chan(i)
+				data_tmp=d.read_chan(i)*info['chan_weight'][i]
 				dphi0=rot(lam0[i]**2,rm,0)*2
 				q_tmp,u_tmp=data_tmp[:,:,1:3].transpose(2,0,1).copy()
 				q0=q_tmp*np.cos(dphi0)+u_tmp*np.sin(dphi0)

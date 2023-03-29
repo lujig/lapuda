@@ -42,14 +42,9 @@ if info0['mode']=='template':
 else:
 	psrname=pr.psr(info0['psr_par']).name
 #
-if 'compressed' in info0.keys():
-	nchan0=info0['nchan_new']
-	nsub0=info0['nsub_new']
-	nbin0=info0['nbin_new']
-else:
-	nchan0=info0['nchan']
-	nsub0=info0['nsub']
-	nbin0=info0['nbin']
+nchan0=info0['nchan']
+nsub0=info0['nsub']
+nbin0=info0['nbin']
 #
 if args.zap_file:
 	command.append('-z')
@@ -62,10 +57,7 @@ if args.zap_file:
 		command.append('-Z')
 		if np.max(zchan)>=nchan0:
 			parser.error('The zapped channel number is overrange.')
-		if 'zchan' in info0.keys():
-			info0['zchan']=str(list(set(map(int,info0['zchan'])).union(zchan)))[1:-1]
-		else:
-			info0['zchan']=zchan
+		zchan=np.array(list(set(np.where(info0['chan_weight']==0)[0]).union(zchan)))
 else:
 	zchan=np.int32([])
 #
@@ -125,12 +117,8 @@ def ld_check(fname,filetype='Ld file'):
 	if telename!=tmptele:
 		parser.error('The data should come from the same telescope.')
 	#
-	if 'compressed' in finfo.keys():
-		nchan=finfo['nchan_new']
-		nperiod=finfo['nsub_new']
-	else:
-		nchan=finfo['nchan']
-		nperiod=finfo['nsub']
+	nchan=finfo['nchan']
+	nperiod=finfo['nsub']
 	#
 	if args.zap_file:
 		if args.zap_template:
@@ -224,7 +212,7 @@ else:
 frequse=np.arange(freq_start0,freq_end0,channel_width0)[chanstart0:chanend0][rchan]
 #
 if info0['mode']!='template':
-	data0=d0.period_scrunch()[chanstart0:chanend0,:,0]
+	data0=d0.period_scrunch()[chanstart0:chanend0,:,0]*info0['chan_weight'][chanstart0:chanend0].reshape(-1,1)
 	if not args.freqtoa:
 		if not args.dm_corr and chanend0-chanstart0>1:
 			sys.stdout=open(os.devnull,'w')
@@ -265,10 +253,10 @@ else:
 		data0=d0.read_data()[:,:,:,0]
 		if len(data0)==1: parser.error("The freq-domain ToA cannot be obtained for template with only one frequency channel.")
 		if nsub0==1:
-			tpdata0=data0[:,0]
+			tpdata0=data0[:,0]*info0['chan_weight'].reshape(-1,1)
 			tmp=tpdata0.sum(0)-af.baseline(tpdata0.sum(0))
 		else:
-			tpdata0=data0
+			tpdata0=data0*info0['chan_weight'].reshape(-1,1,1)
 			tmp=tpdata0[:,0].sum(0)-af.baseline(tpdata0[:,0].sum(0))
 #
 ew=tmp.sum()/tmp.max()
@@ -452,24 +440,12 @@ for k in np.arange(filenum):
 	sys.stdout=sys.__stdout__
 	period0=info['period']
 	#
-	if 'compressed' in info.keys():
-		nchan=info['nchan_new']
-		nbin=info['nbin_new']
-		nperiod=info['nsub_new']
-		npol=info['npol_new']
-	else:
-		nchan=info['nchan']
-		nbin=info['nbin']
-		nperiod=info['nsub']
-		npol=info['npol']
+	nchan=info['nchan']
+	nbin=info['nbin']
+	nperiod=info['nsub']
+	npol=info['npol']
 	#
-	if args.zap_file:
-		if 'zchan' in info.keys():
-			zchan_tmp=np.array(list(set(map(int,info['zchan'])).union(zchan)))
-	elif 'zchan' in info.keys():
-		zchan_tmp=np.int32(info['zchan'])
-	else:
-		zchan_tmp=np.int32([])
+	zchan_tmp=np.array(list(set(np.where(info['chan_weight']==0)[0]).union(zchan)))
 	#
 	if args.subint_range:
 		if sub_end<0:
@@ -510,7 +486,7 @@ for k in np.arange(filenum):
 		middle_time=np.interp(middle,phase1.integer-phase0+phase1.offset,time0)[sub_s:sub_e]
 		psr1=pm.psr_timing(psr0,te.times(te.time(info['stt_date']*np.ones(nsub_new[k],dtype=np.float64),info['stt_sec']+middle_time,scale=info['telename'])),(freq_start+freq_end)/2)
 		middle_phase=psr1.phase
-		data1=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]
+		data1=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]*info['chan_weight'][chanstart:chanend].reshape(-1,1)
 		freq_real=(np.linspace(freq_start,freq_end,nchan+1)[:-1]+channel_width/2)*psr.vchange.mean()
 		if not args.freqtoa:
 			if not args.dm_corr:
@@ -531,7 +507,7 @@ for k in np.arange(filenum):
 			else:
 				kvalue=np.float64(list(map(lambda x: x.split(','),krange)))
 		for s in np.arange(nsub_new[k]):
-			data=d.read_period(s+sub_s)[chanstart:chanend,:,0]
+			data=d.read_period(s+sub_s)[chanstart:chanend,:,0]*info['chan_weight'][chanstart:chanend]
 			if np.any(np.isnan(data)) or np.any(np.isinf(data)) or np.all(data==0):
 				discard.append([filelist[k],s])
 				continue
@@ -591,7 +567,7 @@ for k in np.arange(filenum):
 		chebd=nc.chebder(chebc)
 		middle_time=nc.chebval(middle,chebc)
 		psr1=pm.psr_timing(psr0,te.times(te.time(info['stt_date'],info['stt_sec']+middle_time,scale=info['telename'])),(freq_start+freq_end)/2)
-		data=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]
+		data=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]*info['chan_weight'][chanstart:chanend].reshape(-1,1)
 		if np.any(np.isnan(data)) or np.any(np.isinf(data)) or np.all(data==0):
 			discard.append(filelist[k])
 			continue

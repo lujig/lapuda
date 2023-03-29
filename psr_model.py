@@ -429,7 +429,7 @@ class psr_timing:
 			cosmu=np.cos(dec_g)*np.cos(dec_p)*np.cos(ra_g-ra_p)+np.sin(dec_g)*np.sin(dec_p)
 			prev_p,prev_p_p=self.psr.gwecc_orbital_period*365.25*86400,self.psr.gwecc_orbital_period*365.25*86400
 			prev_e,prev_e_p=self.psr.gwecc_e,self.psr.gwecc_e
-			prev_epoch=self.psr.gwecc_epoch
+			prev_epoch=self.psr.gwecc_epoch.mjd
 			prev_epoch_p=prev_epoch+1/86400*(self.psr.gwecc_psrdist*3.08568e19/te.sl)*(1-cosmu)
 			prev_theta,prev_theta_p=self.psr.gwecc_theta_0
 			prev_a=(6.67e-11*(self.psr.gwecc_m1+self.psr.gwecc_m2)*19891e30*(2*np.pi/prev_p)**-2)**(1/3)

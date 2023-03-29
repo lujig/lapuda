@@ -97,12 +97,8 @@ def ld_check(fname,filetype='Ld file',notfirst=True):
 		psrname=psr.name
 		dm=psr.dm
 	#
-	if 'compressed' in finfo.keys():
-		nchan=finfo['nchan_new']
-		nperiod=finfo['nsub_new']
-	else:
-		nchan=finfo['nchan']
-		nperiod=finfo['nsub']
+	nchan=finfo['nchan']
+	nperiod=finfo['nsub']
 	#
 	if args.zap_file:
 		if np.max(zchan)>=nchan or np.min(zchan)<0: parser.error('The zapped channel number is overrange.')
@@ -218,24 +214,12 @@ for k in np.arange(filenum):
 	d=ld.ld(filelist[k])
 	info=d.read_info()
 	#
-	if 'compressed' in info.keys():
-		nchan=info['nchan_new']
-		nbin=info['nbin_new']
-		nperiod=info['nsub_new']
-		npol=info['npol_new']
-	else:
-		nchan=info['nchan']
-		nbin=info['nbin']
-		nperiod=info['nsub']
-		npol=info['npol']
+	nchan=info['nchan']
+	nbin=info['nbin']
+	nperiod=info['nsub']
+	npol=info['npol']
 	#
-	if args.zap_file:
-		if 'zchan' in info.keys():
-			zchan_tmp=np.array(list(set(info['zchan']).union(zchan)))
-	elif 'zchan' in info.keys():
-		zchan_tmp=info['zchan']
-	else:
-		zchan_tmp=np.int32([])
+	zchan_tmp=np.array(list(set(np.where(info['chan_weight']==0)[0]).union(zchan)))
 	#
 	if args.subint_range:
 		if sub_end<0:
@@ -258,7 +242,7 @@ for k in np.arange(filenum):
 		rchan=np.array(list(set(range(chanstart,chanend))-set(list(zchan_tmp))))-chanstart
 	if not args.freqtem:
 		if not args.dm_corr:
-			data1=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]
+			data1=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]*info['chan_weight'][chanstart:chanend].reshape(-1,1)
 			freq_real=np.linspace(freq_start,freq_end,nchan+1)[:-1]
 			data1-=data1.mean(1).reshape(-1,1)
 			data1/=data1.max(1).reshape(-1,1)
@@ -271,14 +255,14 @@ for k in np.arange(filenum):
 				ddm,ddmerr=dmcor(data1,freq_real,rchan,info['period'],output=0)
 			const=(1/freq_real**2*pm.dm_const/info['period']*np.pi*2.0)*ddm
 		else:
-			data1=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]
+			data1=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]*info['chan_weight'][chanstart:chanend].reshape(-1,1)
 			if np.any(np.isnan(data1)) or np.any(np.isinf(data1)):
 				discard+=1
 				continue
 			const=0
 	if not args.tscrunch:
 		for s in np.arange(nsub_new[k]):
-			data=d.read_period(s+sub_s)[chanstart:chanend,:,0]
+			data=d.read_period(s+sub_s)[chanstart:chanend,:,0]*info['chan_weight'][chanstart:chanend].reshape(-1,1)
 			if np.any(np.isnan(data)) or np.any(np.isinf(data)):
 				discard+=1
 				continue
@@ -292,7 +276,6 @@ for k in np.arange(filenum):
 				else:
 					result0[0,cumsub[k]+s-discard]=data
 			else:
-				data=d.read_period(s+sub_s)[chanstart:chanend,:,0]
 				if nbin!=args.nbin:
 					fdata=fft.rfft(data,axis=1)
 					if np.shape(data)[1]>args.nbin: fdata=fdata[:,:int(args.nbin/2+1)]
@@ -311,7 +294,7 @@ for k in np.arange(filenum):
 			else:
 				result0[0,cumsub[k]-discard]=data
 		else:
-			data=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]
+			data=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]*info['chan_weight'][chanstart:chanend].reshape(-1,1)
 			if np.any(np.isnan(data)) or np.any(np.isinf(data)):
 				discard+=1
 				continue
@@ -501,16 +484,16 @@ if args.freqtem:
 	else: prof[1:]=shift(prof[1:],-dt*2*np.pi)
 
 if np.sum(prof**2)==0: parser.error('Unexpected error. The produced profile is zero in every phase bin.')
-info={'mode':'template','nchan_new':int(nchan_res), 'nbin_new':int(args.nbin), 'npol_new':1, 'file_time':[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())], 'pol_type':'I','compressed':True,'history':[command],'psr_name':psrname,'freq_start':freq_s,'freq_end':freq_e,'length':1}
+info={'mode':'template','nchan':int(nchan_res), 'nbin':int(args.nbin), 'npol':1, 'file_time':[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())], 'pol_type':'I','compressed':True,'history':[command],'psr_name':psrname,'freq_start':freq_s,'freq_end':freq_e,'length':1}
 do=ld.ld(name+'.ld')
 
 if args.component:
 	do.write_shape([nchan_res,2,args.nbin,1])
 	info['krange']=krange
-	info['nsub_new']=2
+	info['nsub']=2
 else:
 	do.write_shape([nchan_res,1,args.nbin,1])
-	info['nsub_new']=1
+	info['nsub']=1
 for i in np.arange(nchan_res):
 	do.write_chan(prof[i],i)
 do.write_info(info)

@@ -35,16 +35,10 @@ info=d.read_info()
 if info['mode']=='cal':
 	parser.error('This ld file is calibration data.')
 #
-if 'compressed' in info.keys():
-	nchan=info['nchan_new']
-	nbin=info['nbin_new']
-	nsub=info['nsub_new']
-	npol=info['npol_new']
-else:
-	nchan=info['nchan']
-	nbin=info['nbin']
-	nsub=info['nsub']
-	npol=info['npol']
+nchan=info['nchan']
+nbin=info['nbin']
+nsub=info['nsub']
+npol=info['npol']
 freq_start=info['freq_start']
 freq_end=info['freq_end']
 freq=(freq_start+freq_end)/2.0
@@ -121,15 +115,15 @@ fig.set_facecolor('white')
 ax=fig.add_axes([0.12,0.1,0.82,0.83])
 ax.patch.set_facecolor('w')
 if args.fdomain:
-	data=d.period_scrunch(subint_start,subint_end,chan)[:,:,polar]
-	if 'zchan' in info.keys():
-		if len(chan):
-			zchan=np.array(list(set(np.int32(info['zchan'])).intersection(chan)))-chanstart
-		else:
-			zchan=np.int32(info['zchan'])
-		zaparray=np.zeros_like(data)
-		zaparray[zchan]=True
-		data=ma.masked_array(data,mask=zaparray)
+	weight=info['chan_weight']
+	data=d.period_scrunch(subint_start,subint_end,chan)[:,:,polar]*weight.reshape(-1,1)
+	if len(chan):
+		zchan=np.array(list(set(np.where(weight==0)[0]).intersection(chan)))-chanstart
+	else:
+		zchan=np.where(weight==0)[0]-chanstart
+	zaparray=np.zeros_like(data)
+	zaparray[zchan]=True
+	data=ma.masked_array(data,mask=zaparray)
 	if args.n:
 		data-=np.polyval(np.polyfit(np.arange(nbin),data.T,args.n),np.array([range(nbin)]*len(data)).T).T
 	else:
@@ -161,7 +155,7 @@ if args.tdomain:
 	ax.set_ylim(subint[0],subint[1])
 	texty=subint[1]*1.01-subint[0]*0.01
 if args.profile:
-	data=d.chan_scrunch(chan,subint_start,subint_end).sum(0)
+	data=(d.period_scrunch(subint_start,subint_end,chan)*weight.reshape(-1,1,1)).sum(0)
 	if args.n:
 		data-=np.polyval(np.polyfit(np.arange(nbin),data,args.n),np.arange(nbin))
 	base,pos=af.baseline(data[:,0],pos=True)

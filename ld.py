@@ -208,9 +208,12 @@ class ld():
 		bin_num=(end_period-start_period)*self.__size__[3]*self.__size__[4]
 		data=np.zeros(bin_num)
 		self.file=open(self.name,'rb')
+		info=self.read_info()
+		if 'weight' in info.keys(): weight=self.read_para('chan_weight')
+		else: weight=np.ones(self.__size__[1])
 		for i in select_chan:
 			self.file.seek(24+ndata_chan*i*8+bin_start*8)
-			data+=np.array(st.unpack('>'+str(bin_num)+'d',self.file.read(bin_num*8)))
+			data+=np.array(st.unpack('>'+str(bin_num)+'d',self.file.read(bin_num*8)))*weight[i]
 		data=data.reshape([end_period-start_period,self.__size__[3],self.__size__[4]])
 		return data
 	#
@@ -264,46 +267,3 @@ class ld():
 		else:
 			raise Exception('Wrong parameter name.')
 #
-ldinfo_keys={'best_dm':[list,[2],float],
- 'cal':[list,['1 or 2',4,'nchan'],float],
- 'cal_mode':str,
- 'compressed':bool,
- 'dm':float,
- 'file_time':[list,['number_of_processing'],str],
- 'freq_end':float,
- 'freq_start':float,
- 'history':[list,['number_of_processing'],str],
- 'krange':[list,[2],float],
- 'length':float,
- 'mode':str,
- 'nbin':int,
- 'nbin_new':int,
- 'nbin_origin':int,
- 'nchan':int,
- 'nchan_new':int,
- 'noise_time0':float,
- 'nperiod':int,
- 'npol':int,
- 'npol_new':int,
- 'nsub':int,
- 'nsub_new':int,
- 'period':float,
- 'phase0':int,
- 'pol_type':str,
- 'predictor':[list,['ncoeff',2],float],
- 'predictor_freq':[list,[5],float],
- 'psr_name':str,
- 'psr_par':[list,['number_of_lines'],str],
- 'rm':[list,[2],float],
- 'seg_time':[list,['numbe_of_noise_segments'],float],
- 'spec':[list,['nchan'],float],
- 'stt_date':int,
- 'stt_sec':float,
- 'stt_time':float,
- 'stt_time_origin':float,
- 'sub_nperiod':int,
- 'sub_nperiod_last':int,
- 'sublen':float,
- 'telename':str,
- 'tsamp_origin':float,
- 'zchan':[list,['number_of_zapped_channels'],int]}

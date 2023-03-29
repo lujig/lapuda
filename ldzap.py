@@ -5,7 +5,7 @@ import numpy.fft as fft
 import argparse as ap
 from matplotlib.figure import Figure
 import matplotlib.lines as ln
-import ld,os,copy,sys
+import ld,os,copy,sys,shutil
 import matplotlib.pyplot as plt
 plt.rcParams['font.family']='Serif'
 #
@@ -24,23 +24,19 @@ if not os.path.isfile(args.filename):
 d=ld.ld(args.filename)
 info=d.read_info()
 #
-if 'compressed' in info.keys():
-	nchan=info['nchan_new']
-	nbin=info['nbin_new']
-	nperiod=info['nsub_new']
+nchan=info['nchan']
+if info['mode']=='test':
+	nbin=1
+	nperiod=d.read_shape()[1]
 else:
-	nchan=info['nchan']
-	if info['mode']=='test':
-		nbin=1
-		nperiod=d.read_shape()[1]
-	else:
-		nbin=info['nbin']
-		nperiod=info['nsub']
+	nbin=info['nbin']
+	nperiod=info['nsub']
 npol=info['npol']
 if nbin!=1:
 	data0=d.period_scrunch()[:,:,0]
 else:
 	data0=d.__read_bin_segment__(0,nperiod)[:,:,0]
+data0*=info['chan_weight'].reshape(-1,1)
 if nbin>128 or ((nbin==1)&(nperiod>512)):
 	data0=fft.irfft(fft.rfft(data0,axis=1)[:,:257],axis=1)
 if args.norm:
@@ -53,16 +49,13 @@ else:
 	data=data0
 testdata=copy.deepcopy(data)
 testdata=ma.masked_where(testdata<0,testdata)
-if 'zchan' in info.keys():
-	zaplist=[list(map(int,info['zchan']))]
-	zapnum=zaplist[0]
-	zaparray=np.zeros_like(testdata)
-	zaparray[zapnum,:]=True
-	testdata.mask=zaparray
-	zap0=1
-else:
-	zaplist=[]
-	zap0=0
+#
+zaplist=[list(np.where(info['chan_weight']==0)[0])]
+zapnum=zaplist[0]
+zaparray=np.zeros_like(testdata)
+zaparray[zapnum,:]=True
+testdata.mask=zaparray
+zap0=1
 #
 if args.zap_file:
 	if not os.path.isfile(args.zap_file):
@@ -246,15 +239,22 @@ def keymotion(a):
 			zapnum.update(i)
 		zapnum=np.sort(list(zapnum))
 		zapnum=list(zapnum[(zapnum>=0)&(zapnum<nchan)])
-		info['zchan']=list(zapnum)
-		save=ld.ld('.'.join(args.filename.split('.')[:-1])+'_zap.ld')
-		save.write_shape([nchan,nperiod,nbin,npol])
+		weight=info['chan_weight']
+		weight[zapnum]=0
+		info['chan_weight']=weight
+		new_name='.'.join(args.filename.split('.')[:-1])+'_zap.ld'
 		sys.stdout.write("file saving...\n\n")
-		for i in np.arange(nchan):
-			if i in zapnum:
-				save.write_chan(np.zeros(nperiod*nbin*npol),i)
-				continue
-			save.write_chan(d.read_chan(i),i)
+		shutil.copyfile(args.filename,newname)
+		save=ld.ld(newname)
+		for i in zapnum:
+			save.write_chan(np.zeros(nperiod*nbin*npol),i)
+		command=['ldzap.py']
+		if 'history' in info.keys():
+			info['history'].append(command)
+			info['file_time'].append(time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime()))
+		else:
+			info['history']=[command]
+			info['file_time']=[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())]
 		save.write_info(info)
 	elif a=='r':
 		if ylimlist:

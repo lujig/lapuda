@@ -186,6 +186,7 @@ for i in filelist:
 	dfile=ld.ld(i)
 	d=dfile.period_scrunch()[:,:,0]
 	info=dfile.read_info()
+	d*=info['chan_weight'].reshape(-1,1)
 	nchan,nperiod,nbin0,npol=dfile.read_shape()
 	cal=info['cal'][-4:].reshape(4,-1)
 	aa,bb,cr,ci=cal
@@ -206,13 +207,12 @@ for i in filelist:
 	tmp=np.ones(nchan,dtype=np.bool)
 	tmp[np.arange(nchan,dtype=np.int32)[jc][j1]]=False
 	zchan0=np.arange(nchan,dtype=np.int32)[tmp]
-	if 'zchan' in info.keys():
-		zchan1=info['zchan']
-	else:
-		zchan1=np.int32([])
+	zchan1=np.where(info['chan_weight']==0)[0]
 	zchan=list(set(zchan0).union(zchan1))
 	if args.modify or args.correct:
-		info['zchan']=list(zchan)
+		weight=info['chan_weight']
+		weight[zchan]=0
+		info['chan_weight']=weight
 		if 'history' in info.keys():
 			info['history'].append(command)
 			info['file_time'].append(time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime()))

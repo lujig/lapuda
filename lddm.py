@@ -97,14 +97,9 @@ for psr_name in psrlist:
 		psr_para=pr.psr(psr_par)
 		d=ld.ld(filename)
 		info=d.read_info()
-		if 'compressed' in info.keys():
-			nchan=info['nchan_new']
-			nbin=info['nbin_new']
-			nsub=info['nsub_new']
-		else:
-			nchan=info['nchan']
-			nbin=info['nbin']
-			nsub=info['nsub']
+		nchan=info['nchan']
+		nbin=info['nbin']
+		nsub=info['nsub']
 		if len(zchan0):
 			if np.max(zchan0)>=nchan or np.min(zchan0)<0:
 				parser.error('The zapped channel number is overrange.')
@@ -189,10 +184,7 @@ for psr_name in psrlist:
 			ax1.set_ylabel('Frequency (MHz)',fontsize=25)
 			ax2.set_ylabel('Frequency (MHz)',fontsize=25)
 		#
-		if 'zchan' in info.keys():
-			zchan1=np.int32(info['zchan'])
-		else:
-			zchan1=np.int32([])
+		zchan1=np.where(info['chan_weight']==0)[0]
 		zchan=set(zchan0).union(zchan1)
 		if len(chan):
 			zchan=np.int32(list(zchan.intersection(chan)))-chanstart
@@ -212,6 +204,9 @@ for psr_name in psrlist:
 			maxima=data1.max(1)
 			maxima[maxima==0]=1
 			data1/=maxima.reshape(-1,1)
+		else:
+			data*=info['chan_weight'].reshape(-1,1)
+			data1*=info['chan_weight'].reshape(-1,1)
 		#
 		if not args.text: 
 			ax2.imshow(data1[::-1],aspect='auto',interpolation='nearest',extent=(0,1,freq_start0,freq_end0),cmap='jet')

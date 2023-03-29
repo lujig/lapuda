@@ -23,25 +23,13 @@ for ldfile in filelist:
 	plist=args.paras.split(',')
 	for pname in plist:
 		if pname=='nsub':
-			if 'compressed' in info.keys():
-				sys.stdout.write(pname+' '+str(info['nsub_new'])+'\n')
-			else:
-				sys.stdout.write(pname+' '+str(info['nsub'])+'\n')
+			sys.stdout.write(pname+' '+str(info['nsub'])+'\n')
 		elif pname=='nchan':
-			if 'compressed' in info.keys():
-				sys.stdout.write(pname+' '+str(info['nchan_new'])+'\n')
-			else:
-				sys.stdout.write(pname+' '+str(info['nchan'])+'\n')
+			sys.stdout.write(pname+' '+str(info['nchan'])+'\n')
 		elif pname=='nbin':
-			if 'compressed' in info.keys():
-				sys.stdout.write(pname+' '+str(info['nbin_new'])+'\n')
-			else:
-				sys.stdout.write(pname+' '+str(info['nbin'])+'\n')
+			sys.stdout.write(pname+' '+str(info['nbin'])+'\n')
 		elif pname=='npol':
-			if 'compressed' in info.keys():
-				sys.stdout.write(pname+' '+str(info['npol_new'])+'\n')
-			else:
-				sys.stdout.write(pname+' '+str(info['npol'])+'\n')
+			sys.stdout.write(pname+' '+str(info['npol'])+'\n')
 		elif pname=='shape':
 			sys.stdout.write(pname+' '+str(tuple(d.read_shape()))+'\n')
 		elif pname in ['stt_time', 'file_time', 'psr_name', 'nperiod', 'period', 'dm', 'length', 'mode']:

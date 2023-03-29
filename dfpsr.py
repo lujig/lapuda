@@ -186,7 +186,7 @@ nchan_new=chanend-chanstart
 nbin=file_len.sum()*nsblk
 stt_time=file_t0[0]
 freq_start,freq_end=(np.array([chanstart,chanend])-0.5*nchan)*channel_width+freq
-info={'nbin_origin':int(nbin),'telename':telename,'freq_start':freq_start,'freq_end':freq_end,'nchan':int(chanend-chanstart),'tsamp_origin':tsamp,'stt_time_origin':stt_time,'stt_time':stt_time,'npol':int(npol)}
+info={'nbin_origin':int(nbin),'telename':telename,'freq_start_origin':freq-bandwidth/2.0,'freq_end_origin':freq+bandwidth/2.0,'freq_start':freq_start,'freq_end':freq_end,'nchan_origin':int(nchan),'nchan':int(chanend-chanstart),'tsamp_origin':tsamp,'stt_time_origin':stt_time,'stt_time':stt_time,'npol':int(npol)}
 #
 if args.psr_name and args.par_file:
 	parser.error('At most one of flags -n and -p is required.')
@@ -265,7 +265,9 @@ if args.zap_file:
 	zchan=np.loadtxt(args.zap_file,dtype=int)
 	if np.max(zchan)>=nchan or np.min(zchan)<0:
 		parser.error('The zapped channel number is overrange.')
-	info['zchan']=zchan.tolist()
+	weight=np.ones(nchan,dtype=np.float64)
+	weight[zchan]=0
+	info['chan_weight']=weight[chanstart:chanend]
 else:
 	zchan=[]
 name=args.output

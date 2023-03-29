@@ -21,9 +21,10 @@ info=d.read_info()
 if args.mode=='dat':
 	d1=np.memmap(args.output+'.dat',dtype=np.float64,mode='w+',shape=shape)
 	del d1
+	weight=info['chan_weight']
 	for i in range(shape[0]):
 		d1=np.memmap(args.output+'.dat',dtype=np.float64,mode='r+',shape=shape)
-		data=d.read_chan(i)
+		data=d.read_chan(i)*weight[i]
 		d1[i]=data
 		del d1
 else:

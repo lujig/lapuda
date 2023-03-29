@@ -45,16 +45,10 @@ elif fflag==2:
 elif np.sum(map(np.bool,[args.fscrunch,args.tscrunch,args.bscrunch]))==3:
 	parser.error('What do you want to do? To obtain a point?')
 #
-if 'compressed' in info.keys():
-	nchan=int(info['nchan_new'])
-	nbin=int(info['nbin_new'])
-	nperiod=int(info['nsub_new'])
-	npol=int(info['npol_new'])
-else:
-	nchan=int(info['nchan'])
-	nbin=int(info['nbin'])
-	nperiod=int(info['nsub'])
-	npol=int(info['npol'])
+nchan=int(info['nchan'])
+nbin=int(info['nbin'])
+nperiod=int(info['nsub'])
+npol=int(info['npol'])
 #
 if args.nchan_new:
 	nchan_new=args.nchan_new
@@ -99,6 +93,7 @@ if args.pscrunch:
 else:
 	npol_new=npol
 #
+weight=info['chan_weight']
 if args.zap_file:
 	command.append('-z')
 	if not os.path.isfile(args.zap_file):
@@ -106,17 +101,11 @@ if args.zap_file:
 	zchan=np.loadtxt(args.zap_file,dtype=np.int32)
 	if np.max(zchan)>=nchan or np.min(zchan)<0:
 		parser.error('The zapped channel number is overrange.')
-	if 'zchan' in info.keys():
-		info['zchan']=list(set(info['zchan']).union(zchan))
-	else:
-		info['zchan']=list(zchan)
-	if nchan_new>1 and nchan_new!=nchan:
-		info.pop('zchan')
+	zchan=list(set(np.where(weight==0)[0]).union(zchan))
+	weight[zchan]=0
+	info['chan_weight']=weight	
 else:
-	if 'zchan' in info.keys():
-		if nchan_new>1 and nchan_new!=nchan:
-			info.pop('zchan')
-	zchan=[]
+	zchan=list(np.where(weight==0)[0])
 #
 freq_start,freq_end=info['freq_start'],info['freq_end']
 freq=(freq_start+freq_end)/2.0
@@ -186,29 +175,36 @@ if dmmodi:
 	info['dm']=new_dm
 res=nchan0
 tpdata=np.zeros([nperiod,nbin,npol_new])
+weight_new=np.zeros(nchan_new)
+tpweight=0
 i_new=0
 for i in np.arange(chanstart,chanend):
 	if res>nchan_new:
 		res-=nchan_new
 		if i in zchan: continue
-		data0=d.read_chan(i)
+		weight0=weight[i]
+		data0=d.read_chan(i)*weight0
 		if npol_new==1:
 			data0=data0[:,:,0].reshape(nperiod,nbin,npol_new)
 		if dmmodi:
 			tpdata+=np.float64(shift(data0,disp[i-chanstart]))
 		else:
 			tpdata+=data0
+		tpweight+=weight0
 	else:
 		if i in zchan:
 			chan_data=np.zeros([nperiod,nbin,npol_new])
+			weight0=0
 		else:
-			data0=d.read_chan(i)
+			weight0=weight[i]
+			data0=d.read_chan(i)*weight0
 			if npol_new==1:
 				data0=data0[:,:,0].reshape(nperiod,nbin,npol_new)
 			if dmmodi:
 				chan_data=np.float64(shift(data0,disp[i-chanstart]))
 			else:
 				chan_data=data0
+		tpweight+=weight0*(res*1.0/nchan_new)
 		tpdata+=chan_data*(res*1.0/nchan_new)
 		if nsub_new!=nperiod:
 			if nsub_new==1:
@@ -227,21 +223,25 @@ for i in np.arange(chanstart,chanend):
 			#	tpdata=fft.irfft(tpdata[:,:(nbin_new+1)],axis=1).reshape(nsub_new,nbin_new,2,npol_new).sum(2)
 			tpdata=tpdata.reshape(nsub_new,nbin_new,-1,npol_new).sum(2)
 		d1.write_chan(tpdata,i_new)
+		weight_new[i_new]=tpweight
 		i_new+=1
 		tpdata=chan_data*((nchan_new-res)*1.0/nchan_new)
+		tpweight=weight0*((nchan_new-res)*1.0/nchan_new)
 		res=nchan0-(nchan_new-res)
 #
 if nchan_new==1:
-	data=d.period_scrunch()[:,:,0]
+	data=d.period_scrunch()[:,:,0]*weight.reshape(-1,1)
 	data[zchan]=0
 	base,bin0=ad.baseline(data.mean(0),pos=True)
 	spec=np.concatenate((data,data),axis=1)[:,bin0:(bin0+10)].mean(1)
 	info['spec']=list(spec)
 #
-info['nchan_new']=int(nchan_new)
-info['nsub_new']=int(nsub_new)
-info['nbin_new']=int(nbin_new)
-info['npol_new']=int(npol_new)
+weight_new[weight_new>0]=1/weight_new[weight_new>0]
+info['weight']=weight_new
+info['nchan']=int(nchan_new)
+info['nsub']=int(nsub_new)
+info['nbin']=int(nbin_new)
+info['npol']=int(npol_new)
 info['freq_start']=freq_start
 info['freq_end']=freq_end
 info['compressed']=True
