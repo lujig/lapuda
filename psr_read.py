@@ -115,7 +115,7 @@ class psr:
 				return False
 		return True
 	#
-	def cal_pos(self):
+	def cal_pos(self):	# calculate the pulsar position in ecliptic coordinates
 		alpha=self.raj
 		delta=self.decj
 		ca=np.cos(alpha)
@@ -145,7 +145,7 @@ class psr:
 			self.acc=te.vector(0,0,0,center='bary',scale='si',coord='ecl',unit=te.sl,type0='acc')
 			self.acc_equ=te.vector(0,0,0,center='bary',scale='si',coord='equ',unit=te.sl,type0='acc')
 	#
-	def cal_pos_ecl(self):
+	def cal_pos_ecl(self):	# calculate the pulsar position in equatorial coordinates
 		alpha=self.elong
 		delta=self.elat
 		ca=np.cos(alpha)
@@ -177,7 +177,7 @@ class psr:
 			self.acc=te.vector(0,0,0,center='bary',scale='si',coord='ecl',unit=te.sl,type0='acc')
 			self.acc_equ=te.vector(0,0,0,center='bary',scale='si',coord='equ',unit=te.sl,type0='acc')
 	#
-	def dpos(self,vectype,coord1,coord2):
+	def dpos(self,vectype,coord1,coord2):,	# calculate the derivative of pulsar position along different coordinate axes
 		arcsec2rad=np.pi/648000.0
 		obliq=84381.4059*arcsec2rad
 		ce=np.cos(obliq)
@@ -200,7 +200,7 @@ class psr:
 		if coord1==coord2: return dvecdcoord
 		else: return (dvecdcoord@coordconv)
 	#
-	def change_units(self):
+	def change_units(self):	# change the unit of pulsar parameter to be TCB
 		if self.units=='TCB':
 			return
 		for i in self.paras:
@@ -278,7 +278,7 @@ class psr:
 	def __repr__(self):
 		return self.__str__()
 	#
-	def tdb_par(self):
+	def tdb_par(self):	# return a TDB unit psr instance counterpart
 		tmp=self.copy()
 		for i in tmp.paras:
 			if hasattr(tmp,i):
@@ -728,7 +728,7 @@ class psr:
 		if len(self.unused_paras)>=2: print('Warning: The parameters '+', '.join(list(self.unused_paras))+' in the parfile are not used.')
 		elif len(self.unused_paras)==1: print('Warning: The parameter '+', '.join(list(self.unused_paras))+' in the parfile is not used.')
 	#
-	def deal_para(self,paraname,paras,paras_key,exce=False,value=0,err_case=[],err_exc=[]):
+	def deal_para(self,paraname,paras,paras_key,exce=False,value=0,err_case=[],err_exc=[]):	# analyze parameter
 		paraname0=paraname.upper()
 		if (paraname in aliase_keys) and (paraname0 not in paras_key):
 			for i in aliase[paraname]:
@@ -782,7 +782,7 @@ class psr:
 			elif paraname in paras_text:
 				self.__setattr__(paraname,'')
 	#
-	def deal_paralist(self,paralist_name,paras,paras_key,listlimit=100,exce=False,value=0,err_case=[],err_exc=[]):
+	def deal_paralist(self,paralist_name,paras,paras_key,listlimit=100,exce=False,value=0,err_case=[],err_exc=[]):	# analyze parameter list
 		paralist=eval('para_'+paralist_name)
 		listindex=[]
 		for i in np.arange(listlimit):

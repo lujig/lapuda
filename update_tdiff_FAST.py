@@ -17,10 +17,10 @@ parser.add_argument("-w","--rewrite",action="store_true",default=False,help="upd
 parser.add_argument('-s','--show',action="store_true",default=False,help='show the handled clock difference.')
 args=(parser.parse_args())
 #
-dtj0=np.array([1537588300,1537623000,1538314761,1541724000,1541916000,1548391000,1550469000,1554826000])
-dt0j=np.array([1538314761])
+dtj0=np.array([1537588300,1537623000,1538314761,1541724000,1541916000,1548391000,1550469000,1554826000])	# the time for FAST clock to adjust the time frequency
+dt0j=np.array([1538314761])	# the time to adjust the clock time
 ldt0j=len(dt0j)
-def poly(x,*p):
+def poly(x,*p):	# polynomial fit for the clock correction
 	start=0
 	y=np.zeros_like(x,dtype=np.float64)
 	y0=0
@@ -55,7 +55,7 @@ deltat=50
 flist=os.listdir(dirname+'/clock/FAST_tmp')
 t0=[]
 dt0=[]
-for i in flist:
+for i in flist:	# merge clock correction files
 	if i[:l0]!=str0: continue
 	date=i[l0:-4]
 	if not args.rewrite:
@@ -71,7 +71,7 @@ for i in flist:
 if len(t0)<20:	
 	print('All present clock data have been included in the clock-difference file.')
 	end=True
-else:
+else:	# screen the time points existed in present file
 	dt0=np.array(dt0)[np.argsort(t0)]
 	t0=np.sort(t0)
 	jt0=(t0>(endunix-deltat))&(dt0>0)
@@ -82,7 +82,7 @@ if end: pass
 elif len(t1)<20:
 	print('All present clock data have been included in the clock-difference file.')
 	end=True
-else:
+else:	# screen the time points with large time jump
 	lt=len(t1)
 	if endunix==0: sttunix=t1[0]
 	else: sttunix=endunix
@@ -101,7 +101,7 @@ if end: pass
 elif len(t2)<20:
 	print('All present clock data have been included in the clock-difference file.')
 	end=True
-else:
+else:	# create a uniform time line
 	if endunix==0: sttunix=t2[0]
 	else: sttunix=endunix
 	t3=np.arange(sttunix,t2[-1],deltat)
@@ -109,7 +109,7 @@ if end: pass
 elif len(t3)<20:
 	print('All present clock data have been included in the clock-difference file.')
 	end=True
-else:
+else:	# fit the clock correction with polynomials
 	dt3=np.interp(t3,t2,dt2)
 	dtj0=np.append(sttunix-1,np.append(dtj0[(dtj0>sttunix)&(dtj0<=t3[-1])],t3[-1]+1))
 	dtj=[]

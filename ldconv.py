@@ -18,7 +18,7 @@ d=ld.ld(args.filename)
 shape=tuple(d.read_shape())
 info=d.read_info()
 #
-if args.mode=='dat':
+if args.mode=='dat':	# save the four dimension data to a dat file
 	d1=np.memmap(args.output+'.dat',dtype=np.float64,mode='w+',shape=shape)
 	del d1
 	weight=info['chan_weight']

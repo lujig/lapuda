@@ -6,20 +6,20 @@ import os
 import copy as cp
 import adfunc as af
 #
-ephname='DE436.1950.2050'
-sl=299792458.0
-km1=1.55051979176e-8
-lc=1.48082686742e-8
-iftek=1.000000015505197917599998747524139082638872
-lg=6.969290133091514e-10
-tdb0=-65.564518e-6
-mjd0=43144.0003725
-au_dist=149597870691
-pi_mm=3.14159265358979323846264338327950288
-pi=np.float64(pi_mm)
-dirname=os.path.split(os.path.realpath(__file__))[0]
+ephname='DE436.1950.2050'	# the ephemeris file name
+sl=299792458.0	# speed of light
+km1=1.55051979176e-8	# the linear difference between TDB and TCB
+lc=1.48082686742e-8	# the average linear difference between TCB and TCG
+iftek=1.000000015505197917599998747524139082638872	# the linear coefficient for TCB over TDB
+lg=6.969290133091514e-10	# the linear difference between TT and TCG
+tdb0=-65.564518e-6	# the time difference between TDB and TCB at time 'mjd0'
+mjd0=43144.0003725	# the bifurcation MJD time for TT and TCG
+au_dist=149597870691	# astronomical unit (m)
+pi_mm=3.14159265358979323846264338327950288	# PI in mpmath
+pi=np.float64(pi_mm)	# PI
+dirname=os.path.split(os.path.realpath(__file__))[0]	# the directory of the programs
 #
-def readeph(et,ephname=ephname):
+def readeph(et,ephname=ephname):	# read the parameters from ephemeris
 	# 0 mercury; 1 venus; 2 earth; 3 mars; 4 jupiter; 5 saturn; 6 uranus; 7 neptune; 8 pluto; 9 moon; 10 sun; 11 barycenter; 12 earth-moon-center
 	f=open(dirname+'/conventions/'+ephname,'rb')
 	title=f.read(84)
@@ -38,7 +38,7 @@ def readeph(et,ephname=ephname):
 		ipt[39:45]=st.unpack('<6L',f.read(24))
 	#
 	au=au*1000
-	ipt=ipt.reshape(15,3)
+	ipt=ipt.reshape(15,3)	# the intervals starting position and numbers 
 	dimension=np.array([3,3,3,3,3,3,3,3,3,3,3,2,3,3,1])
 	kernel_size=4+(2*ipt[:,1]*ipt[:,2]*dimension).sum()
 	recsize=kernel_size*4
@@ -112,8 +112,8 @@ def readeph(et,ephname=ephname):
 					start_coeff_k=coeff_start+(k+set_interval[s]*ncm)*n_cheb
 					coef0=coef[start_coeff_k:(start_coeff_k+n_cheb)]
 					posvel[:,k]=nc.chebval(tc[j_interval],coef0)
-					posvel[:,k+ncm]=nc.chebval(tc[j_interval],nc.chebder(coef0))*vfac
-					posvel[:,k+2*ncm]=nc.chebval(tc[j_interval],nc.chebder(coef0,2))*vfac**2
+					posvel[:,k+ncm]=nc.chebval(tc[j_interval],nc.chebder(coef0))*vfac	# the derivative of position is velosity
+					posvel[:,k+2*ncm]=nc.chebval(tc[j_interval],nc.chebder(coef0,2))*vfac**2	# the 2nd order derivative of position is acceleration
 				if i<10:
 					if i==2:
 						pv[j_sum,12]=posvel
@@ -133,7 +133,7 @@ def readeph(et,ephname=ephname):
 	acc=np.array(list(map(lambda x:vector(x[0],x[1],x[2],center='bary',scale='tdb',coord='equ',unit=sl,type0='acc'),acc0)))
 	return pos,vel,acc,nut,cons
 #
-def rotz(psi,mat):
+def rotz(psi,mat):	# rotate the matrix around z-axis
 	sp=np.sin(psi)
 	cp=np.cos(psi)
 	rot=np.array([[cp,sp,np.zeros_like(cp)],[-sp,cp,np.zeros_like(cp)],[np.zeros_like(cp),np.zeros_like(cp),np.ones_like(cp)]])
@@ -141,7 +141,7 @@ def rotz(psi,mat):
 		rot=rot.transpose(2,0,1)
 	return rot@mat
 #
-def rotx(phi,mat):
+def rotx(phi,mat):	# rotate the matrix around x-axis
 	sp=np.sin(phi)
 	cp=np.cos(phi)
 	rot=np.array([[np.ones_like(cp),np.zeros_like(cp),np.zeros_like(cp)],[np.zeros_like(cp),cp,sp],[np.zeros_like(cp),-sp,cp]])
@@ -149,7 +149,7 @@ def rotx(phi,mat):
 		rot=rot.transpose(2,0,1)
 	return rot@mat
 #
-def roty(theta,mat):
+def roty(theta,mat):	# rotate the matrix around y-axis	# normalize the vectors
 	st=np.sin(theta)
 	ct=np.cos(theta)
 	rot=np.array([[ct,np.zeros_like(ct),-st],[np.zeros_like(ct),np.ones_like(ct),np.zeros_like(ct)],[st,np.zeros_like(ct),ct]])
@@ -157,13 +157,13 @@ def roty(theta,mat):
 		rot=rot.transpose(2,0,1)
 	return rot@mat
 #
-def multiply(a,b):
+def multiply(a,b):	# return the cross product of two groups of vectors
 	if a.shape[-1]==b.shape[-1]==3:
 		ax,ay,az=a[...,0],a[...,1],a[...,2]
 		bx,by,bz=b[...,0],b[...,1],b[...,2]
 		return np.array([ay*bz-az*by,az*bx-ax*bz,ax*by-ay*bx]).T
 #
-def normalize(a):
+def normalize(a):	# normalize the vectors
 	return a/(a**2).sum(-1).reshape([*a.shape[:-1],1])
 #
 def lmst(mjd,olong):# sidereal time and the derivative, here mjd is the ut1_mjd
@@ -187,7 +187,7 @@ def lmst(mjd,olong):# sidereal time and the derivative, here mjd is the ut1_mjd
 	xlst = xlst%1.0
 	return xlst,sdd
 #
-def get_precessionMatrix(et0,nut): #et0 is the ut1_mjd
+def get_precessionMatrix(et0,nut): 	# calculate the precession matrix with UT1 time and nutation parameters
 	par_zeta=np.array([2306.2181, 0.30188, 0.017998])
 	par_z=np.array([2306.2181, 1.09468, 0.018203])
 	par_theta=np.array([2004.3109, -0.42665, -0.041833])
@@ -217,7 +217,7 @@ def get_precessionMatrix(et0,nut): #et0 is the ut1_mjd
 	prn=(nut0.transpose(2,0,1)@(prc.transpose(2,0,1))).transpose(0,2,1)
 	return prn
 #
-def datetime2mjd(datetime):
+def datetime2mjd(datetime):	# change datetime (year, month, day, hour, minute, and second) to be MJD time
 	ndate=int(np.size(datetime)/6)
 	yr,mo,dat,hr,mi,se=np.array(datetime).reshape(ndate,6).T
 	dat0=hr*3600+mi*60+se
@@ -230,7 +230,7 @@ def datetime2mjd(datetime):
 	yrdat=np.array(list(map(lambda x:x[0][:(x[1]-1950)].sum(),zip(yrdat,yr))))
 	return time(33281+yrdat+modat+dat,dat0)
 #
-def mjd2datetime(mjd):
+def mjd2datetime(mjd):	# change MJD time to be date time (year, month, day, second in one day, and day in one year)
 	mjd=np.array(mjd).reshape(-1)
 	ndate=np.array(mjd).size
 	day,sec=np.divmod(mjd,1)
@@ -297,7 +297,7 @@ class vector:
 	def copy(self):
 		return cp.deepcopy(self)
 	#
-	def equ2ecl(self):
+	def equ2ecl(self):	# transform the coordinates from equatorial to ecliptic
 		if ((self.scale=='si')|(self.scale=='tdb'))&(self.coord=='equ'):
 			arcsec2rad=pi/648000.0
 			obliq=84381.4059*arcsec2rad
@@ -306,7 +306,7 @@ class vector:
 			self.y,self.z=ce*self.y+se*self.z,ce*self.z-se*self.y
 			self.coord='ecl'
 	#
-	def ecl2equ(self):
+	def ecl2equ(self):	# transform the coordinates from ecliptic to equatorial
 		if ((self.scale=='si')|(self.scale=='tdb'))&(self.coord=='ecl'):
 			arcsec2rad=pi/648000.0
 			obliq=84381.4059*arcsec2rad
@@ -315,7 +315,7 @@ class vector:
 			self.y,self.z=ce*self.y-se*self.z,ce*self.z+se*self.y
 			self.coord='equ'
 	#
-	def si2tdb(self):
+	def si2tdb(self):	# change scale from TCB to TDB
 		if self.scale=='si':
 			if self.type=='pos':
 				self.x*=(1/iftek)
@@ -327,7 +327,7 @@ class vector:
 				self.z*=iftek
 			self.scale='tdb'
 	#
-	def tdb2si(self):
+	def tdb2si(self):	# change scale from TDB to TCB
 		if self.scale=='tdb':
 			if self.type=='pos':
 				self.x*=iftek
@@ -339,7 +339,7 @@ class vector:
 				self.z*=(1/iftek)
 			self.scale='si'
 	#
-	def itrs2grs80(self):
+	def itrs2grs80(self):	# transform the coordinates from ITRS to GRS80
 		if self.scale=='itrs' and self.type=='pos':
 			x,y,z=self.x,self.y,self.z
 			grs80_a=6378137.0
@@ -363,7 +363,7 @@ class vector:
 			self.x,self.y,self.z=lon,lat,height
 			self.scale='grs80'
 	#
-	def grs802itrs(self):
+	def grs802itrs(self):	# transform the coordinates from GRS80 to ITRS
 		if self.scale=='grs80' and self.type=='pos':
 			lon,lat,height=self.x,self.y,self.z
 			esq=1.0/298.257222101*(2-1.0/298.257222101)
@@ -782,7 +782,7 @@ class times:
 			dts=((dt1.mjd*dt1.unit)**2).mean()
 		return tmp.tt
 	#
-	def deltat_fb(self):
+	def deltat_fb(self):	# the time difference between TT and TCB induced by gravitational and the Earth motion effects (Fairhead and Bretagnon, 1990)
 		f=open('./conventions/'+'TDB.1950.2050','rb')
 		b=st.unpack('>2d2i5d',f.read(64))
 		tdbd1,tdbd2,tdbdt,tdbncf=b[:4]
@@ -801,7 +801,7 @@ class times:
 		f.close()
 		return tttdb-tdb0
 	#
-	def deltat_if(self):
+	def deltat_if(self):	# the time difference (and its derivative) between TT and TCB induced by gravitational and the Earth motion effects (Irwin and Fukushima, 1999)
 		f=open(dirname+'/conventions/'+'TIMEEPH_short.te405','rb')
 		f.seek(264)
 		startjd,endjd,stepjd,ncon=st.unpack('>3d1L',f.read(28))
@@ -844,7 +844,7 @@ class times:
 			pv[j_nr]=posvel
 		return -pv.T
 	#
-	def ve_if(self):
+	def ve_if(self):	# calculate the motion of the Earth
 		f=open(dirname+'/conventions/'+'TIMEEPH_short.te405','rb')
 		f.seek(264)
 		startjd,endjd,stepjd,ncon=st.unpack('>3d1L',f.read(28))
@@ -1065,7 +1065,7 @@ class times:
 		d=np.arctan(np.sqrt(r2/(1-r2)))
 		rc2i=rotz(-(e+s),roty(d,rotz(e,rbw))) # rotation matrix of transform celestial system to intermediate system
 		#
-		# the calculation of era is just 1st order in the sofa code, it is lower than the 3rd order of lmst in tempo2? or the lmst is not the era?
+		# the calculation of 'era' is just 1st order in the sofa code, it is lower than the 3rd order of lmst in tempo2? or the lmst is not the 'era'?
 		era=2*np.pi*((ut1_jd2+0.7790572732640 + 0.00273781191135448 * (ut1_jd1-dj00+ut1_jd2))%1) # earth rotation angle, Greenwich sidereal time
 		self.lst=(era+lon)/(2*np.pi)%1
 		t2c=polarmotion@rotz(era,rc2i)

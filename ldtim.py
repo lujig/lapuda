@@ -93,7 +93,7 @@ dt=phase.offset
 dterr=toae/period
 dt=(dt-args.zero)%1
 #
-def merge(date,sec,dt,dterr,freq,dm,period):
+def merge(date,sec,dt,dterr,freq,dm,period):	# merge adjacent ToAs
 	ttmp=time.local.mjd
 	jj=np.zeros(nt,dtype=np.int32)
 	j0=1
@@ -148,7 +148,7 @@ time=te.times(te.time(date,sec,scale=info['telename']))
 #
 paras=args.fit.split(',')
 #
-def psrfit(psr,paras,time,dt,toae,freq):
+def psrfit(psr,paras,time,dt,toae,freq):	# fit the ToAs with pulsar parameters
 	psrt=pm.psr_timing(psr,time,freq)
 	lpara=len(paras)
 	x0=np.zeros(lpara+1)

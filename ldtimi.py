@@ -30,11 +30,11 @@ if args.par:
 else:
 	psr0=pr.psr(info['psr_name'])
 #
-jj_list=[np.ones(len(data),dtype=np.bool)]
-select_list=[np.ones(len(data),dtype=np.bool)]
-time_jump=np.ones(len(data),dtype=np.int64)
-plotlim_list=[]
-merge_mark,restart,reset_select,fit_mark=False,True,False,False
+jj_list=[np.ones(len(data),dtype=np.bool)]	# the list which records the reserved ToAs
+select_list=[np.ones(len(data),dtype=np.bool)]	# the list which records the ToAs in zoom in region
+time_jump=np.ones(len(data),dtype=np.int64)	# the list which records the time-jump for each ToAs
+plotlim_list=[]	# the list recording the zoom in history
+merge_mark,restart,reset_select,fit_mark=False,True,False,False	# the marks for merging ToAs, restart fitting, reset zoom in region, and fitting the ToAs
 err_limit=1.0
 dtunit='phase'
 xax='mjd'
@@ -48,7 +48,7 @@ fig.clf()
 x1,x2=0.18,0.95
 y1,y2,y3=0.16,0.56,0.96
 #
-def merge(time,dt,dterr,freq,dm,dmerr,period,jj1,se):
+def merge(time,dt,dterr,freq,dm,dmerr,period,jj1,se):	# merge the adjacent ToAs
 	global mergej
 	date,sec=time.local.date,time.local.second
 	if 'mergej' in locals().keys():
@@ -112,7 +112,7 @@ def merge(time,dt,dterr,freq,dm,dmerr,period,jj1,se):
 	se2=np.array(se2)
 	return te.times(te.time(date2,sec2,scale=info['telename'])),dt2,dt2err,freq2,dm2,dmerr2,period2,jj2,se2
 #
-def psrfit(psr,paras,time,dt,toae,freq,jj,se):
+def psrfit(psr,paras,time,dt,toae,freq,jj,se):	# fit the ToAs with pulsar parameters
 	psrt=pm.psr_timing(psr,time,freq)
 	lpara=len(paras)
 	x0=np.zeros(lpara+1)
@@ -152,7 +152,7 @@ def psrfit(psr,paras,time,dt,toae,freq,jj,se):
 	#print(fit(popt),dt,x0)
 	return popt,np.sqrt(pcov),fit(popt)+dt,resi(popt),psr1,psrt2
 #
-def plot(time,psrt,dt,dterr,dm,dmerr,jj,se):
+def plot(time,psrt,dt,dterr,dm,dmerr,jj,se):	# plot the figure with options
 	global ax1,xax,yax,xaxis,yaxis,yerr,plotlim_list,lines,points,yunit
 	marker_colors=np.array(['b']*len(jj))
 	marker_colors[np.logical_not(se)]='c'
@@ -233,7 +233,7 @@ def plot(time,psrt,dt,dterr,dm,dmerr,jj,se):
 	plotlim=[*ax1.get_xlim(),*ax1.get_ylim()]
 	plotlim_list=[plotlim]
 #
-def adjust():
+def adjust():	# adjust the zoom in region, set of ToAs to be fitted, and plot options
 	global jj_list,psr,time,dt,res,dterr,dm,yunit,select_list,reset_select,freq,dmerr,period,restart,fit_mark,time_jump
 	errentry.delete(0,np.int(np.uint32(-1)/2))
 	errentry.insert(0,str(err_limit))
@@ -295,7 +295,7 @@ def adjust():
 		yunit=''
 	plot(time1,psrt,dt1,dterr1,dm1,dmerr1,jj1,se1)
 #
-def zoom(cur_x0,cur_x,cur_y0,cur_y,reset=False):
+def zoom(cur_x0,cur_x,cur_y0,cur_y,reset=False):	# set the zoom in region
 	global ax1,plotlim_list
 	tmp_x0,tmp_x1=np.sort([cur_x0,cur_x])
 	tmp_y0,tmp_y1=np.sort([cur_y0,cur_y])
@@ -309,7 +309,7 @@ def zoom(cur_x0,cur_x,cur_y0,cur_y,reset=False):
 		if plotlim!=plotlim_list[-1]:
 			plotlim_list.append(plotlim)
 #
-def delete_range():
+def delete_range():	# delete ToAs in set of ToA to be fitted
 	global jj_list,ax1,lines,points
 	tmp_x0,tmp_x1=np.sort([cur_x0,cur_x])
 	tmp_y0,tmp_y1=np.sort([cur_y0,cur_y])
@@ -335,7 +335,7 @@ def delete_range():
 		points.set_color(marker_colors)
 		canvas.draw()	
 #
-def fit(fit=True,merge=True):
+def fit(fit=True,merge=True):	# implement the fitting process
 	global select_list,fit_mark
 	xlim1,xlim2,ylim1,ylim2=*ax1.get_xlim(),*ax1.get_ylim()
 	se=(xaxis>xlim1)&(xaxis<xlim2)&(yaxis>ylim1)&(yaxis<ylim2)
@@ -349,7 +349,7 @@ def fit(fit=True,merge=True):
 	fit_mark=fit
 	adjust()
 #
-def click(event):
+def click(event):	# handle the click event
 	global cur_x0,cur_y0,mouse_on,rect
 	if mouse_on: return
 	xlim1,xlim2,ylim1,ylim2=*ax1.get_xlim(),*ax1.get_ylim()
@@ -400,7 +400,7 @@ def release(event):
 	global key_on
 	key_on=''
 #
-def add_jump(a):
+def add_jump(a):	# add or minus a one-period jump for the ToAs of the right side of the cursor
 	global time_jump
 	if a=='a': jump=1
 	else: jump=-1
@@ -417,13 +417,13 @@ def add_jump(a):
 #
 def keymotion(a):
 	global plotlim_list,select_list,jj_list,lines,points,merge_mark,reset_select,restart
-	if a=='r':
+	if a=='r':	# reset the zoom in region
 		if len(plotlim_list)>1:
 			plotlim_list.pop()
 			ax1.set_xlim(*plotlim_list[-1][:2])
 			ax1.set_ylim(*plotlim_list[-1][2:])
 			canvas.draw()
-	elif a=='e':
+	elif a=='e':	# reset the zoom in region to origin
 		if len(select_list)>1:
 			if xax=='orbit': xlim=0,1
 			elif xax=='year': xlim=0,366
@@ -434,7 +434,7 @@ def keymotion(a):
 			ylim=ymin*1.05-ymax*0.05,-ymin*0.05+ymax*1.05
 			zoom(*xlim,*ylim,reset=True)
 			reset_select=True
-	elif a=='u':
+	elif a=='u':	# undo the last delete
 		if len(jj_list)>1:
 			jj_list.pop()
 			jj0=jj_list[-1]
@@ -455,26 +455,26 @@ def keymotion(a):
 			lines.set_color(marker_colors)
 			points.set_color(marker_colors)
 			canvas.draw()
-	elif a=='f':
+	elif a=='f':	# fit
 		fit(fit=True)
-	elif a=='a' or a=='d':
+	elif a=='a' or a=='d':	# add or minus a jump
 		add_jump(a)
-	elif a=='m':
+	elif a=='m':	# merge or unmerge the ToAs
 		merge_mark=not merge_mark
 		fit(fit=False,merge=False)
-	elif a=='b':
+	elif a=='b':	# restart the fitting process
 		restart=True
 		adjust()	
-	elif a=='p':
+	elif a=='p':	# print present fitted pulsar parameters
 		print('Pulsar parameters:')
 		print(psr)
-	elif a=='q':
+	elif a=='q':	# quit
 		root.destroy()
-	elif a=='s':
+	elif a=='s':	# save the pulsar parameters to file
 		psrfile=tk.filedialog.asksaveasfilename(defaultextension='.par')
 		if psrfile:
 			psr.writepar(psrfile)
-	elif a=='x':
+	elif a=='x':	# save the timing residuals to file
 		resfile=tk.filedialog.asksaveasfilename(defaultextension='.res')
 		if resfile:
 			tmp=np.array([time.local.date,time.local.second,dt,dterr,np.int8(jj_list[-1]),np.int8(select_list[-1])]).T
@@ -499,14 +499,14 @@ def keymotion(a):
 		sys.stdout.write("  q    Exit program\n\n")
 	return
 #
-def xmode(mode):
+def xmode(mode):	# choose the x-axis mode
 	global xax,select_list
 	if mode==xax: return
 	xax=mode
 	select_list=[select_list[0]]
 	adjust()
 #
-def ymode(mode):
+def ymode(mode):	# choose the y-axis mode
 	global yax,select_list,dtunit,y5bttn
 	if mode==yax: return
 	select_list=[select_list[0]]
@@ -519,7 +519,7 @@ def ymode(mode):
 		yax=mode
 		adjust()
 #
-def submit_err(event):
+def submit_err(event):	# screen the large noise ToAs
 	global err_limit
 	err=errentry.get()
 	try:

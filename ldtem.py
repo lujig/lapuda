@@ -167,7 +167,7 @@ if args.dm_corr:
 dm_zone=np.max([0.1,dm/100])
 dm_zone=np.min([0.5,dm_zone])
 #
-def dmcor(data,freq,rchan,period,output=1):
+def dmcor(data,freq,rchan,period,output=1):	# correct the DM before extracting the template
 	data=data[rchan]
 	freq=freq[rchan]
 	fftdata=fft.rfft(data,axis=1)
@@ -210,7 +210,7 @@ else:
 cumsub=np.append(0,np.cumsum(nsub_new)[:-1])
 krange=[]
 discard=0
-for k in np.arange(filenum):
+for k in np.arange(filenum):	# read all data in files
 	d=ld.ld(filelist[k])
 	info=d.read_info()
 	#
@@ -323,7 +323,7 @@ for s in np.arange(nchan_res):
 	jj=(result.sum(1)**2)>=0
 	result=result[jj]
 	fres=fft.rfft(result,axis=1)
-	if not args.auto:
+	if not args.auto:	# remove profiles with strong noise
 		fabs=np.abs(fres)
 		fabss=fabs.sum(0)
 		ntmp=int(np.round(fabss.sum()/fabss.max()))
@@ -344,7 +344,7 @@ for s in np.arange(nchan_res):
 			parser.error('The number of frequency-domain points for linear fitting is invalid.')
 	else:
 		fabss=fabs.sum(0)
-		lnumber=int(np.round(fabss.sum()/fabss.max()))
+		lnumber=int(np.round(fabss.sum()/fabss.max()*2))
 		lnumber=max(4,lnumber)
 	#
 	knumber=lnumber*2
@@ -353,7 +353,7 @@ for s in np.arange(nchan_res):
 	angerr=np.zeros([nsub,knumber-1])
 	nb=int(nbin/2+1)
 	errbinnum=np.min([int(nb/6),20])
-	for i in np.arange(nsub):
+	for i in np.arange(nsub):	# pre-align all the profiles
 		f=fres[-1]
 		tmpnum=np.argmax(fft.irfft(fres[i]*f.conj()))
 		d0=np.append(result[i,tmpnum:],result[i,:tmpnum])
@@ -371,7 +371,7 @@ for s in np.arange(nchan_res):
 	#
 	result[:-1]=shift(result[:-1],-dt[:-1]*2*np.pi)
 	#
-	if args.red:
+	if args.red:	# align the pulse phase and reserve the low frequency component
 		fres=fft.rfft(result,axis=1)
 		fang=np.angle(fres)[:,1:knumber]
 		fang0=fang[0]*1
@@ -402,7 +402,7 @@ for s in np.arange(nchan_res):
 		abs0=(np.abs(fres[jj])*weight.reshape(-1,1)).sum(0)/weight.sum()
 		prof0=abs0[1:knumber]*np.exp(1j*(ang1+fang0))
 		prof[s]=fft.irfft(np.concatenate(([0],prof0,np.zeros(nb-knumber))))
-	else:
+	else:	# align with the pre-aligh profile
 		fres=fft.rfft(result,axis=1)
 		weight=1/(np.var(fres[:,-errbinnum:].real,1)+np.var(fres[:,-errbinnum:].imag,1))
 		prof0=(result*weight.reshape(-1,1)).sum(0)/weight.sum()
@@ -428,7 +428,7 @@ for s in np.arange(nchan_res):
 			result-=result[:,pos:(pos+int(nbin/10))].mean(1).reshape(-1,1)
 			result/=result.max(1).reshape(-1,1)
 			nc=2
-			pca=PCA(n_components=nc)
+			pca=PCA(n_components=nc)	# PCA to get the initial value for fitting
 			def resi(x):
 				knk,cin,dk=x[:nc*nsub],x[nc*sub:nc*nsub+nc*nbin],x[nc*nsub+nc*nbin:]
 				kk=knk.reshape(nsub,nc)
@@ -439,7 +439,7 @@ for s in np.arange(nchan_res):
 			k0=np.array([[1]+[0]*(nc-1)]*nsub).reshape(-1)
 			d0=np.zeros(nsub)
 			p0=np.concatenate((k0,c0,d0),axis=0)
-			res=so.leastsq(resi,x0=p0,full_output=True)
+			res=so.leastsq(resi,x0=p0,full_output=True)	# fit to obtain different components
 			knk,cin,dk=res[0][:nc*nsub],res[0][nc*sub:nc*nsub+nc*nbin],res[0][nc*nsub+nc*nbin:]
 			kk=knk.reshape(nsub,nc)
 			cc=cin.reshape(nc,nbin)
@@ -454,7 +454,7 @@ for s in np.arange(nchan_res):
 		else:
 			prof[s]=(result*weight.reshape(-1,1)).sum(0)/weight.sum()
 #
-if args.freqtem:
+if args.freqtem:	# align the multi-frequency template
 	fprof=fft.rfft(prof,axis=-1)
 	if args.component: 
 		f=fprof[0,0]

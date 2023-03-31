@@ -33,7 +33,9 @@ parser.add_argument('-n','--pulsar_name',default=0,dest='psr_name',help='input p
 parser.add_argument('-e','--pulsar_ephemeris',default=0,dest='par_file',help='input pulsar parameter file')
 parser.add_argument("-c","--coefficients_num",dest="ncoeff",default=12,type=int,help="numbers of Chebyshev polynomial coefficients on time axis")
 parser.add_argument("-b","--nbin",dest="nbin",default=0,type=int,help="number of phase bins in each period")
-parser.add_argument("-s","--sublen",dest="subint",default=0,type=np.float64,help="length of a subint (s)")
+parser.add_argument("-s","--sublen",dest="subint",default=0,type=np.float64,help="length of sub-integration (s)")
+parser.add_argument("--nsub",dest="nsub",default=0,type=int,help="total number of sub-integrations")
+parser.add_argument("--sub_nperiod",dest="sub_nperiod",default=0,type=int,help="the number of period in one sub-integration")
 parser.add_argument("-z","--zap",dest="zap_file",default=0,help="file recording zap channels")
 parser.add_argument("-r","--reverse",action="store_true",default=False,help="reverse the band")
 parser.add_argument("-l","--large_mem",action="store_true",default=False,help="large RAM")
@@ -54,7 +56,8 @@ def file_error(para,filetype):
 	parser.error("Fits "+filetype+" have different parameters: "+para+".")
 #
 telename,pol_type,npol,nchan,freq,bandwidth,tsamp,nsblk,bw_sign,stt_imjd,stt_smjd,stt_offs,nsub,offs_sub='','',0,0,0,0.0,0.0,0,True,0,0,0.0,0,0.0
-def file_check(fname,notfirst=True,filetype='data'):
+#
+def file_check(fname,notfirst=True,filetype='data'):	# check the file consistency
 	if not os.path.isfile(fname):
 		parser.error('Fits '+filetype+' name is invalid.')
 	try:
@@ -112,11 +115,11 @@ for i in np.arange(filenum):
 file_len,file_t0,filelist,file_time=np.array(file_len),np.array(file_t0),np.array(filelist),np.array(file_time)
 sorts=np.argsort(file_t0)
 file_len,file_t0,filelist,file_time=file_len[sorts],np.sort(file_t0),filelist[sorts],file_time[sorts]
-if len(file_len)>1:
+if len(file_len)>1:	# check the file continuity
 	if np.max(np.abs((file_len*nsblk*tsamp/86400.0+file_t0)[:-1]-file_t0[1:]))>(tsamp/86400.0):
 		parser.error("Data files are not continuous.")
 #
-if args.cal:
+if args.cal:	# check the calibration file and parameters
 	command.append('-a ')
 	if args.cal_para:
 		cal_para=args.cal_para.split(',')
@@ -188,7 +191,7 @@ stt_time=file_t0[0]
 freq_start,freq_end=(np.array([chanstart,chanend])-0.5*nchan)*channel_width+freq
 info={'nbin_origin':int(nbin),'telename':telename,'freq_start_origin':freq-bandwidth/2.0,'freq_end_origin':freq+bandwidth/2.0,'freq_start':freq_start,'freq_end':freq_end,'nchan_origin':int(nchan),'nchan':int(chanend-chanstart),'tsamp_origin':tsamp,'stt_time_origin':stt_time,'stt_time':stt_time,'npol':int(npol)}
 #
-if args.psr_name and args.par_file:
+if args.psr_name and args.par_file:	# check the conflict of folding flags
 	parser.error('At most one of flags -n and -p is required.')
 elif args.psr_name or args.par_file:
 	if args.period:
@@ -232,24 +235,51 @@ else:
 	dm=args.dm
 	command.append('-p '+str(args.period)+' -d '+str(args.dm))
 #
-if args.subint:
-	if args.subint<period:
-		parser.error('Duration time of a subint is too short')
-	elif args.subint<(1.5*period):
-		sys.stdout.write('Warning: Duration time of a subint is too short, then the out put file is indeed single pulse mode.\n')
-		info['mode']='single'
+if args.subint or args.nsub or args.sub_nperiod:	# check the subint flags
+	if (args.subint and args.nsub) or (args.subint and args.sub_nperiod) or (args.sub_nperiod and args.nsub):
+		parser.error('At most one of flags --sublen, --nsub and --sub_nperiod is required.')
+	if args.subint:
+		if args.subint<period:
+			parser.error('Duration time of a subint is too short')
+		elif args.subint<(1.5*period):
+			sys.stdout.write('Warning: Duration time of a subint is too short, then the out put file is indeed single pulse mode.\n')
+			info['mode']='single'
+		else:
+			info['mode']='subint'
+			sub_nperiod=np.int64(round(args.subint/period))
+			info['sublen']=period*sub_nperiod
+			command.append('-s '+str(args.subint))
+	elif args.nsub:
+		if args.nsub*period>nbin*tsamp:
+			parser.error('Duration time of a subint is too short')
+		elif args.nsub*period*1.5>nbin*tsamp:
+			sys.stdout.write('Warning: Duration time of a subint is too short, then the out put file is indeed single pulse mode.\n')
+			info['mode']='single'
+		elif args.nsub<0:
+			parser.error('The sub-integration number can not be negative.')
+		else:
+			info['mode']='subint'
+			sub_nperiod=np.int64(round(nbin*tsamp/args.nsub/period))
+			info['sublen']=period*sub_nperiod
+			command.append('--nsub '+str(args.nsub))
 	else:
-		info['mode']='subint'
-		sub_nperiod=np.int64(round(args.subint/period))
-		info['sublen']=period*sub_nperiod
-		command.append('-s '+str(args.subint))
+		if args.sub_nperiod==1:
+			sys.stdout.write('Warning: Period number in one sub-integration is too short, then the out put file is indeed single pulse mode.\n')
+			info['mode']='single'
+		elif args.sub_nperiod<0:
+			parser.error('The period number in one sub-integration can not be negative.')
+		else:
+			info['mode']='subint'
+			sub_nperiod=np.int64(args.sub_nperiod)
+			info['sublen']=period*sub_nperiod
+			command.append('--sub_nperiod '+str(args.sub_nperiod))
 else:
 	info['mode']='single'
 #
 info['dm']=dm
 #
 command.append('-c '+str(args.ncoeff))
-if args.nbin:
+if args.nbin:	# check the nbin flag
 	command.append('-b '+str(args.nbin))
 	if args.nbin>(period/tsamp):
 		if args.subint:
@@ -295,7 +325,7 @@ if args.multi:
 command=' '.join(command)
 info['history']=[command]
 #
-def deal_seg(n1,n2):
+def deal_seg(n1,n2):	# processing the noise data segments
 	cumsub=0
 	noise_data=np.zeros([noisen,npol,nchan])
 	noise_cum=np.zeros(noisen)
@@ -340,7 +370,7 @@ def deal_seg(n1,n2):
 	noise_cos,noise_sin=np.cos(noise_dphi),np.sin(noise_dphi)
 	return np.array([noise_a12,noise_a22,noise_cos,noise_sin])
 #
-if noise_mark=='fits':
+if noise_mark=='fits':	# the calibration data can be original fits data of noise or processed parameters in ld file
 	if args.verbose:
 		sys.stdout.write('Processing the noise file...\n')
 	if args.subi:
@@ -454,6 +484,7 @@ freq0=freq_start
 freq1=freq_end
 nbin0=nbin
 #
+# the delay in telescope line transmission
 roach_delay=8.192e-6*3
 gps_delay=1e-5
 transline_delay=2e-5
@@ -473,7 +504,7 @@ if args.period or (not pepoch):
 	stt_sec=time0[:-1].sum()-delay+offs_sub-tsamp*nsblk/2.0
 	stt_date=time0[-1]+stt_sec//86400
 	stt_sec=stt_sec%86400
-else:
+else:	# generate the Chebishev polynomials based on the time and frequency
 	chebx_test0=nc.chebpts1(args.ncoeff)
 	chebx_test=np.concatenate(([-1],chebx_test0,[1]),axis=0)
 	second_test=(chebx_test+1)/2*nbin0*tsamp+file_time[0][:-1].sum()-delay+offs_sub-tsamp*nsblk/2.0
@@ -551,7 +582,7 @@ def write_data(ldfile,data,startbin,channum,lock=0):
 	d.__write_chanbins_add__(data.T,startbin,channum)
 	#if args.multi: lock.release()
 #
-def gendata(cums,data,tpsub=0,tpsubn=0,last=False,first=True,lock=0):
+def gendata(cums,data,tpsub=0,tpsubn=0,last=False,first=True,lock=0):	# analyze the phase bin of the data
 	if args.reverse or (not bw_sign):
 		if nchan==chanend:
 			data=data[(nchan-chanstart-1)::-1]

@@ -50,7 +50,7 @@ def file_error(para,filetype):
 	parser.error("Fits "+filetype+" have different parameters: "+para+".")
 #
 telename,pol_type,npol,nchan,freq,bandwidth,tsamp,nsblk,bw_sign,stt_imjd,stt_smjd,stt_offs,nsub,offs_sub='','',0,0,0,0.0,0.0,0,True,0,0,0.0,0,0.0
-def file_check(fname,notfirst=True,filetype='data'):
+def file_check(fname,notfirst=True,filetype='data'):	# check the file consistency
 	if not os.path.isfile(fname):
 		parser.error('Fits '+filetype+' name is invalid.')
 	try:
@@ -108,11 +108,11 @@ for i in np.arange(filenum):
 file_len,file_t0,filelist,file_time=np.array(file_len),np.array(file_t0),np.array(filelist),np.array(file_time)
 sorts=np.argsort(file_t0)
 file_len,file_t0,filelist,file_time=file_len[sorts],np.sort(file_t0),filelist[sorts],file_time[sorts]
-if len(file_len)>1:
+if len(file_len)>1:	# check the file continuity
 	if np.max(np.abs((file_len*nsblk*tsamp/86400.0+file_t0)[:-1]-file_t0[1:]))>(tsamp/86400.0):
 		parser.error("Data files are not continuous.")
 #
-if args.cal:
+if args.cal:	# check the calibration file and parameters
 	command.append('-a ')
 	if args.cal_para:
 		cal_para=args.cal_para.split(',')
@@ -184,7 +184,7 @@ stt_time=file_t0[0]
 freq_start,freq_end=(np.array([chanstart,chanend])-0.5*nchan)*channel_width+freq
 info={'nbin_origin':int(nbin),'telename':telename,'freq_start_origin':freq-bandwidth/2.0,'freq_end_origin':freq+bandwidth/2.0,'freq_start':freq_start,'freq_end':freq_end,'nchan_origin':int(nchan),'nchan':1,'tsamp_origin':tsamp,'stt_time_origin':stt_time,'stt_time':stt_time,'npol':int(npol),'freq_align':freq_end-channel_width}
 #
-if args.psr_name and args.par_file:
+if args.psr_name and args.par_file:	# check the conflict of dispersion flags
 	parser.error('At most one of flags -n and -p is required.')
 elif args.psr_name or args.par_file:
 	if args.dm:
@@ -263,7 +263,7 @@ if args.multi:
 command=' '.join(command)
 info['history']=[command]
 #
-def deal_seg(n1,n2):
+def deal_seg(n1,n2):	# processing the noise data segments
 	cumsub=0
 	noise_data=np.zeros([noisen,npol,nchan])
 	noise_cum=np.zeros(noisen)
@@ -308,7 +308,7 @@ def deal_seg(n1,n2):
 	noise_cos,noise_sin=np.cos(noise_dphi),np.sin(noise_dphi)
 	return np.array([noise_a12,noise_a22,noise_cos,noise_sin])
 #
-if noise_mark=='fits':
+if noise_mark=='fits':	# the calibration data can be original fits data of noise or processed parameters in ld file
 	if args.verbose:
 		sys.stdout.write('Processing the noise file...\n')
 	if args.subi:
@@ -422,6 +422,7 @@ freq0=freq_start
 freq1=freq_end
 nbin0=nbin
 #
+# the delay in telescope line transmission
 roach_delay=8.192e-6*3
 gps_delay=1e-5
 transline_delay=2e-5
@@ -468,7 +469,7 @@ def write_data(n,cumsub,fsub,data,lock=0):
 if args.verbose:
 	sys.stdout.write('Dedispersing and folding the data...\n')
 #
-def dealdata(filelist,n,lock=0):
+def dealdata(filelist,n,lock=0):	# analyze the phase bin of the data
 	global noise_a12,noise_a22,noise_cos,noise_sin
 	if args.verbose:
 		if args.multi: lock.acquire()

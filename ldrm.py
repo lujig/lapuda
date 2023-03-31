@@ -157,7 +157,7 @@ for psr_name in psrlist:
 		lam=c/freq/1e6
 		lam2=lam**2
 		base=args.base.split(',')
-		if args.base:
+		if args.base:	# the baseline should be removed
 			if len(base)==1:
 				nbase=int(np.float64(base)*nbin)
 				pn,bn=af.radipos(i.mean(0),base=True,base_nbin=nbase)
@@ -184,7 +184,7 @@ for psr_name in psrlist:
 		def rot(x,rm,c):
 			return rm*x+c
 		#
-		rm,drm=0,1e10
+		rm,drm=0,1e-10
 		if args.rmi:
 			rm=args.rmi
 			dphi0=rot(lam**2,rm,0)*2
@@ -192,7 +192,7 @@ for psr_name in psrlist:
 			u0=u*np.cos(dphi0).reshape(-1,1)-q*np.sin(dphi0).reshape(-1,1)
 		else:
 			q0,u0=q.copy(),u.copy()			
-		while True:
+		while True:	# consider the diffusion in Q-U space for each phase bin, loop until the rm value converges
 			qs=q0.mean(0)
 			us=u0.mean(0)
 			qs-=qs[bn].mean()

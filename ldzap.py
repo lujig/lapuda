@@ -37,7 +37,7 @@ if nbin!=1:
 else:
 	data0=d.__read_bin_segment__(0,nperiod)[:,:,0]
 data0*=info['chan_weight'].reshape(-1,1)
-if nbin>128 or ((nbin==1)&(nperiod>512)):
+if nbin>128 or ((nbin==1)&(nperiod>512)):	# rebin the data to make it smaller and convinient to be shown
 	data0=fft.irfft(fft.rfft(data0,axis=1)[:,:257],axis=1)
 if args.norm:
 	data=data0-data0.mean(1).reshape(-1,1)
@@ -57,7 +57,7 @@ zaparray[zapnum,:]=True
 testdata.mask=zaparray
 zap0=1
 #
-if args.zap_file:
+if args.zap_file:	# merge zap channels in ld infomation and zap file
 	if not os.path.isfile(args.zap_file):
 		parser.error('The zap channel file is invalid.')
 	zchan=np.loadtxt(args.zap_file,dtype=np.int32)
@@ -81,7 +81,7 @@ spec=spec-np.min(spec)
 spec0=np.append(0,np.append(spec.repeat(2),0))
 spec1=copy.deepcopy(spec0)
 cali=args.cal
-if args.cal:
+if args.cal:	# show calibration parameters
 	if 'cal' not in info.keys():
 		parser.error('The file information does not contain calibration parameters.')
 	nchan0=info['nchan']
@@ -98,7 +98,7 @@ channelwidth=(freq_end-freq_start)/nchan
 halfwidth=channelwidth/2
 freq=np.linspace(ylim0[0]-halfwidth,ylim0[1]-halfwidth,len(spec)+1).repeat(2)
 #
-def plotimage(ylim):
+def plotimage(ylim):	# refresh the figure
 	ax.imshow(testdata[::-1,:],aspect='auto',interpolation='nearest',extent=(0,1,ylim0[0]-halfwidth,ylim0[1]-halfwidth),cmap=colormap)
 	if cali:
 		ax1.plot(cal1,freq,'-')
@@ -117,10 +117,10 @@ def plotimage(ylim):
 	ax.set_ylabel('Frequency (MHz)',fontsize=30)
 	canvas.draw()
 #
-def ycal(y,ylim):
+def ycal(y,ylim):	# calculate the y-value corresponding to the cursor
 	return (fig.bbox.extents[3]-y-ax.bbox.extents[1])/ax.bbox.bounds[3]*(ylim[1]-ylim[0])+ylim[0]
 #
-def chancal(y):
+def chancal(y):	# calculate the channel index corresponding to the y-value
 	return np.int32((y-freq_start)/channelwidth)
 #
 fig=Figure(figsize=(40,30),dpi=80)
@@ -142,13 +142,13 @@ def leftclick(event):
 		ylim1=ylimlist[-1]
 	else:
 		ylim1=ylim0
-	if ylim==0:
+	if ylim==0:	# click to choose a channel
 		y=(fig.bbox.extents[3]-event.y)/fig.bbox.extents[3]
 		l2=ln.Line2D([0,1],[y,y],color='k',transform=fig.transFigure,figure=fig)
 		fig.lines.append(l2)
 		canvas.draw()
 		ylim=ycal(event.y,ylim1)
-	else:
+	else:	# click again to zoom in
 		ylim=[ylim,ycal(event.y,ylim1)]
 		ylimlist.append(ylim)
 		ax.set_ylim(ylim[0]-halfwidth,ylim[1]-halfwidth)
@@ -167,9 +167,9 @@ def rightclick(event):
 	chan=chancal(ycal(event.y,ylim1))
 	chan=min(chan,nchan-1)
 	if chan>=0 and chan<nchan:
-		if ylim==0:
+		if ylim==0:	# click to remove one channel
 			zaplist.append([chan])
-		else:
+		else:	# click after a left click to remove the region between two clicks
 			if chancal(ylim)<=chan:
 				zaplist.append(list(range(max(0,chancal(ylim)),chan+1)))
 			else:
@@ -177,7 +177,7 @@ def rightclick(event):
 			ylim=0
 		update_image()
 #
-def update_image():
+def update_image():	# update the parameters to plot the figure
 	global ylim,spec1
 	zapnum=set()
 	for i in zaplist:
@@ -204,27 +204,27 @@ def update_image():
 	plotimage(ylim)
 	ylim=0
 #
-def move_tk(event):
+def move_tk(event):	# the black horizon line move with cursor
 	if event.x>ax.bbox.extents[0] and event.x<ax1.bbox.extents[2]: 
 		y=(fig.bbox.extents[3]-event.y)/fig.bbox.extents[3]
 		l1.set_ydata([y,y])
 		canvas.draw()
 #
-def move_gtk(window,event):
+def move_gtk(window,event):	# the black horizon line move with cursor (GTK version)
 	if event.x>ax.bbox.extents[0] and event.x<ax1.bbox.extents[2]: 
 		y=(fig.bbox.extents[3]-event.y)/fig.bbox.extents[3]
 		l1.set_ydata([y,y])
 		canvas.draw()
 #
-def press_gtk(window,event):
+def press_gtk(window,event):	# press a key (GTK version)
 	keymotion(gtk.gdk.keyval_name(event.keyval))
 #
-def press_tk(event):
+def press_tk(event):	# press a key
 	keymotion(event.keysym)
 #
-def keymotion(a):
+def keymotion(a):	# press a key
 	global ylim
-	if a=='q':
+	if a=='q':	# press 'q' to quit the programme and save the zapped channels in a txt file
 		root.destroy()
 		zapnum=set()
 		for i in zaplist:
@@ -232,7 +232,7 @@ def keymotion(a):
 		zapnum=np.sort(list(zapnum))
 		zapnum=zapnum[(zapnum>=0)&(zapnum<nchan)]
 		np.savetxt(args.filename[:-3]+'_zap.txt',zapnum,fmt='%i')
-	elif a=='s':
+	elif a=='s':	# press 's' to save the zapped data into a new file
 		root.destroy()
 		zapnum=set()
 		for i in zaplist:
@@ -256,7 +256,7 @@ def keymotion(a):
 			info['history']=[command]
 			info['file_time']=[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())]
 		save.write_info(info)
-	elif a=='r':
+	elif a=='r':	# press 'r' to reset the zoom in region to the state before last zoom
 		if ylimlist:
 			ylimlist.pop()
 		else: return
@@ -268,16 +268,16 @@ def keymotion(a):
 		ax1.set_ylim(ylim[0]-halfwidth,ylim[1]-halfwidth)
 		canvas.draw()
 		ylim=0
-	elif a=='u':
+	elif a=='u':	# press 'u' to withdraw the last zap
 		if len(zaplist)>zap0:
 			zaplist.pop()
 		else: return
 		update_image()
-	elif a=='c':
+	elif a=='c':	# press 'c' to set the right panel to show the calibration parameters
 		global cali
 		cali=not cali
 		update_image()
-	elif a=='h':
+	elif a=='h':	# press 'h' to show help information
 		sys.stdout.write("\nldzap interactive commands\n\n")
 		sys.stdout.write("Mouse:\n")
 		sys.stdout.write("  Left-click selects the start of a range\n")
@@ -287,6 +287,7 @@ def keymotion(a):
 		sys.stdout.write("  h  Show this help\n")
 		sys.stdout.write("  u  Undo last zap command\n")
 		sys.stdout.write("  r  Reset zoom and update dynamic spectrum\n")
+		sys.stdout.write("  c  Switch the right panel between showing the calibration parameters and spectra information\n")
 		sys.stdout.write("  s  Save zapped version as (filename)_zap.ld and quit\n")
 		sys.stdout.write("  q  Exit program\n\n")
 #

@@ -11,7 +11,7 @@ except:
 #
 version='JigLu_20220221'
 #
-parser=ap.ArgumentParser(prog='ldcal',description='Dedisperse and Fold the psrfits data.',epilog='Ver '+version)
+parser=ap.ArgumentParser(prog='ldcal',description='Process noise data in fits file to obtain calibration parameters, or merge multi-calibration-file to a large file.',epilog='Ver '+version)
 parser.add_argument('-v','--version', action='version', version=version)
 parser.add_argument('--verbose', action="store_true",default=False,help="print detailed information")
 parser.add_argument("filename",nargs='+',help="name of file or filelist")
@@ -44,7 +44,7 @@ else:
 def file_error(para,filetype):
 	parser.error(filetype+" have different parameters: "+para+".")
 #
-def fits_check(fname,notfirst=True,filetype='Fits file'):
+def fits_check(fname,notfirst=True,filetype='Fits file'):	# check the consistency of file
 	if not os.path.isfile(fname):
 		parser.error(filetype+' name '+fname+' '+'is invalid.')
 	try:
@@ -91,7 +91,7 @@ def fits_check(fname,notfirst=True,filetype='Fits file'):
 	del subint_data
 	f.close()
 #
-def ld_check(fname,notfirst=True,filetype='Ld file'):
+def ld_check(fname,notfirst=True,filetype='Ld file'):	# check the consistency of file
 	if not os.path.isfile(fname):
 		parser.error(filetype+' name '+fname+' '+'is invalid.')
 	try:

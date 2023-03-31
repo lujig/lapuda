@@ -28,7 +28,7 @@ if args.verbose:
 filelist=args.filename
 filenum=len(filelist)
 #
-def ld_check(fname,notfirst=True):
+def ld_check(fname,notfirst=True):	# check the validity of file
 	fnametmp='___'+fname
 	if fnametmp[-3:]!='.ld':
 		parser.error('File '+fname+' is not LD format.')
@@ -66,7 +66,7 @@ if args.correct:
 	command.append('-c')
 command=' '.join(command)
 #
-def func(x0,y0,c0):
+def func(x0,y0,c0):	# the ellipticity of polarization should have a linear relation with frequency
 	c=[0.0015304279396914935,-5.142979752233712]
 	def lineres(p):
 		k,b=p
@@ -82,7 +82,7 @@ def func(x0,y0,c0):
 	jj=np.arange(len(x0))[np.abs(y0-y1)<c0]
 	return k,b,jj
 #
-def calzap(aa,bb,cr,ci):
+def calzap(aa,bb,cr,ci):	# consider the smoothness of aa and bb and the elliptical angle calculated with cr and ci
 	aa=aa/aa[chanstart:chanend].mean()
 	bb=bb/bb[chanstart:chanend].mean()
 	b,a=ss.butter(10,0.1,'lowpass')
@@ -199,7 +199,7 @@ for i in filelist:
 	ff=np.abs(f*f.conj())
 	nbin=np.int16(ff.shape[1]/2)
 	r2=ff[:,nbin:].sum(1)
-	rs=np.argsort(r2)
+	rs=np.argsort(r2)	# screen with noise intensity
 	f0=f[rs].cumsum(0)
 	ff=np.abs(f0*f0.conj())
 	a=ff[:,1:nbin].sum(1)/ff[:,nbin:].sum(1)

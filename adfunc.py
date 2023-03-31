@@ -2,7 +2,7 @@ import numpy as np
 import numpy.fft as fft
 import scipy.optimize as so
 #
-def reco(x):
+def reco(x):	# recognize the telescope name from its aliases
 	dirname=os.path.split(os.path.realpath(__file__))[0]
 	with open(dirname+'/conventions/aliase.txt') as f:
 		names=f.readlines()
@@ -11,19 +11,19 @@ def reco(x):
 			return i.split()[0]
 	return x
 #
-def shift(y,x):
+def shift(y,x):	# assistant function for dmdet(); return the shifted counterpart of the Fourier-domain array
 	ffts=y*np.exp(x*1j)
 	fftr=fft.irfft(ffts)
 	return fftr
 #
-def dmdet(fftdata,dmconst,dm0,dmw,polynum,prec=0):
+def dmdet(fftdata,dmconst,dm0,dmw,polynum,prec=0):	# determine the best DM with the specified precision
 	length=100
 	dm=np.linspace(dm0-dmw,dm0+dmw,length)
 	value=np.zeros(length)
 	for i in np.arange(length):
 		disp=dm[i]*dmconst
-		value[i]=np.max(shift(fftdata,disp).sum(0))
-		value[i]=(shift(fftdata,disp).sum(0)**2).sum()
+		#value[i]=np.max(shift(fftdata,disp).sum(0))
+		value[i]=(shift(fftdata,disp).sum(0)**2).sum()	# using the Minkowski inequality, and assuming that the pulse profiles have uniform shape along frequency
 	polyfunc=np.polyfit(dm,value,polynum)
 	fitvalue=np.polyval(polyfunc,dm)
 	roots=np.roots(np.polyder(polyfunc))
@@ -44,7 +44,7 @@ def dmdet(fftdata,dmconst,dm0,dmw,polynum,prec=0):
 			else: return dmmax,dmerr,dm,value,fitvalue
 	return 0,0
 #
-def baseline0(data):
+def baseline0(data):	# determine the baseline of the data (old version)
 	nbin=data.size
 	bins,mn=10,nbin/10
 	stat,val=np.histogram(data[:,0],bins)
@@ -65,7 +65,7 @@ def baseline0(data):
 		base=data[(data[:,0]>(-poly[1]/poly[0]/2.0-(val[1]-val[0])*0.5))&(data[:,0]<(-poly[1]/poly[0]/2.0+(val[1]-val[0])*0.5))].mean(0)
 	return base
 #
-def baseline(data,base_nbin=0,pos=False):
+def baseline(data,base_nbin=0,pos=False):	# determine the baseline of the data
 	nbin=data.size
 	base_nbin=int(base_nbin)
 	if base_nbin<=0:
@@ -79,7 +79,7 @@ def baseline(data,base_nbin=0,pos=False):
 	else:
 		return base
 #
-def radipos(data,crit=10,base=False,base_nbin=0):
+def radipos(data,crit=10,base=False,base_nbin=0):	# determine the radiation position of the data
 	base,pos=baseline(data,pos=True,base_nbin=base_nbin)
 	nbin=data.size
 	base_nbin=int(nbin/10)

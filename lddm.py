@@ -36,7 +36,7 @@ command=['lddm.py']
 filelist=args.filename
 errorfile=[]
 filedict={}
-for i in filelist:
+for i in filelist:	# check the files
 	if not os.path.isfile(i):
 		parser.error(i+' is unexist.')
 	else:
@@ -159,7 +159,7 @@ for psr_name in psrlist:
 		else:
 			data=data0.copy()
 		#
-		if not args.text:
+		if not args.text:	# figure
 			from matplotlib.figure import Figure
 			import matplotlib.pyplot as plt
 			fig=Figure(figsize=(40,30),dpi=80)
@@ -219,7 +219,7 @@ for psr_name in psrlist:
 			fftr=fft.irfft(ffts)
 			return fftr
 		#
-		psr=pm.psr_timing(psr_para,te.times(te.time(info['stt_time']+info['length']/86400,0)),freq.mean())
+		psr=pm.psr_timing(psr_para,te.times(te.time(info['stt_time']+info['length']/86400,0)),freq.mean())	# the observed frequency is different from the original signal frequency in ISM
 		fftdata=fft.rfft(data,axis=1)
 		tmp=np.shape(fftdata)[-1]
 		const=(1/(freq*psr.vchange)**2*pm.dm_const/period*np.pi*2.0).repeat(tmp).reshape(-1,tmp)*np.arange(tmp)
@@ -229,7 +229,7 @@ for psr_name in psrlist:
 		else:
 			order=7
 		#
-		if args.prec:
+		if args.prec:	# calculate the best DM and its error
 			dmmax,dmerr=af.dmdet(fftdata[nzchan],const[nzchan],ddm,zone,order,prec=args.prec)
 		else:
 			dmmax,dmerr,dm,value,fitvalue=af.dmdet(fftdata[nzchan],const[nzchan],ddm,zone,order,prec=args.prec)

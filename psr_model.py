@@ -4,14 +4,14 @@ import subprocess as sp
 import psr_read as pr
 import adfunc as af
 #
-dm_const=4148.8064224
-dm_const_si=7437506.761
-kpc2m = 3.08568025e19
-mas_yr2rad_s = 1.536281850e-16
-pxconv = 1.74532925199432958E-2/3600.0e3
-au_dist=149597870691
+dm_const=4148.8064224	# the constant to calculate the dispersion delay
+dm_const_si=7437506.761	# the constant to calculate the dispersion delay (in SI unit)
+kpc2m = 3.08568025e19	# the constant to convert the distance unit kpc to m
+mas_yr2rad_s = 1.536281850e-16	# the constant to convert the proper motion unit mas/yr to rad/s
+pxconv = 1.74532925199432958E-2/3600.0e3	# the constant to convert the parallax to distance
+au_dist=149597870691	# astronomical unit (m)
 aultsc=499.00478364 #au_dist/te.sl
-gg=6.67259e-11
+gg=6.67259e-11	# gravitational constant
 #
 class psr_timing:
 	def __init__(self,psr,time,freq):
@@ -266,7 +266,7 @@ class psr_timing:
 		self.dtdaccecl=0.5*delt.reshape(-1,1)**2*rcaxyz@self.psr.dpos('acc','ecl','ecl').T
 		self.dt_ssb=dt_ssb-self.tropo_delay # -self.iono_delay # ???
 	#
-	def phase_der_para(self,paras):
+	def phase_der_para(self,paras):	# calculate the derivative of pulse phase to different parameters
 		nparas=len(paras)
 		deriv=np.zeros([nparas,self.time.size])
 		if not pr.para_with_err.intersection(paras):
@@ -314,7 +314,7 @@ class psr_timing:
 		tmp=str(self.psr.f0).split('.')
 		nf0=int(tmp[0])
 		ff0=np.float64('0.'+tmp[1])
-		phase2=nf0*ftpd+ff0*ntpd+ftpd*ff0
+		phase2=nf0*ftpd+ff0*ntpd+ftpd*ff0	# to reserve the precision of the data in maximum, the integer and decimal parts of pulsar rotating frequency and time are used in calculation respectively
 		phase2*=86400
 		phase0=te.phase(ntpd*nf0*86400,np.zeros_like(ntpd))
 		phase0=phase0.add(phase2)
@@ -656,7 +656,7 @@ class psr_timing:
 		#print(nf0*ntpd[0]*86400.0, phase2[0],phase3[0],phase1[0]+phase2[0])
 		self.phase=phase0.add(phase1)
 	#
-	def eccRes(self,prev_p,prev_e,prev_a,prev_epoch,prev_theta):
+	def eccRes(self,prev_p,prev_e,prev_a,prev_epoch,prev_theta):	# calculate the gravitational wave influence on ToA induced by a elliptic orbit source
 		msun=self.time.cons['GMS']/gg*aultsc*te.sl**2*1e4*te.iftek
 		mpc_to_m=kpc2m*1e3
 		ra_p=self.psr.raj
@@ -718,7 +718,7 @@ class psr_timing:
 			pert=1e9*(rplus*gplus+rcross*gcross)
 		return pert
 	#
-	def compute_binary(self):
+	def compute_binary(self):	# calculate the binary system induced delay
 		if self.psr.binary=='BT': return self.BTmodel()
 		if self.psr.binary=='BTJ': return self.BTJmodel()
 		if self.psr.binary=='BTX': return self.BTXmodel()
@@ -734,7 +734,7 @@ class psr_timing:
 		if self.psr.binary=='T2': return self.T2model()
 		if self.psr.binary=='T2_PTA': return self.T2_PTAmodel()
 	# 
-	def compute_binary_der(self):
+	def compute_binary_der(self):	# calculate the derivative of binary system induced delay to different binary parameters
 		if self.psr.binary=='BT': return self.BTmodel(der=True)
 		if self.psr.binary=='BTJ': return self.BTJmodel(der=True)
 		if self.psr.binary=='BTX': return self.BTXmodel(der=True)
@@ -2000,7 +2000,7 @@ class psr_timing:
 	def T2_PTAmodel(self,der=False):
 		return 0
 #
-def calculate_gw(ra1,dec1,ra2,dec2):
+def calculate_gw(ra1,dec1,ra2,dec2):	# calculate the influence of a gravitational wave source on the ToA
 	lambda_p,beta_p,lamb,beta=ra1,dec1,ra2,dec2
 	clp,slp,cbp,sbp,cl,sl,cb,sb=np.cos(lambda_p),np.sin(lambda_p),np.cos(beta_p),np.sin(beta_p),np.cos(lamb),np.sin(lamb),np.cos(beta),np.sin(beta)
 	vn=np.array([[clp*cbp,slp*cbp,sbp]])
@@ -2013,7 +2013,7 @@ def calculate_gw(ra1,dec1,ra2,dec2):
 	resc=vn@mec@vn.T
 	return resp,resc,costheta
 #
-def calcdh(ae,h3,h4,nharm,sel):
+def calcdh(ae,h3,h4,nharm,sel):	# calculate the Shapiro delay with expanded harmonic fitting (Freire & Wex, 2010)
 	s=h4/h3
 	firsth3=-4/3*np.sin(3*ae)
 	secondh3=0.0

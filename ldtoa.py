@@ -98,7 +98,7 @@ filelist=args.filename
 filenum=len(filelist)
 nsub_new=[]
 telename=''
-def ld_check(fname,filetype='Ld file'):
+def ld_check(fname,filetype='Ld file'): # check the consistensy of LD files
 	global freq_s,freq_e,tmptele
 	if not os.path.isfile(fname):
 		parser.error(filetype+' name '+fname+' '+'is invalid.')
@@ -190,7 +190,7 @@ def shift(y,x):
 	fftr=fft.irfft(ffts)
 	return fftr
 #
-def dmcor(data,freq,rchan,period,dm0,output=1):
+def dmcor(data,freq,rchan,period,dm0,output=1):	# correct the DM for multi-frequency data
 	data=data[rchan]
 	freq=freq[rchan]
 	fftdata=fft.rfft(data,axis=1)
@@ -211,7 +211,7 @@ else:
 	rchan=np.arange(chanend0-chanstart0)
 frequse=np.arange(freq_start0,freq_end0,channel_width0)[chanstart0:chanend0][rchan]
 #
-if info0['mode']!='template':
+if info0['mode']!='template':	# processing the template
 	data0=d0.period_scrunch()[chanstart0:chanend0,:,0]*info0['chan_weight'][chanstart0:chanend0].reshape(-1,1)
 	if not args.freqtoa:
 		if not args.dm_corr and chanend0-chanstart0>1:
@@ -281,7 +281,7 @@ command=' '.join(command)
 def lin(x,k):
 	return k*x
 #
-def poa(tpdata0,tpdata):
+def poa(tpdata0,tpdata):	# phase gradient method
 	nb=int(min(nbin0,nbin)//2+1)
 	tpdata-=tpdata.mean()
 	tpdata/=tpdata.max()
@@ -308,7 +308,7 @@ def poa(tpdata0,tpdata):
 	dterr=pcov[0,0]**0.5/(2*np.pi)
 	return [dt,dterr]
 #
-def coa(tpdata0,tpdata):
+def coa(tpdata0,tpdata):	# sinc interpolation correlation method
 	nb=int(min(nbin0,nbin)//2+1)
 	tpdata-=tpdata.mean()
 	tpdata/=tpdata.max()
@@ -342,7 +342,7 @@ def coa(tpdata0,tpdata):
 	dterr=err
 	return [dt,dterr]
 #
-def foa(tpdata0,tpdata):
+def foa(tpdata0,tpdata):	# leastsq method
 	nb=int(min(nbin0,nbin)//2+1)
 	tpdata-=tpdata.mean()
 	tpdata/=tpdata.max()
@@ -362,7 +362,7 @@ def foa(tpdata0,tpdata):
 	dterr=np.sqrt(pcov[0,0])
 	return [dt,dterr]
 #
-def ftoa(tpdata0,tpdata,comp,kvalue):
+def ftoa(tpdata0,tpdata,comp,kvalue):	# leastsq method for 2 components template
 	nb=int(min(nbin0,nbin)//2+1)
 	tpdata-=tpdata.mean()
 	tpdata/=tpdata.max()
@@ -400,7 +400,7 @@ elif args.algorithm=='fit':
 def dmdt(freq,dm,c):
 	return 1/freq**2*pm.dm_const/period0*dm+c
 #
-def toafunc(tpdata0,tpdata,freq=0,comp=[],kv=0):
+def toafunc(tpdata0,tpdata,freq=0,comp=[],kv=0):	# choose ToA calculation method
 	if not args.freqtoa:
 		return tfunc(tpdata0,tpdata)
 	else:

@@ -3,7 +3,7 @@ import numpy as np
 import numpy.polynomial.chebyshev as nc
 import argparse as ap
 import numpy.fft as fft
-import os,ld,time
+import os,ld,time,sys
 import adfunc as ad
 import psr_model as pm
 #
@@ -47,7 +47,7 @@ elif np.sum(map(np.bool,[args.fscrunch,args.tscrunch,args.bscrunch]))==3:
 #
 nchan=int(info['nchan'])
 nbin=int(info['nbin'])
-nperiod=int(info['nsub'])
+nsub=int(info['nsub'])
 npol=int(info['npol'])
 #
 if args.nchan_new:
@@ -62,18 +62,20 @@ else:
 	nchan_new=nchan
 #
 if args.nsub_new:
-	nsub_new=args.nsub_new
 	command.append('-t '+str(nsub_new))
-	if nsub_new>nperiod:
+	if nsub_new>nsub:
 		parser.error('The input subint number is larger than the period number of dat file.')
-	elif nsub_new<nperiod:
+	elif nsub_new<nsub:
 		info['mode']='subint'
+	nsub_new=int(np.ceil(nsub/np.ceil(nsub/args.nsub_new)))
+	if nsub_new!=args.nsub_new:
+		sys.stdout.write('Warning: the new sub-integration number '+str(args.nsub_new)+' can not be achieved, and the sub-integration number of new data is set to be '+str(nsub_new)+'.')
 elif args.tscrunch:
 	nsub_new=1
 	info['mode']='subint'
 	command.append('-T')
 else:
-	nsub_new=nperiod
+	nsub_new=nsub
 #
 if args.nbin_new:
 	nbin_new=args.nbin_new
@@ -149,20 +151,20 @@ else:
 #
 d1.write_shape([nchan_new,nsub_new,nbin_new,npol_new])
 #
-def shift(y,x):
-	nperiod,nbin,npol=y.shape
+def shift(y,x):	# cyclically shift y with phase difference x
+	nsub,nbin,npol=y.shape
 	if info['mode']=='subint':
 		fftp=fft.rfft(y,axis=1)
-		ffts=fftp*np.exp(x*nperiod*1j*np.arange(fftp.shape[1])).reshape(1,-1,1)
+		ffts=fftp*np.exp(x*nsub*1j*np.arange(fftp.shape[1])).reshape(1,-1,1)
 		fftr=fft.irfft(ffts,axis=1)
 	elif info['mode']=='single':
 		fftp=fft.rfft(y.reshape(-1,npol),axis=0)
 		ffts=fftp*np.exp(x*1j*np.arange(fftp.shape[0])).reshape(-1,1)
-		fftr=fft.irfft(ffts,axis=0).reshape(nperiod,nbin,npol)
+		fftr=fft.irfft(ffts,axis=0).reshape(nsub,nbin,npol)
 	return fftr
 #
 nchan0=chanend-chanstart
-if dmmodi:
+if dmmodi:	# use new DM value to modify data
 	freq0=freq_start+channel_width/2.0
 	freq1=freq_end-channel_width/2.0
 	if 'dm' in info.keys():
@@ -170,22 +172,22 @@ if dmmodi:
 	else:
 		dm_old=0
 	disp_time=1/np.linspace(freq0,freq1,nchan0)**2*np.float64(new_dm-dm_old)*pm.dm_const
-	disp=disp_time*np.pi*2.0/info['period']/nperiod
+	disp=disp_time*np.pi*2.0/info['period']/nsub
 	disp=disp-np.min(disp)
 	info['dm']=new_dm
 res=nchan0
-tpdata=np.zeros([nperiod,nbin,npol_new])
+tpdata=np.zeros([nsub,nbin,npol_new])
 weight_new=np.zeros(nchan_new)
 tpweight=0
 i_new=0
-for i in np.arange(chanstart,chanend):
+for i in np.arange(chanstart,chanend):	# fold in different frequency channel
 	if res>nchan_new:
 		res-=nchan_new
 		if i in zchan: continue
 		weight0=weight[i]
 		data0=d.read_chan(i)*weight0
 		if npol_new==1:
-			data0=data0[:,:,0].reshape(nperiod,nbin,npol_new)
+			data0=data0[:,:,0].reshape(nsub,nbin,npol_new)
 		if dmmodi:
 			tpdata+=np.float64(shift(data0,disp[i-chanstart]))
 		else:
@@ -193,35 +195,33 @@ for i in np.arange(chanstart,chanend):
 		tpweight+=weight0
 	else:
 		if i in zchan:
-			chan_data=np.zeros([nperiod,nbin,npol_new])
+			chan_data=np.zeros([nsub,nbin,npol_new])
 			weight0=0
 		else:
 			weight0=weight[i]
 			data0=d.read_chan(i)*weight0
 			if npol_new==1:
-				data0=data0[:,:,0].reshape(nperiod,nbin,npol_new)
+				data0=data0[:,:,0].reshape(nsub,nbin,npol_new)
 			if dmmodi:
 				chan_data=np.float64(shift(data0,disp[i-chanstart]))
 			else:
 				chan_data=data0
 		tpweight+=weight0*(res*1.0/nchan_new)
 		tpdata+=chan_data*(res*1.0/nchan_new)
-		if nsub_new!=nperiod:
+		if nsub_new!=nsub:	# compress in sub-integration dimension
 			if nsub_new==1:
 				tpdata=tpdata.sum(0).reshape(1,nbin,npol_new)
 			else:
-				tpdata=fft.rfft(tpdata,axis=0)*np.exp(-(0.5/nsub_new-0.5/nperiod)*1j*np.arange(nperiod/2+1)).reshape(-1,1,1)
-				if 2*nsub_new>=nperiod:
-					tpdata=fft.irfft(np.concatenate((tpdata,np.zeros([nsub_new+1-tpdata.shape[0],nbin])),axis=0),axis=0).reshape(nsub_new,2,nbin,npol_new).sum(1)
-				else:
-					tpdata=fft.irfft(tpdata[:(nsub_new+1),:],axis=0).reshape(nsub_new,2,nbin,npol_new).sum(1)
-		if nbin_new!=nbin:
+				tpdata0=np.zeros([int(np.ceil(nsub/nsub_new)*nsub_new),nbin,npol_new])
+				tpdata0[:nsub]=tpdata
+				tpdata=tpdata0.reshape(nsub_new,-1,nbin,npol_new).sum(1)
+		if nbin_new!=nbin:	# compress in phase bin dimension
 			#tpdata=fft.irfft(fft.rfft(tpdata,axis=1)*np.exp(-(0.5/nbin_new-0.5/nbin)*1j*np.arange(nbin/2+1)).reshape(1,-1,1),axis=1)
 			#if 2*nbin_new>=nbin:
 			#	tpdata=fft.irfft(np.concatenate((tpdata,np.zeros([nsub_new,nbin_new+1-tpdata.shape[1]])),axis=1),axis=1).reshape(nsub_new,nbin_new,2,npol_new).sum(2)
 			#else:
 			#	tpdata=fft.irfft(tpdata[:,:(nbin_new+1)],axis=1).reshape(nsub_new,nbin_new,2,npol_new).sum(2)
-			tpdata=tpdata.reshape(nsub_new,nbin_new,-1,npol_new).sum(2)
+			tpdata=tpdata.reshape(nsub_new,nbin_new,-1,npol_new).mean(2)
 		d1.write_chan(tpdata,i_new)
 		weight_new[i_new]=tpweight
 		i_new+=1
@@ -229,15 +229,25 @@ for i in np.arange(chanstart,chanend):
 		tpweight=weight0*((nchan_new-res)*1.0/nchan_new)
 		res=nchan0-(nchan_new-res)
 #
-if nchan_new==1:
+if nchan_new==1:	# create a spectrum for frequency-scrunched data
 	data=d.period_scrunch()[:,:,0]*weight.reshape(-1,1)
 	data[zchan]=0
 	base,bin0=ad.baseline(data.mean(0),pos=True)
 	spec=np.concatenate((data,data),axis=1)[:,bin0:(bin0+10)].mean(1)
 	info['spec']=list(spec)
 #
+if sub_new!=nsub:	# adjust the information which describe the weight in each sub-integration
+	if nsub_new==1:
+		info['sub_nperiod']=info['nperiod']
+		info['sub_nperiod_last']=info['nperiod']
+		info['sublen']=info['period']*info['nperiod']
+	else:
+		info['sub_nperiod']=int(info['sub_nperiod']*np.ceil(nsub/nsub_new))
+		info['sub_nperiod_last']=int(info['nperiod']-(nsub-1)*info['sub_nperiod'])
+		info['sublen']=float(info['period']*info['sub_nperiod'])
+#
 weight_new[weight_new>0]=1/weight_new[weight_new>0]
-info['weight']=weight_new
+info['chan_weight']=weight_new	# adjust information
 info['nchan']=int(nchan_new)
 info['nsub']=int(nsub_new)
 info['nbin']=int(nbin_new)

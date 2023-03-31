@@ -7,11 +7,29 @@ import _io
 #
 # ld.py
 ld={
+	'__size__':[np.ndarray,[5],int],	# the size of the LD file
 	'file':_io.TextIOWrapper,	# the file handle of LD file
 	'name':str,	# the name of the LD file
-	'__size__':[np.ndarray,[5],int],	# the size of the LD file
 	#
-	'chan_scrunch()':(dict(select_chan=[list,['number_of_selected_channels'],int],start_period=int,end_period=int),	# scrunch the data in LD file along frequency axis
+	'__init__()':(dict(name=str),
+		[]),
+	'__read_size__()':(dict(),		# read the size of the LD file, containing the file size and the shape along the 4 dimensions of the data
+		[[np.ndarray,[5],int]]),
+	'__refresh_size__()':(dict(),		# refresh the file size value in the LD file
+		[]),
+	'__read_bin_segment__()':(dict(bin_start=int,bin_num=int),	# read data segment with specified starting bin index and total bin numbers in all frequency channels
+		[[np.ndarray,['nchan','nbin','npol'],float]]),
+	'__read_chan0__()':(dict(chan_num=int,ndata_chan0=int),	# discarded
+		[[np.ndarray,['ndata'],float]]),
+	'__write_bin_segment__()':(dict(data=[np.ndarray,['nchan','ndata_per_channel'],float],bin_start=int),	# write the data segment with all frequency channels into LD file at the specified starting bin index
+		[]),
+	'__write_chanbins_add__()':(dict(data=[np.ndarray,['nbin','npol'],float],bin_start=int,chan_num=int),	# add the data series onto specific frequency channel of LD file at specified starting bin index
+		[]),
+	'__write_chanbins__()':(dict(data=[np.ndarray,['nbin','npol'],float],bin_start=int,chan_num=int),		# write the data series into specific frequency channel of LD file at specified starting bin index
+		[]),
+	'__write_size__()':(dict(size=[np.ndarray,[5],int]),		# write the size array into LD file, containing the file size and the shape along the 4 dimensions of the data
+		[]),
+	'chan_scrunch()':(dict(select_chan=[list,['number_of_selected_channels'],int],start_period=int,end_period=int,chan_weighted=bool),	# scrunch the data in LD file along frequency axis
 		[[np.ndarray,['nsub','nbin','npol'],float]]),		# scrunched data
 	'period_scrunch()':(dict(start_period=int,end_period=int,select_chan=[list,['number_of_selected_channels'],int]),	# scrunch the data in LD file along subint axis
 		[[np.ndarray,['nchan','nbin','npol'],float]]),	# scrunched data
@@ -36,24 +54,6 @@ ld={
 	'write_period()':(dict(data=[np.ndarray,['ndata_per_subint'],float],p_num=int),	# write data into specific sub-integration index in LD file
 		[]),
 	'write_shape()':(dict(shape=[np.ndarray,[4],int]),		# write the data shape into the LD file
-		[]),
-	'__init__()':(dict(name=str),
-		[]),
-	'__read_size__()':(dict(),		# read the size of the LD file, containing the file size and the shape along the 4 dimensions of the data
-		[[np.ndarray,[5],int]]),
-	'__refresh_size__()':(dict(),		# refresh the file size value in the LD file
-		[]),
-	'__read_bin_segment__()':(dict(bin_start=int,bin_num=int),	# read data segment with specified starting bin index and total bin numbers in all frequency channels
-		[[np.ndarray,['nchan','nbin','npol'],float]]),
-	'__read_chan0__()':(dict(chan_num=int,ndata_chan0=int),	# discarded
-		[[np.ndarray,['ndata'],float]]),
-	'__write_bin_segment__()':(dict(data=[np.ndarray,['nchan','ndata_per_channel'],float],bin_start=int),	# write the data segment with all frequency channels into LD file at the specified starting bin index
-		[]),
-	'__write_chanbins_add__()':(dict(data=[np.ndarray,['nbin','npol'],float],bin_start=int,chan_num=int),	# add the data series onto specific frequency channel of LD file at specified starting bin index
-		[]),
-	'__write_chanbins__()':(dict(data=[np.ndarray,['nbin','npol'],float],bin_start=int,chan_num=int),		# write the data series into specific frequency channel of LD file at specified starting bin index
-		[]),
-	'__write_size__()':(dict(size=[np.ndarray,[5],int]),		# write the size array into LD file, containing the file size and the shape along the 4 dimensions of the data
 		[])
 }
 #
@@ -411,7 +411,7 @@ psr={
 		[pr.psr]),
 	'deal_para()':(dict(paraname=str,paras=dict,paras_key=type(dict().keys()),exce=bool,value=int,err_case=[list,['ncase'],bool],err_exc=[list,['ncase'],str]),	# analyze parameter
 		[]),
-	'deal_paralist()':(dict(paralist_name=str,paras=dict,paras_key=type(dict().keys()),listlimit=int,exce=bool,value=int,err_case=[list,['ncase'],bool],err_exc=[list,['ncase'],str]),	# analyze parameterlist
+	'deal_paralist()':(dict(paralist_name=str,paras=dict,paras_key=type(dict().keys()),listlimit=int,exce=bool,value=int,err_case=[list,['ncase'],bool],err_exc=[list,['ncase'],str]),	# analyze parameter list
 		[]),
 	'dpos()':(dict(vectype=str,coord1=str,coord2=str),	# calculate the derivative of pulsar position along different coordinate axes
 		[np.ndarray,[3,3],float]),
@@ -427,19 +427,19 @@ psr={
 #
 # psr_model.py
 functions_variables_psr_model={
+	'au_dist':int,		# astronomical unit (m)
+	'aultsc':float,	# au_dist/te.sl
 	'dm_const':float,	# the constant to calculate the dispersion delay
 	'dm_const_si':float,	# the constant to calculate the dispersion delay (in SI unit)
+	'gg':float,		# gravitational constant
 	'kpc2m':float,		# the constant to convert the distance unit kpc to m
 	'mas_yr2rad_s':float,	# the constant to convert the proper motion unit mas/yr to rad/s
 	'pxconv':float,	# the constant to convert the parallax to distance
-	'au_dist':int,		# astronomical unit (m)
-	'aultsc':float,	# au_dist/te.sl
-	'gg':float,		# gravitational constant
 	#
-	'calculate_gw()':(dict(ra1=float,dec1=float,ra2=float,dec2=float),	# calculate the influence of a gravitational wave source on the ToA
-		[[np.ndarray,[1,1],float],[np.ndarray,[1,1],float],float]),
 	'calcdh()':(dict(ae=float,h3=float,h4=float,nharm=int,sel=int),	# calculate the Shapiro delay with expanded harmonic fitting (Freire & Wex, 2010)
-		[[np.ndarray,['nae'],float]])
+		[[np.ndarray,['nae'],float]]),
+	'calculate_gw()':(dict(ra1=float,dec1=float,ra2=float,dec2=float),	# calculate the influence of a gravitational wave source on the ToA
+		[[np.ndarray,[1,1],float],[np.ndarray,[1,1],float],float])
 }
 #
 # psr_model.py
@@ -468,7 +468,7 @@ psr_timing={
 		[[np.ndarray,['size'],float]]),
 	'phase_der_para()':(dict(paras=[np.ndarray,['nparas'],str]),		# calculate the derivative of pulse phase to different parameters
 		[[np.ndarray,['nparas','size'],float]]),
-	'solarWindModel()':(dict(),		# calculate the solar wind induced variation of interplanet medium
+	'solarWindModel()':(dict(),		# calculate the solar wind induced variation of DM
 		[[np.ndarray,['size'],float]]),
 	'BTmodel()':(dict(der=bool),		# binary pulsar BT model
 		[[np.ndarray,['size'],float]]),
@@ -502,16 +502,16 @@ psr_timing={
 #
 # adfunc.py
 functions_variables_ad_func={
+	'baseline()':(dict(data=[np.ndarray,['nbin'],float],base_nbin=int,pos=bool),	# determine the baseline of the data
+		[float]),
+	'baseline0()':(dict(data=[np.ndarray,['nbin'],float]),	# determine the baseline of the data (old version)
+		[float]),
+	'dmdet()':(dict(fftdata=[np.ndarray,['nchan','nbin'],complex],dmconst=[np.ndarray,['nbin'],float],dm0=float,dmw=float,polynum=int,prec=float),	# determine the best DM with the specified precision
+		[float,float,float,[np.ndarray,['ntest'],float],[np.ndarray,['ntest'],float]]),
+	'radipos()':(dict(data=[np.ndarray,['nbin'],float],crit=float,base=bool,base_nbin=int),	# determine the radiation position of the data
+		[[np.ndarray,['nradipos'],int]]),
 	'reco()':(dict(x=str),	# recognize the telescope name from its aliases
 		[str]),
 	'shift()':(dict(y=[np.ndarray,['ny'],complex],x=float),	# assistant function for dmdet(); return the shifted counterpart of the Fourier-domain array
-		[[np.ndarray,['ny*2-2'],float]]),
-	'dmdet()':(dict(fftdata=[np.ndarray,['nchan','nbin'],complex],dmconst=[np.ndarray,['nbin'],float],dm0=float,dmw=float,polynum=int,prec=float),	# determine the best DM with the specified precision
-		[float,float,float,[np.ndarray,['ntest'],float],[np.ndarray,['ntest'],float]]),
-	'baseline0()':(dict(data=[np.ndarray,['nbin'],float]),	# determine the baseline of the data (old version)
-		[float]),
-	'baseline()':(dict(data=[np.ndarray,['nbin'],float],base_nbin=int,pos=bool),	# determine the baseline of the data
-		[float]),
-	'radipos()':(dict(data=[np.ndarray,['nbin'],float],crit=float,base=bool,base_nbin=int),	# determine the radiation position of the data
-		[[np.ndarray,['nradipos'],int]])
+		[[np.ndarray,['ny*2-2'],float]])
 }
