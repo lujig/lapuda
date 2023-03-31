@@ -96,9 +96,13 @@ Including the programme design, development, testing, maintenance.
 ### Contributors
 
 Shijun Dang
+
 Yulan Liu
+
 Jiguang Lu
+
 Ruian Xu
+
 Zhengli Wang
 
 ## License
