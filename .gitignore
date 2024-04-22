@@ -6,6 +6,9 @@ __pycache__/
 # C extensions
 *.so
 
+# FAST original clock difference
+materials/clock/FAST_tmp/
+
 # Distribution / packaging
 .Python
 env/
