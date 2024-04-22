@@ -17,12 +17,12 @@ version='JigLu_20201202'
 parser=ap.ArgumentParser(prog='ldrm',description='Calculate the best RM value. Press \'s\' in figure window to save figure.',epilog='Ver '+version)
 parser.add_argument('-v','--version',action='version',version=version)
 parser.add_argument("filename",nargs='+',help="input ld file or files")
-parser.add_argument('-r','--frequency_range',default=0,dest='frequency',help='limit the frequency rangeFREQ0,FREQ1')
-parser.add_argument('-o','--rmi',default=0,type=np.float64,dest='rmi',help='the initial RM value')
-parser.add_argument('-b','--base',default='',dest='base',help='the baseline range PHASE0,PHASE1 or pulse-off phase width')
-parser.add_argument('-s','--subint_range',default=0,dest='subint',help='limit the subint range SUBINT0,SUBINT1')
-parser.add_argument('-t',action='store_true',default=False,dest='text',help='only print the result in text-form instead of plot')
-parser.add_argument('-f',default='',dest='file',help='output the results into a file')
+parser.add_argument('--fr','--frequency_range',default=0,dest='frequency',help='limit the frequency rangeFREQ0,FREQ1')
+parser.add_argument('-r','--rmi',default=0,type=np.float64,dest='rmi',help='the initial RM value')
+parser.add_argument('--br','--baseline_range',default='',dest='base',help='the baseline range PHASE0,PHASE1 or pulse-off phase width')
+parser.add_argument('--sr','--subint_range',default=0,dest='subint',help='limit the subint range SUBINT0,SUBINT1')
+parser.add_argument('-k','--text',action='store_true',default=False,dest='text',help='only print the result in text-form instead of plot')
+parser.add_argument('-o','--file',default='',dest='file',help='output the results into a file')
 parser.add_argument('-d','--dm_center',dest='dm',default=0,type=np.float64,help="center of the fitting dispersion measure")
 parser.add_argument('-i','--dm_zone',dest='zone',default=0,type=np.float64,help="total range of the fitting dispersion measure")
 parser.add_argument('-c',action='store_true',default=False,dest='correct',help='correct the data with the best dm')
@@ -47,7 +47,7 @@ for i in filelist:
 			if filei.read_shape()[0]<=2:
 				parser.error('The channel numbers for file '+i+' is too small to fit the rotation measure.')
 			psr_par=filei.read_para('psr_par')
-			psr_name=pr.psr(psr_par).name
+			psr_name=pr.psr(psr_par,warning=False).name
 			if psr_name in filedict.keys(): filedict[psr_name].append([i,psr_par])
 			else: filedict[psr_name]=[[i,psr_par]]
 		except:
@@ -68,13 +68,13 @@ else:
 	zchan0=np.array([],dtype=np.int32)
 #
 if args.frequency:
-	command.append('-r '+args.frequency)
+	command.append('--fr '+args.frequency)
 if args.rmi:
 	command.append('-o '+str(args.rmi))
 if args.base:
-	command.append('-b '+args.base)
+	command.append('--br '+args.base)
 if args.subint:
-	command.append('-s '+args.subint)
+	command.append('--sr '+args.subint)
 if args.correct:
 	command.append('-c')
 if args.compf:
@@ -91,45 +91,52 @@ if not args.text:
 			parser.error('The visualized results cannot be manifested for multi-files.')
 #
 for psr_name in psrlist:
+	first=True
+	print('Analyzing for '+psr_name+':')
 	for filename,psr_par in filedict[psr_name]:
-		psr_para=pr.psr(psr_par)
+		psr_para=pr.psr(psr_par,warning=first)
+		first=False
 		d=ld.ld(filename)
 		info=d.read_info()
-		if 'rm' in info.keys(): rm0=info['rm'][0]
+		if 'additional_info' in info.keys():
+			if 'rm' in info['additional_info'].keys(): rm0=info['additional_info']['rm'][0]
+			else: rm0=0
 		else: rm0=0
-		nchan=info['nchan']
-		nbin=info['nbin']
-		nsub=info['nsub']
+		nchan=info['data_info']['nchan']
+		nbin=info['data_info']['nbin']
+		nsub=info['data_info']['nsub']
 		if len(zchan0):
 			if np.max(zchan0)>=nchan or np.min(zchan0)<0:
 				parser.error('The zapped channel number is overrange.')
-		dm0=info['dm']
-		period=info['period']
+		dm0=info['data_info']['dm']
+		period=info['data_info']['period']
 		#
 		if args.zone:
 			zone=args.zone/2
 		else:
 			zone=np.max([0.1,dm0/100])
 			zone=np.min([0.5,zone])
-		freq_start0=info['freq_start']
-		freq_end0=info['freq_end']
+		freq_start0=info['data_info']['freq_start']
+		freq_end0=info['data_info']['freq_end']
 		channel_width=(freq_end0-freq_start0)/nchan
-		freq0=np.arange(freq_start0,freq_end0,channel_width)+channel_width/2.0
+		frequency=np.arange(freq_start0,freq_end0,channel_width)+channel_width/2.0
 		if args.frequency:
-			frequency=np.float64(args.frequency.split(','))
-			if len(frequency)!=2:
+			freqtmp=np.float64(args.frequency.split(','))
+			if len(freqtmp)!=2:
 				parser.error('A valid frequency range should be given.')
-			if frequency[0]>frequency[1]:
+			freq_start,freq_end=freqtmp
+			chanstart,chanend=np.int16(np.round((np.array([freq_start,freq_end])-freq_start0)/channel_width))
+			if chanstart>chanend:
 				parser.error("Starting frequency larger than ending frequency.")
-			freq_start=max(frequency[0],freq_start0)
-			freq_end=min(frequency[1],freq_end0)
-			chanstart,chanend=np.int16(np.round((np.array([freq_start,freq_end])-(freq_start+freq_end)/2.0)/channel_width+0.5*nchan))
+			elif chanstart<0 or chanend>nchan:
+				parser.error("Input frequency is overrange.")
+			freq_start,freq_end=np.array([chanstart,chanend])*channel_width+freq_start0
 			chan=np.arange(chanstart,chanend)
-			if len(chan)<=2:
+			if len(chan)<2:
 				parser.error('Input bandwidth is too narrow.')
-			freq=freq0[chan]
+			freq=frequency[chan]
 		else:
-			freq=freq0
+			freq=frequency
 			chanstart,chanend=0,nchan
 			chan=np.arange(0,nchan)
 		#
@@ -148,7 +155,7 @@ for psr_name in psrlist:
 			subint_end=nsub
 			subint=np.array([subint_start,subint_end])
 		#
-		data0=d.period_scrunch(subint_start,subint_end)*info['chan_weight'].reshape(-1,1)
+		data0=d.period_scrunch(subint_start,subint_end)*np.asarray(info['data_info']['chan_weight']).reshape(-1,1,1)
 		data0[zchan0]=0
 		data0=data0[chan]
 		i=data0[:,:,0]
@@ -184,7 +191,7 @@ for psr_name in psrlist:
 		def rot(x,rm,c):
 			return rm*x+c
 		#
-		rm,drm=0,1e-10
+		rm,drm=0,1e-5
 		if args.rmi:
 			rm=args.rmi
 			dphi0=rot(lam**2,rm,0)*2
@@ -218,9 +225,8 @@ for psr_name in psrlist:
 			ephi=ephi[jj]
 			lam20=lam2[jj]
 			popt,pcov=so.curve_fit(rot,lam20,phi,p0=(0,0),sigma=ephi)
-			if np.abs(popt[0])<np.abs(drm):
-				drm=popt[0]
-				rm+=drm
+			if np.abs(popt[0])>np.abs(drm):
+				rm+=popt[0]
 			else: break
 			dphi0=rot(lam**2,rm,0)*2
 			q0=q*np.cos(dphi0).reshape(-1,1)+u*np.sin(dphi0).reshape(-1,1)
@@ -237,16 +243,18 @@ for psr_name in psrlist:
 		ndigit=int(-np.log10(rmerr))+1
 		ndigit=max(ndigit,0)
 		if args.correct:
-			info['rm']=[best_rm,rmerr]
-			lam0=c/freq0/1e6
-			if 'history' in info.keys():
-				info['history'].append(command)
-				info['file_time'].append(time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime()))
+			if 'additional_info' in info.keys(): info['additional_info']['rm']=[best_rm,rmerr]
+			else: info['additional_info']={'rm':[best_rm,rmerr]}
+			lam0=c/frequency/1e6
+			if 'history_info' in info.keys():
+				info['history_info']['history'].append(command)
+				info['history_info']['file_time'].append(time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime()))
 			else:
-				info['history']=[command]
-				info['file_time']=[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())]
+				info['history_info']={}
+				info['history_info']['history']=[command]
+				info['history_info']['file_time']=[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())]
 			for i in np.arange(nchan):
-				data_tmp=d.read_chan(i)*info['chan_weight'][i]
+				data_tmp=d.read_chan(i)*info['data_info']['chan_weight'][i]
 				dphi0=rot(lam0[i]**2,rm,0)*2
 				q_tmp,u_tmp=data_tmp[:,:,1:3].transpose(2,0,1).copy()
 				q0=q_tmp*np.cos(dphi0)+u_tmp*np.sin(dphi0)
@@ -274,6 +282,7 @@ for psr_name in psrlist:
 			ax1=ax1.twinx()
 			ax1.set_ylabel('Intensity (arbi.)',fontsize=30)
 			y=phi+rot(lam2[jj],rm,0)
+			dphi0=rot(lam**2,rm,0)*2
 			ax.errorbar(np.sqrt(lam2[jj]),y,yerr=ephi,fmt='b.')
 			ax.plot(lam,dphi0/2,'r-')
 			ymax,ymin=(y+ephi).max(),(y-ephi).min()
@@ -281,7 +290,6 @@ for psr_name in psrlist:
 			ax.text(lam.mean(),ymin*1.1-ymax*0.1,'Best RM='+str(np.round(best_rm,ndigit))+'$\pm$'+str(np.round(rmerr,ndigit)),horizontalalignment='center',verticalalignment='center',fontsize=25)
 			#
 			phase=np.arange(nbin)/nbin
-			dphi0=rot(lam**2,rm,0)*2
 			q0=q*np.cos(dphi0).reshape(-1,1)+u*np.sin(dphi0).reshape(-1,1)
 			u0=u*np.cos(dphi0).reshape(-1,1)-q*np.sin(dphi0).reshape(-1,1)
 			q1=q0.mean(0)

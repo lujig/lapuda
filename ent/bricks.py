@@ -272,12 +272,12 @@ class bricks_class:
         self.root.after(np.int16(self.deltat),self.display)
     #
     def nextchapter(self):
-        self.axis.images=[]
-        self.axis.patches=[]
-        self.axis.texts=[]
-        self.axis1.images=[]
-        self.axis1.patches=[]
-        self.axis1.texts=[]
+        self.axis.images.clear()
+        self.axis.patches.clear()
+        self.axis.texts.clear()
+        self.axis1.images.clear()
+        self.axis1.patches.clear()
+        self.axis1.texts.clear()
         self.canvas.draw()
         self.canvas1.draw()
         self.label.config(text=' Level : 0 ')
@@ -289,7 +289,7 @@ class bricks_class:
             self.stopmark=False
             if self.mask in self.axis.patches: 
                 self.axis.patches.remove(self.mask)
-                self.axis.texts=[]
+                self.axis.texts.clear()
             self.stopbutton.config(text='Stop')
             if not self.displaying:
                 self.displaying=True
@@ -303,8 +303,8 @@ class bricks_class:
     #
     def restart(self):
         if not self.startmark or self.textmark: return
-        self.axis.texts=[]
-        self.axis.patches=[]
+        self.axis.texts.clear()
+        self.axis.patches.clear()
         self.axis.add_patch(self.wall)
         self.freshtime=0.02
         self.deltat=0.01
@@ -373,14 +373,14 @@ class bricks_class:
             self.stopmark=False
             if self.mask in self.axis.patches: 
                 self.axis.patches.remove(self.mask)
-                self.axis.texts=[]
+                self.axis.texts.clear()
             self.stopbutton.config(text='Stop')
             self.root.destroy()
         else: self.quitmark=True
         self.quitfunc()
     #
     def mainloop(self):
-        self.axis.images=[]
+        self.axis.images.clear()
         if self.startmark: return
         if self.textmark:
             self.axis.text(self.width/20.0,self.height/2,'This is the chapter \nintroduction.\nYou can use \'ad\' or Left/Right \nto play.\nPress \'Space\' to stop/continue \nand press \'Q\' to quit.\n\nNow click \'Start\' again \nor press \'Enter\' to start the \ngame.',family='serif', fontsize=13,color='k',verticalalignment='center', horizontalalignment='left')
@@ -389,7 +389,7 @@ class bricks_class:
             return
         self.ctrl.config(text='Restart',command=self.restart)
         self.startmark=True
-        self.axis.texts=[]
+        self.axis.texts.clear()
         ball=plt.Circle((self.width/2.0,2.5),self.ballradius,edgecolor='k',facecolor='w')
         plate=plt.Rectangle((self.width/2.0-self.platelen/2.0,1.4),self.platelen,0.5,edgecolor=None,facecolor='k')
         billiards=[]

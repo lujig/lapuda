@@ -2,6 +2,7 @@ import numpy as np
 import numpy.polynomial.chebyshev as nc
 import struct as st
 import datetime as dt
+import psr_read as pr
 import os
 import copy as cp
 import adfunc as af
@@ -21,7 +22,7 @@ dirname=os.path.split(os.path.realpath(__file__))[0]	# the directory of the prog
 #
 def readeph(et,ephname=ephname):	# read the parameters from ephemeris
 	# 0 mercury; 1 venus; 2 earth; 3 mars; 4 jupiter; 5 saturn; 6 uranus; 7 neptune; 8 pluto; 9 moon; 10 sun; 11 barycenter; 12 earth-moon-center
-	f=open(dirname+'/conventions/'+ephname,'rb')
+	f=open(dirname+'/materials/'+ephname,'rb')
 	title=f.read(84)
 	ephemeris_version=int(title[26:29])
 	f.seek(2652,0)
@@ -62,6 +63,10 @@ def readeph(et,ephname=ephname):	# read the parameters from ephemeris
 	pv=np.zeros([et.size,13,9])
 	nut=np.zeros([et.size,6])
 	lib=np.zeros([et.size,9])
+	if ephem_start-2400000.5>(date+second/86400).min():
+		raise Exception('The input time is earlier than the start time of the planet ephemeris, please change the ephemeris or input time.')
+	elif ephem_end-2400000.5<(date+second/86400).max():
+		raise Exception('The input time is latter than the end time of the planet ephemeris, please change the ephemeris or input time.')
 	block_loc=(date+2400000.5-ephem_start+second/86400)/ephem_step
 	nr=np.uint32(block_loc)
 	t0=block_loc-nr
@@ -248,6 +253,14 @@ def mjd2datetime(mjd):	# change MJD time to be date time (year, month, day, seco
 	mo=1+monum
 	day=np.int8(iday-modat[np.arange(ndate),monum]+modat0[np.arange(ndate),monum])
 	return yr,mo,day,sec,iday
+#
+def readpos(telename):
+	values=np.loadtxt(dirname+'/materials/'+'telescopes.txt',dtype='|S30')
+	telename=af.reco(telename)
+	if telename.encode() in values[:,0]:
+		return np.float64(values[values[:,0]==telename.encode()][0,1:4])
+	else:
+		raise Exception('The name of the telescope cannot be recognized.')
 #
 class vector:
 	def __init__(self,x,y,z,center='geo',scale='si',coord='equ',unit=1.0,type0='pos'):
@@ -437,10 +450,12 @@ class vector:
 		return np.array([self.x,self.y,self.z]).T
 #
 class time:
-	def __init__(self,date,second,scale='FAST',unit=86400):
+	def __init__(self,date,second=0,scale='FAST',unit=86400):
 		date=np.array(date).reshape(-1)
 		second=np.array(second).reshape(-1)
-		size=np.array(date).size
+		if date.size==second.size: size=np.array(date).size
+		elif date.size==1: size=np.array(second).size
+		elif second.size==1: size=np.array(date).size
 		if type(date[0])==str:
 			date0,second0=np.zeros_like(date,dtype=np.int64),np.zeros_like(date,dtype=np.float64)
 			for i in range(size):
@@ -520,35 +535,54 @@ class time:
 	#
 	def local2utc(self):
 		if self.scale not in time_scales:
-			f=open(dirname+'/clock/'+self.scale+'.txt')
-			t0=np.int64(f.read(10))
-			t1=np.int64(f.read(30)[20:])
-			flen=f.seek(0,2)/30
-			localunix=self.local2unix()
-			main,resi=np.divmod(localunix.date-t0,t1-t0)
-			nr0=main
-			resi=resi+localunix.second
-			set_nr=list(set(nr0))
-			set_len=len(set_nr)
-			interplist=[]
-			gpssec=np.zeros_like(resi,dtype=np.float64)
-			for i in range(set_len):
-				nri=set_nr[i]
-				if nri>(flen-2): nri=flen-2
-				f.seek(nri*30)
-				interplist.extend(f.read(60).split())
-			t,dt=np.float64(interplist).reshape(-1,2).T
-			order=np.argsort(t)
-			gpssec=np.interp(localunix.mjd,t[order],dt[order])
-			f.close()
-			f=np.loadtxt(dirname+'/conventions/'+'gps2utc.txt')
-			t,dt=f[:,0:2].T
-			utcsec=np.interp(gpssec/86400+self.mjd,t,dt)*1e-9
+			if self.scale=='FAST':
+				f=open(dirname+'/materials/clock/FAST_poly.txt')
+				cont=f.readlines()
+				f.close()
+				lseg=int(cont[0])
+				dtj=np.float64(cont[1].split())
+				p=np.float64(cont[2].split())
+				localunix=self.local2unix().mjd
+				dt=af.poly(localunix,lseg,dtj,p)
+				return dt
+			else:
+				f=open(dirname+'/materials/clock/'+self.scale+'.txt')
+				t0=np.int64(f.read(10))
+				t1=np.int64(f.read(30)[20:])
+				flen=f.seek(0,2)/30
+				localunix=self.local2unix()
+				main,resi=np.divmod(localunix.date-t0,t1-t0)
+				nr0=main
+				if np.min(nr0)<0:
+					raise Exception('The input time is earlier than the start time of the clock difference, please change the input time.')
+				elif np.max(nr0)>(flen-2):
+					raise Exception('The input time is latter than the end time of the clock difference, please update the clock difference file or change the input time.')
+				resi=resi+localunix.second
+				set_nr=list(set(nr0))
+				set_len=len(set_nr)
+				interplist=[]
+				gpssec=np.zeros_like(resi,dtype=np.float64)
+				for i in range(set_len):
+					nri=set_nr[i]
+					if nri>(flen-2): nri=flen-2
+					f.seek(nri*30)
+					interplist.extend(f.read(60).split())
+				t,dt=np.float64(interplist).reshape(-1,2).T
+				order=np.argsort(t)
+				gpssec=np.interp(localunix.mjd,t[order],dt[order])
+				f.close()
+				f=np.loadtxt(dirname+'/materials/'+'gps2utc.txt')
+				t,dt=f[:,0:2].T
+				if np.min(self.mjd)<np.min(t):
+					raise Exception('The input time is earlier than the start time of the GPS difference, please change the input time.')
+				elif np.max(self.mjd)>np.max(t):
+					raise Exception('The input time is latter than the end time of the GPS difference, please update the GPS difference file or change the input time.')
+				utcsec=np.interp(gpssec/86400+self.mjd,t,dt)*1e-9
 			return utcsec+gpssec
 	#
 	def utc2tai(self):
 		if self.scale=='utc':
-			f=np.loadtxt(dirname+'/conventions/'+'leap.txt')
+			f=np.loadtxt(dirname+'/materials/'+'leap.txt')
 			leap_time=np.array(list(map(lambda x:datetime2mjd([x[0],x[1],x[2],0,0,0]).mjd,f))).reshape(-1)
 			leap_time0=leap_time.repeat(self.size).reshape(-1,self.size)
 			leap_sec=f[:,3].cumsum()
@@ -557,7 +591,7 @@ class time:
 	#
 	def tai2utc(self):
 		if self.scale=='tai':
-			f=np.loadtxt(dirname+'/conventions/'+'leap.txt')
+			f=np.loadtxt(dirname+'/materials/'+'leap.txt')
 			leap_mjd=np.array(list(map(lambda x:datetime2mjd([x[0],x[1],x[2],0,0,0]).mjd,f))).reshape(-1)
 			leap_sec=f[:,3].cumsum()
 			leap_tai=(leap_mjd*86400-leap_sec-10).repeat(self.size).reshape(-1,self.size)
@@ -566,7 +600,11 @@ class time:
 	#
 	def tai2ut1(self):
 		if self.scale=='tai':
-			mjd0,taimjd0,deltat=np.loadtxt(dirname+'/conventions/'+'tai2ut1.txt').T
+			mjd0,taimjd0,deltat=np.loadtxt(dirname+'/materials/'+'tai2ut1.txt').T
+			if np.min(self.mjd)<np.min(taimjd0)+1:
+				raise Exception('The input time is earlier than the start time of the TAI-UT1, please change the input time.')
+			elif np.max(self.mjd)>np.max(taimjd0)-1:
+				raise Exception('The input time is latter than the end time of the TAI-UT1, please update the TAI-UT1 difference file or change the input time.')
 			jj=(taimjd0>(self.mjd.min()-1))&(taimjd0<self.mjd.max()+1)
 			if len(taimjd0[jj])>0:
 				taimjd0,deltat=taimjd0[jj],deltat[jj]
@@ -575,20 +613,42 @@ class time:
 	#
 	def utc2tt(self):
 		if self.scale=='utc':
-			mjd0,deltat=np.loadtxt(dirname+'/conventions/'+'tai2tt.txt')[:,[0,2]].T
-			ttmjd=self.utc2tai()+32.184+np.interp(self.mjd,mjd0,deltat)*1e-6
+			mjd0,deltat=np.loadtxt(dirname+'/materials/'+'tai2tt.txt')[:,[0,2]].T
+			if np.min(self.mjd)<np.min(mjd0):
+				raise Exception('The input time is earlier than the start time of the TAI-TT(BIPM), please change the input time.')
+			if np.max(self.mjd)>np.max(mjd0):
+				print('Warning: The input time is latter than the end time of the TAI-TT(BIPM), please update the TAI-TT(BIPM) difference file or change the input time.')
+				jj=self.mjd<=np.max(mjd0)
+				dt=np.ones_like(self.mjd)*deltat[-1]
+				dt[jj]=np.interp(self.mjd[jj],mjd0,deltat)
+				ttmjd=self.utc2tai()+32.184+dt*1e-6
+			else:
+				ttmjd=self.utc2tai()+32.184+np.interp(self.mjd,mjd0,deltat)*1e-6
 			return ttmjd
 	#
 	def tai2tt(self):
 		if self.scale=='tai':
 			utc=self.mjd # using tai instead of utc
-			mjd0,deltat=np.loadtxt(dirname+'/conventions/'+'tai2tt.txt')[:,[0,2]].T
-			tt_tai=32.184+np.interp(utc,mjd0,deltat)*1e-6
+			mjd0,deltat=np.loadtxt(dirname+'/materials/'+'tai2tt.txt')[:,[0,2]].T
+			if np.min(self.mjd)<np.min(mjd0):
+				raise Exception('The input time is earlier than the start time of the TAI-TT(BIPM), please change the input time.')
+			if np.max(self.mjd)>np.max(mjd0):
+				print('Warning: The input time is latter than the end time of the TAI-TT(BIPM), please update the TAI-TT(BIPM) difference file or change the input time.')
+				jj=self.mjd<=np.max(mjd0)
+				dt=np.ones_like(self.mjd)*deltat[-1]
+				dt[jj]=np.interp(self.mjd[jj],mjd0,deltat)
+				tt_tai=32.184+dt*1e-6
+			else:
+				tt_tai=32.184+np.interp(utc,mjd0,deltat)*1e-6
 			return tt_tai
 	#
 	def tt2tai(self):
 		if self.scale=='tt':
-			mjd0,deltat=np.loadtxt(dirname+'/conventions/'+'tai2tt.txt')[:,[0,2]].T
+			mjd0,deltat=np.loadtxt(dirname+'/materials/'+'tai2tt.txt')[:,[0,2]].T
+			if np.min(self.mjd)<np.min(mjd0):
+				raise Exception('The input time is earlier than the start time of the TAI-TT(BIPM), please change the input time.')
+			elif np.max(self.mjd)>np.max(mjd0):
+				raise Exception('The input time is latter than the end time of the TAI-TT(BIPM), please update the TAI-TT(BIPM) difference file or change the input time.')
 			tt_tai=32.184+np.interp(self.mjd,mjd0,deltat)*1e-6
 			return -tt_tai
 	#
@@ -703,14 +763,7 @@ class phase():
 #
 class times:
 	def __init__(self,time0,ephem='DE436',ephver=5):
-		if time0.scale=='local':
-			self.local=time0.copy()
-			self.unix=time0.local2unix()
-			self.utc=time0.utc()
-			self.tai=self.utc.tai()
-			self.ut1=self.tai.ut1()
-			self.tt=self.utc.tt()
-		elif time0.scale=='utc':
+		if time0.scale=='utc':
 			self.utc=time0.copy()
 			self.tai=time0.tai()
 			self.ut1=self.tai.ut1()
@@ -738,7 +791,14 @@ class times:
 			self.utc=self.tai.utc()
 			self.ut1=self.tai.ut1()
 		else:
-			pass
+			try: ad.reco(time0.scale)
+			except: pass
+			self.local=time0.copy()
+			self.unix=time0.local2unix()
+			self.utc=time0.utc()
+			self.tai=self.utc.tai()
+			self.ut1=self.tai.ut1()
+			self.tt=self.utc.tt()
 		self.size=time0.size
 		self.ephver=ephver
 		self.ephem=ephem
@@ -783,7 +843,7 @@ class times:
 		return tmp.tt
 	#
 	def deltat_fb(self):	# the time difference between TT and TCB induced by gravitational and the Earth motion effects (Fairhead and Bretagnon, 1990)
-		f=open('./conventions/'+'TDB.1950.2050','rb')
+		f=open('./materials/'+'TDB.1950.2050','rb')
 		b=st.unpack('>2d2i5d',f.read(64))
 		tdbd1,tdbd2,tdbdt,tdbncf=b[:4]
 		block_loc=(self.tt.date+2400000.5-tdbd1+self.tt.second/86400)/tdbdt
@@ -802,7 +862,7 @@ class times:
 		return tttdb-tdb0
 	#
 	def deltat_if(self):	# the time difference (and its derivative) between TT and TCB induced by gravitational and the Earth motion effects (Irwin and Fukushima, 1999)
-		f=open(dirname+'/conventions/'+'TIMEEPH_short.te405','rb')
+		f=open(dirname+'/materials/'+'TIMEEPH_short.te405','rb')
 		f.seek(264)
 		startjd,endjd,stepjd,ncon=st.unpack('>3d1L',f.read(28))
 		ipt=np.reshape(st.unpack('>6L',f.read(24)),(2,3))
@@ -845,7 +905,7 @@ class times:
 		return -pv.T
 	#
 	def ve_if(self):	# calculate the motion of the Earth
-		f=open(dirname+'/conventions/'+'TIMEEPH_short.te405','rb')
+		f=open(dirname+'/materials/'+'TIMEEPH_short.te405','rb')
 		f.seek(264)
 		startjd,endjd,stepjd,ncon=st.unpack('>3d1L',f.read(28))
 		ipt=np.reshape(st.unpack('>6L',f.read(24)),(2,3))
@@ -926,16 +986,8 @@ class times:
 		self.earthvel=self.vel[2]
 		self.earthacc=self.acc[2]
 	#
-	def readpos(self):
-		values=np.loadtxt(dirname+'/conventions/'+'telescopes.txt',dtype='|S30')
-		telename=af.reco(self.local.scale)
-		if telename in values[:,0]
-			return np.float64(values[values[:,0]==telename,1:4])
-		else:
-			raise Exception('The name of the telescope cannot be recognized.')
-	#
 	def sitecalc_old(self): # tempo old method
-		x,y,z=self.readpos()
+		x,y,z=readpos(self.local.scale)
 		site_itrs=vector(x,y,z,center='geo',scale='itrs',coord='equ',unit=1.0,type0='pos')
 		self.site_grs80=site_itrs.copy()
 		self.site_grs80.itrs2grs80()
@@ -974,17 +1026,17 @@ class times:
 		self.zenith=sitepos.multi(height/sitepos.length())
 	#
 	def sitecalc(self): #IAU 2000B tempo2 method
-		x,y,z=self.readpos()
+		x,y,z=readpos(self.local.scale)
 		site_itrs=vector(x,y,z,center='geo',scale='itrs',coord='equ',unit=1.0,type0='pos')
 		self.site_grs80=site_itrs.copy()
 		self.site_grs80.itrs2grs80()
-		lat,lon,height=self.site_grs80.x,self.site_grs80.y,self.site_grs80.z
+		lon,lat,height=self.site_grs80.x,self.site_grs80.y,self.site_grs80.z
 		zenith_x=height*np.cos(lon)*np.cos(lat)
 		zenith_y=height*np.sin(lon)*np.cos(lat)
 		zenith_z=height*np.sin(lat)
 		sprime=0.0
-		utc0,xp0,yp0=np.loadtxt(dirname+'/conventions/'+'eopc.txt')[:,3:6].T
-		tai0,dut10=np.loadtxt(dirname+'/conventions/'+'tai2ut1.txt')[:,1:3].T
+		utc0,xp0,yp0=np.loadtxt(dirname+'/materials/'+'eopc.txt')[:,4:7].T
+		tai0,dut10=np.loadtxt(dirname+'/materials/'+'tai2ut1.txt')[:,1:3].T
 		tai0=np.round(tai0%1*86400)
 		dut1dot0=(dut10[1:]-dut10[:-1])/86400
 		xp=np.interp(self.utc.mjd,utc0,xp0)*(np.pi/(180*60*60))
@@ -1082,8 +1134,22 @@ class times:
 		self.sitevel.change_unit(sl)
 		zenith_x_crs,zenith_y_crs,zenith_z_crs=zenith_crs.reshape(self.size,3).T
 		self.zenith=vector(zenith_x_crs,zenith_y_crs,zenith_z_crs,center='geo',scale='si',coord='equ',unit=1,type0='pos')
-		
-		
+	#
+	def obs(self,psr,horizon=5):
+		lon,lat=self.site_grs80.x,self.site_grs80.y
+		ra,dec=psr.raj,psr.decj
+		cosang=-(np.sin(lat)*np.sin(dec)-np.sin(horizon/180*np.pi))/np.cos(lat)/np.cos(dec)
+		if cosang>1:
+			return None,0
+		elif cosang<-1:
+			return None,-1
+		ang=np.arccos(cosang)
+		st,sdd=lmst(self.ut1.mjd,0)
+		lst=self.lst
+		transit=(ra/(np.pi*2)-lst)
+		transit-=np.round(transit)
+		return transit/sdd,ang/(np.pi*sdd)
+#	
 time_scales=['tai','tcb','tdb','utc','tt','ut1','unix','gps','ut1jd','ttjd']
 #
 nutarray=np.array([[ 0, 0, 0, 0,1, -172064161.0, -174666.0, 33386.0, 92052331.0, 9086.0, 15377.0],

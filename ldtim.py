@@ -16,9 +16,9 @@ parser=ap.ArgumentParser(prog='ldtim',description='Get the timing solution the T
 parser.add_argument('-v','--version',action='version',version=version)
 parser.add_argument("filename",help="input ToA file with ld or txt format")
 parser.add_argument('-p','--par',dest='par',help="input par file")
-parser.add_argument('-f','--fit',dest='fit',default='f0',help="fitting parameter")
+parser.add_argument('--fit',dest='fit',default='f0',help="fitting parameter")
 parser.add_argument('-i','--illu',default='prepost',dest='illu',help="plot mode: pre-fit and post-fit residuals (prepost), post-fit residuals (post), DM (dm)")
-parser.add_argument('-t','--time',action='store_true',default=False,dest='time',help="plot the fitting time residuals instead of phase")
+parser.add_argument('--time',action='store_true',default=False,dest='time',help="plot the fitting time residuals instead of phase")
 parser.add_argument('-s','--save',default='',dest='save',nargs='*',help="save the post-fit pulsar parameters and residuals into files")
 parser.add_argument('-x',dest='x',default='mjd',help="the x-axis of the ToA")
 parser.add_argument('-m','--merge',default=0,nargs='?',type=np.float64,dest='merge',help='normalized the data at each channel before cal ')
@@ -36,7 +36,7 @@ info=d.read_info()
 if args.par:
 	psr=pr.psr(args.par,parfile=True)
 else:
-	psr=pr.psr(info['psr_name'])
+	psr=pr.psr(info['pulsar_info']['psr_name'])
 date,sec,dterr=data[:,0],data[:,1],data[:,4]
 if args.date:
 	date0=args.date.split(',')
@@ -48,13 +48,13 @@ if args.date:
 		if len(date0)==2:
 			jj=(date>date0[0])&(date<date0[1])
 		elif len(date0)>2:
-			jj=np.zeros_like(date,dtype=np.bool)
+			jj=np.zeros_like(date,dtype=bool)
 			for i in np.arange(len(date0)):
 				jj=jj^(date>date0[i])
 	except:
 		parser.error('A valid date range is required.')
 else:
-	jj=np.ones_like(date,dtype=np.bool)
+	jj=np.ones_like(date,dtype=bool)
 if args.merge==0:
 	jj=jj&(dterr<args.err)
 #
@@ -86,8 +86,8 @@ if type(args.save) is list:
 date,sec,toae,dt,dterr,freq_start,freq_end,dm,dmerr,period=data[jj].T
 freq=(freq_start+freq_end)/2
 nt=len(date)
-time=te.times(te.time(date,sec,scale=info['telename']))
-psrt=pm.psr_timing(psr,time,freq)
+time=te.times(te.time(date,sec,scale=info['telescope_info']['telename']))
+psrt=pm.psr_timing(psr,time,np.inf)
 phase=psrt.phase
 dt=phase.offset
 dterr=toae/period
@@ -144,12 +144,12 @@ def merge(date,sec,dt,dterr,freq,dm,period):	# merge adjacent ToAs
 #
 if args.merge!=0:
 	date,sec,dt,dterr,freq,dm,dmerr,period=merge(date,sec,dt,dterr,freq,dm,period)
-time=te.times(te.time(date,sec,scale=info['telename']))
+time=te.times(te.time(date,sec,scale=info['telescope_info']['telename']))
 #
 paras=args.fit.split(',')
 #
 def psrfit(psr,paras,time,dt,toae,freq):	# fit the ToAs with pulsar parameters
-	psrt=pm.psr_timing(psr,time,freq)
+	psrt=pm.psr_timing(psr,time,np.inf)
 	lpara=len(paras)
 	x0=np.zeros(lpara+1)
 	for i in np.arange(lpara):
@@ -163,7 +163,7 @@ def psrfit(psr,paras,time,dt,toae,freq):	# fit the ToAs with pulsar parameters
 		psr1=psr.copy()
 		for i in np.arange(lpara):
 			psr1.modify(paras[i],para[i])
-		psrt1=pm.psr_timing(psr1,time,freq)
+		psrt1=pm.psr_timing(psr1,time,np.inf)
 		dphase=psrt1.phase.minus(psrt.phase)
 		#print(para,dphase.mjd.mean())
 		return dphase.phase+para[-1]
@@ -172,7 +172,7 @@ def psrfit(psr,paras,time,dt,toae,freq):	# fit the ToAs with pulsar parameters
 		psr1=psr.copy()
 		for i in np.arange(lpara):
 			psr1.modify(paras[i],para[i])
-		psrt1=pm.psr_timing(psr1,time,freq)
+		psrt1=pm.psr_timing(psr1,time,np.inf)
 		tmp=psrt1.phase_der_para(paras).T
 		#print(para,tmp)
 		return np.concatenate((tmp,np.ones([time.size,1])),axis=1)/toae.reshape(-1,1)
@@ -185,7 +185,7 @@ def psrfit(psr,paras,time,dt,toae,freq):	# fit the ToAs with pulsar parameters
 	psr1=psr.copy()
 	for i in np.arange(lpara):
 		psr1.modify(paras[i],popt[i])
-	psrt2=pm.psr_timing(psr1,time,freq)
+	psrt2=pm.psr_timing(psr1,time,np.inf)
 	#print(fit(popt),dt,x0)
 	return popt,np.sqrt(pcov),fit(popt)+dt,resi(popt),psr1,psrt2
 #

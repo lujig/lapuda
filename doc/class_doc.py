@@ -31,6 +31,8 @@ ld={
 		[]),
 	'chan_scrunch()':(dict(select_chan=[list,['number_of_selected_channels'],int],start_period=int,end_period=int,chan_weighted=bool),	# scrunch the data in LD file along frequency axis
 		[[np.ndarray,['nsub','nbin','npol'],float]]),		# scrunched data
+	'change_info()':(dict(),		# change the old information style to new information style (json format)
+		[]),
 	'period_scrunch()':(dict(start_period=int,end_period=int,select_chan=[list,['number_of_selected_channels'],int]),	# scrunch the data in LD file along subint axis
 		[[np.ndarray,['nchan','nbin','npol'],float]]),	# scrunched data
 	'read_chan()':(dict(chan_num=int),	# read the data in specific channel index in LD file
@@ -59,48 +61,76 @@ ld={
 #
 # ld.py
 ld_file_info={
-	'best_dm':[list,[2],float],		# the best DM value and its error determined with the program lddm.py
-	'cal':[list,['1 or 2',4,'nchan'],float],		# the calibration array used to calibrate the data
-	'cal_mode':str,			# the calibration mode, 'single' or 'seg' or 'trend'
-	'chan_weight':[list,['nchan'],float],	# the weight of each frequency channel
-	'compressed':bool,			# whether the data is compressed
-	'dm':float,				# the DM value of the pulsar which used in the preliminary dedispersion
-	'file_time':[list,['number_of_processing'],str],	# the file creation time
-	'freq_end':float,			# the upper bound of the data frequency
-	'freq_end_origin':float,		# the frequency upper bound of the observed data
-	'freq_start':float,			# the lower bound of the data frequency
-	'freq_start_origin':float,		# the frequency lower bound of the observed data
-	'history':[list,['number_of_processing'],str],	# the commands used to obtain the current data from the original data
-	'krange':[list,[2],float],		#  
-	'length':float,			# the duration of the data
-	'mode':str,				# the mode of the data, 'single' or 'subint' or 'cal' or 'template' or 'ToA' or 'test'
-	'nbin':int,				# the bin number of the data
-	'nbin_origin':int,			# the bin number of the observed data
-	'nchan':int,				# the number of the frequency channels
-	'nchan_origin':int,			# the number of the frequency channels in the observed data
-	'noise_time0':float,			# the zero time of the noise diode data
-	'nperiod':int,				# the number of the pulse periods in the data
-	'npol':int,				# the number of the polarizations in the data
-	'nsub':int,				# the number of the sub-integrations in the data
-	'period':float,			# the actually observational pulse period at the observing time
-	'phase0':int,				# the integer cycles for pulsar rotating from the PEPOCH0 to the observation time
-	'pol_type':str,			# the polarization type, 'IQUV' or 'I' or 'AABB' or 'AABBCRCI'
-	'predictor':[list,['ncoeff',2],float],		# the coefficients of Chebishev polynomials to predict the pulse phase
-	'predictor_freq':[list,[5],float],			# the coefficients of Chebishev polynomials to predict the dispersion
-	'psr_name':str,					# the pulsar name
-	'psr_par':[list,['number_of_lines'],str],		# the parameters of pulsar
-	'rm':[list,[2],float],			# the RM value and its error determined with the program ldrm.py
-	'seg_time':[list,['number_of_noise_segments'],float],	# the recorded time of the noise diode data from 'noise_time0'
-	'spec':[list,['nchan'],float],	# the spectra of the data
-	'stt_date':int,			# the start date of the data
-	'stt_sec':float,			# the start sec of the data at 'stt_data'
-	'stt_time':float,			# the start time of the data
-	'stt_time_origin':float,		# the start time of the observed data
-	'sub_nperiod':int,			# the number of the pulse periods in one sub-integration
-	'sub_nperiod_last':int,		# the number of the pulse periods in the last sub-integration
-	'sublen':float,			# the duration of one sub-integration
-	'telename':str,			# the name of the observing telescope
-	'tsamp_origin':float			# the sample time of the observed data
+	'additional_info':{
+		'best_dm':[list,[2],float],		# the best DM value and its error determined with the program lddm.py
+		'krange':[list,[2],float],		#  
+		'phase0':int,				# the integer cycles for pulsar rotating from the PEPOCH0 to the observation time
+		'rm':[list,[2],float],			# the RM value and its error determined with the program ldrm.py
+		'spec':[list,['nchan_origin'],float]		# the spectra of the data
+	},
+	'calibration_info':{
+		'cal':[list,['1 or 2','npol','nchan_origin'],float],		# the calibration array used to calibrate the data
+		'cal_mode':str,			# the calibration mode, 'single' or 'seg' or 'trend'
+		'cal_period':float,			# the period used to fold the noise diode data
+		'noise_time0':float,			# the zero time of the noise diode data
+		'seg_time':[list,['number_of_noise_segments'],float]	# the recorded time of the noise diode data from 'noise_time0'
+	},
+	'data_info':{
+		'chan_weight':[list,['nchan'],float],	# the weight of each frequency channel
+		'compressed':bool,			# whether the data is compressed
+		'dm':float,				# the DM value of the pulsar which used in the preliminary dedispersion
+		'freq_align':float,			# the central frequency of the last frequency channel
+		'freq_end':float,			# the upper bound of the data frequency
+		'freq_start':float,			# the lower bound of the data frequency
+		'length':float,			# the duration of the data
+		'mode':str,				# the mode of the data, 'single' or 'subint' or 'cal' or 'template' or 'ToA' or 'test'
+		'nbin':int,				# the bin number of the data
+		'nchan':int,				# the number of the frequency channels
+		'nperiod':int,				# the number of the pulse periods in the data
+		'npol':int,				# the number of the polarizations in the data
+		'nsub':int,				# the number of the sub-integrations in the data
+		'period':float,			# the actually observational pulse period at the observing time
+		'pol_type':str,			# the polarization type, 'IQUV' or 'I' or 'AABB' or 'AABBCRCI'
+		'stt_date':int,			# the start date of the data
+		'stt_sec':float,			# the start sec of the data at 'stt_data'
+		'stt_time':float,			# the start time of the data
+		'sub_nperiod':int,			# the number of the pulse periods in one sub-integration
+		'sub_nperiod_last':int,		# the number of the pulse periods in the last sub-integration
+		'sublen':float,			# the duration of one sub-integration
+		'weights':[list,['nchan','nsub'],float]		#  the weight of each frequency channel and each period
+	},
+	'folding_info':{
+		'predictor':[list,['ncoeff',2],float],		# the coefficients of Chebishev polynomials to predict the pulse phase
+		'predictor_freq':[list,[5],float]			# the coefficients of Chebishev polynomials to predict the dispersion
+	},
+	'history_info':{
+		'file_time':[list,['number_of_processing'],str],	# the file creation time
+		'history':[list,['number_of_processing'],str]		# the commands used to obtain the current data from the original data
+	},
+	'original_data_info':{
+		'freq_end_origin':float,		# the frequency upper bound of the observed data
+		'freq_start_origin':float,		# the frequency lower bound of the observed data
+		'nbin_origin':int,			# the bin number of the observed data
+		'nchan_origin':int,			# the number of the frequency channels in the observed data
+		'stt_time_origin':float,		# the start time of the observed data
+		'tsamp_origin':float,			# the sample time of the observed data
+		'filenames':[list,['number_of_files',2],str]	# the names of original files to generate the data
+	},
+	'telescope_info':{
+		'telename':str,			# the name of the observing telescope
+		'backends':str,			# the name of the backends
+		'postions':[list,[3],float]		# the position of the fixed point on the light path for different configurations of the telescope system
+	},
+	'pulsar_info':{
+		'psr_name':str,					# the pulsar name
+		'psr_par':[list,['number_of_lines'],str]		# the parameters of pulsar
+	},
+	'template_info':{
+		'peak_paras':[list,['number_of_peaks',3],str]		# peak parameters for fitting the pulse profile template
+	},
+	'toa_info':{
+		'method':str				# the method to obtain ToA
+	}
 }
 #
 # time_eph.py
@@ -506,8 +536,16 @@ functions_variables_ad_func={
 		[float]),
 	'baseline0()':(dict(data=[np.ndarray,['nbin'],float]),	# determine the baseline of the data (old version)
 		[float]),
+	'cal_time()':(dict(psr=pr.psr,phase=np.int64,freq=np.float64,telescope=str,ttest=np.float64),		# calculate the corresponding time with a specified pulse phase
+		[te.time]),
+	'dic2json()':(dict(dic=dict),	# transform a 1-level information dictionary to a 2-level information dictionary
+		[str]),
 	'dmdet()':(dict(fftdata=[np.ndarray,['nchan','nbin'],complex],dmconst=[np.ndarray,['nbin'],float],dm0=float,dmw=float,polynum=int,prec=float),	# determine the best DM with the specified precision
 		[float,float,float,[np.ndarray,['ntest'],float],[np.ndarray,['ntest'],float]]),
+	'json2dic()':(dict(js=str),	# transform a 2-level information dictionary to a 1-level information dictionary
+		[dict]),
+	'parakey()':(dict(),	# return the dictionarys of parameters for groups and groups for parameters
+		[dict,dict]),
 	'radipos()':(dict(data=[np.ndarray,['nbin'],float],crit=float,base=bool,base_nbin=int),	# determine the radiation position of the data
 		[[np.ndarray,['nradipos'],int]]),
 	'reco()':(dict(x=str),	# recognize the telescope name from its aliases

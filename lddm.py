@@ -17,16 +17,16 @@ version='JigLu_20180515'
 parser=ap.ArgumentParser(prog='lddm',description='Calculate the best DM value. Press \'s\' in figure window to save figure.',epilog='Ver '+version)
 parser.add_argument('-v','--version',action='version',version=version)
 parser.add_argument("filename",nargs='+',help="input ld file")
-parser.add_argument('-r','--frequency_range',default=0,dest='frequency',help='limit the frequency rangeFREQ0,FREQ1')
-parser.add_argument('-s','--subint_range',default=0,dest='subint',help='limit the subint range SUBINT0,SUBINT1')
+parser.add_argument('--fr','--frequency_range',default=0,dest='frequency',help='limit the frequency rangeFREQ0,FREQ1')
+parser.add_argument('--sr','--subint_range',default=0,dest='subint',help='limit the subint range SUBINT0,SUBINT1')
 parser.add_argument('-n',action='store_true',default=False,dest='norm',help='normalized the data at each channel before optimization')
-parser.add_argument('-t',action='store_true',default=False,dest='text',help='only print the result in text-form instead of plot')
-parser.add_argument('-f',default='',dest='file',help='output the results into a file')
+parser.add_argument('-k','--text',action='store_true',default=False,dest='text',help='only print the result in text-form instead of plot')
+parser.add_argument('-o','--file',default='',dest='file',help='output the results into a file')
 parser.add_argument('-m',action='store_true',default=False,dest='modify',help='add a parameter best_dm in the info of ld file')
 parser.add_argument('-c',action='store_true',default=False,dest='correct',help='correct the data with the best dm')
 parser.add_argument('-d','--dm_center',dest='dm',default=0,type=np.float64,help="center of the fitting dispersion measure")
 parser.add_argument('-i','--dm_zone',dest='zone',default=0,type=np.float64,help="total range of the fitting dispersion measure")
-parser.add_argument('-o','--polynomial_order',default=0,dest='n',type=int,help='fit the dm-maxima curve with Nth order polynomial')
+parser.add_argument('--degree','--polynomial_order',default=0,dest='n',type=int,help='fit the dm-maxima curve with Nth order polynomial')
 parser.add_argument("-z","--zap",dest="zap_file",default=0,help="file recording zap channels")
 parser.add_argument('-p','--precision',default=0,dest='prec',type=np.float64,help='fitting precision of the dm')
 args=(parser.parse_args())
@@ -43,7 +43,7 @@ for i in filelist:	# check the files
 		try:
 			filei=ld.ld(i)
 			psr_par=filei.read_para('psr_par')
-			psr_name=pr.psr(psr_par).name
+			psr_name=pr.psr(psr_par,warning=False).name
 			if psr_name in filedict.keys(): filedict[psr_name].append([i,psr_par])
 			else: filedict[psr_name]=[[i,psr_par]]
 		except:
@@ -64,15 +64,15 @@ else:
 	zchan0=np.array([])
 #
 if args.frequency:
-	command.append('-r '+args.frequency)
+	command.append('--fr '+args.frequency)
 if args.subint:
-	command.append('-s '+args.subint)
+	command.append('--sr '+args.subint)
 if args.dm:
 	command.append('-d '+str(args.dm))
 if args.zone:
 	command.append('-i '+str(args.zone))
 if args.n:
-	command.append('-o '+str(args.n))
+	command.append('--degree '+str(args.n))
 if args.prec:
 	command.append('-p '+str(args.prec))
 if args.norm:
@@ -93,18 +93,21 @@ if not args.text:
 			parser.error('The visualized results cannot be manifested for multi-files.')
 #
 for psr_name in psrlist:
+	first=True
+	print('Analyse for '+psr_name,':')
 	for filename,psr_par in filedict[psr_name]:
-		psr_para=pr.psr(psr_par)
+		psr_para=pr.psr(psr_par,warning=first)
+		first=False
 		d=ld.ld(filename)
 		info=d.read_info()
-		nchan=info['nchan']
-		nbin=info['nbin']
-		nsub=info['nsub']
+		nchan=info['data_info']['nchan']
+		nbin=info['data_info']['nbin']
+		nsub=info['data_info']['nsub']
 		if len(zchan0):
 			if np.max(zchan0)>=nchan or np.min(zchan0)<0:
 				parser.error('The zapped channel number is overrange.')
-		dm0=info['dm']
-		period=info['period']
+		dm0=info['data_info']['dm']
+		period=info['data_info']['period']
 		if args.dm:
 			ddm=args.dm-dm0
 		else:
@@ -115,25 +118,27 @@ for psr_name in psrlist:
 		else:
 			zone=np.max([0.1,dm0/100])
 			zone=np.min([0.5,zone])
-		freq_start0=info['freq_start']
-		freq_end0=info['freq_end']
+		freq_start0=info['data_info']['freq_start']
+		freq_end0=info['data_info']['freq_end']
 		channel_width=(freq_end0-freq_start0)/nchan
-		freq0=np.arange(freq_start0,freq_end0,channel_width)+channel_width/2.0
+		frequency=np.arange(freq_start0,freq_end0,channel_width)+channel_width/2.0
 		if args.frequency:
-			frequency=np.float64(args.frequency.split(','))
-			if len(frequency)!=2:
+			freqtmp=np.float64(args.frequency.split(','))
+			if len(freqtmp)!=2:
 				parser.error('A valid frequency range should be given.')
-			if frequency[0]>frequency[1]:
+			freq_start,freq_end=freqtmp
+			chanstart,chanend=np.int16(np.round((np.array([freq_start,freq_end])-freq_start0)/channel_width))
+			if chanstart>chanend:
 				parser.error("Starting frequency larger than ending frequency.")
-			freq_start=max(frequency[0],freq_start0)
-			freq_end=min(frequency[1],freq_end0)
-			chanstart,chanend=np.int16(np.round((np.array([freq_start,freq_end])-(freq_start+freq_end)/2.0)/channel_width+0.5*nchan))
+			elif chanstart<0 or chanend>nchan:
+				parser.error("Input frequency is overrange.")
+			freq_start,freq_end=np.array([chanstart,chanend])*channel_width+freq_start0
 			chan=np.arange(chanstart,chanend)
-			if len(chan)==0:
+			if len(chan)<2:
 				parser.error('Input bandwidth is too narrow.')
-			freq=freq0[chan]
+			freq=frequency[chan]
 		else:
-			freq=freq0
+			freq=frequency
 			chanstart,chanend=0,nchan
 			chan=[]
 		#
@@ -152,7 +157,7 @@ for psr_name in psrlist:
 			subint_end=nsub
 			subint=np.array([subint_start,subint_end])
 		#
-		data0=d.period_scrunch(subint_start,subint_end)
+		data0=d.period_scrunch(subint_start,subint_end,pol=0)*np.asarray(info['data_info']['chan_weight']).reshape(-1,1,1)
 		data0=data0[:,:,0]
 		if len(chan):
 			data=data0[chan]
@@ -184,7 +189,7 @@ for psr_name in psrlist:
 			ax1.set_ylabel('Frequency (MHz)',fontsize=25)
 			ax2.set_ylabel('Frequency (MHz)',fontsize=25)
 		#
-		zchan1=np.where(info['chan_weight']==0)[0]
+		zchan1=np.where(info['data_info']['chan_weight']==0)[0]
 		zchan=set(zchan0).union(zchan1)
 		if len(chan):
 			zchan=np.int32(list(zchan.intersection(chan)))-chanstart
@@ -205,8 +210,8 @@ for psr_name in psrlist:
 			maxima[maxima==0]=1
 			data1/=maxima.reshape(-1,1)
 		else:
-			data*=info['chan_weight'].reshape(-1,1)
-			data1*=info['chan_weight'].reshape(-1,1)
+			data*=np.asarray(info['data_info']['chan_weight']).reshape(-1,1)
+			data1*=np.asarray(info['data_info']['chan_weight']).reshape(-1,1)
 		#
 		if not args.text: 
 			ax2.imshow(data1[::-1],aspect='auto',interpolation='nearest',extent=(0,1,freq_start0,freq_end0),cmap='jet')
@@ -219,7 +224,7 @@ for psr_name in psrlist:
 			fftr=fft.irfft(ffts)
 			return fftr
 		#
-		psr=pm.psr_timing(psr_para,te.times(te.time(info['stt_time']+info['length']/86400,0)),freq.mean())	# the observed frequency is different from the original signal frequency in ISM
+		psr=pm.psr_timing(psr_para,te.times(te.time(info['data_info']['stt_time'],info['data_info']['length']/2)),freq.mean())	# the observed frequency is different from the original signal frequency in ISM
 		fftdata=fft.rfft(data,axis=1)
 		tmp=np.shape(fftdata)[-1]
 		const=(1/(freq*psr.vchange)**2*pm.dm_const/period*np.pi*2.0).repeat(tmp).reshape(-1,tmp)*np.arange(tmp)
@@ -251,28 +256,32 @@ for psr_name in psrlist:
 			if args.file:
 				output.write(psr_para.name+'  '+filename+' DM_0='+str(dm0)+', Best DM='+str(np.round(dmmax+dm0,ndigit))+'+-'+str(np.round(dmerr,ndigit))+'\n')
 			if args.modify:
-				info['best_dm']=[dmmax+dm0,dmerr]
-				if 'history' in info.keys():
-					info['history'].append(command)
-					info['file_time'].append(time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime()))
+				if 'additional_info' in info.keys(): info['additional_info']['best_dm']=[dmmax+dm0,dmerr]
+				else: info['additional_info']={'best_dm':[dmmax+dm0,dmerr]}
+				if 'history_info' in info.keys():
+					info['history_info']['history'].append(command)
+					info['history_info']['file_time'].append(time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime()))
 				else:
-					info['history']=[command]
-					info['file_time']=[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())]
+					info['history_info']={}
+					info['history_info']['history']=[command]
+					info['history_info']['file_time']=[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())]
 				d.write_info(info)
 			elif args.correct:
-				info['dm']=dmmax+dm0
-				info['best_dm']=[dmmax+dm0,dmerr]
-				if 'history' in info.keys():
-					info['history'].append(command)
-					info['file_time'].append(time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime()))
+				info['data_info']['dm']=dmmax+dm0
+				if 'additional_info' in info.keys(): info['additional_info']['best_dm']=[dmmax+dm0,dmerr]
+				else: info['additional_info']={'best_dm':[dmmax+dm0,dmerr]}
+				if 'history_info' in info.keys():
+					info['history_info']['history'].append(command)
+					info['history_info']['file_time'].append(time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime()))
 				else:
-					info['history']=[command]
-					info['file_time']=[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())]
+					info['history_info']={}
+					info['history_info']['history']=[command]
+					info['history_info']['file_time']=[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())]
 				for i in np.arange(nchan):
 					data_tmp=d.read_chan(i)
 					fftdata0=fft.rfft(data_tmp,axis=1)
 					tmp=np.shape(fftdata)[1]
-					frac=1/(freq0[i]*psr.vchange)**2*pm.dm_const/period*dmmax
+					frac=1/(frequency[i]*psr.vchange)**2*pm.dm_const/period*dmmax
 					const=((frac*np.pi*2.0)*np.arange(tmp)).reshape(1,tmp,1)
 					ffts=fftdata0*np.exp(const*1j)
 					data_tmp=fft.irfft(ffts,axis=1)
@@ -284,13 +293,13 @@ for psr_name in psrlist:
 				ax.text(dm0+ddm,y0*0.95+y1*0.05,'DM$_0$='+str(dm0)+'\nBest DM='+str(np.round(dmmax+dm0,3))+'$\pm$'+str(np.round(dmerr,3)),horizontalalignment='center',verticalalignment='bottom',fontsize=25)
 				fftdata0=fft.rfft(data0,axis=1)
 				tmp=np.shape(fftdata)[-1]
-				frac=1/(freq0*psr.vchange)**2*pm.dm_const/period*dmmax
+				frac=1/(frequency*psr.vchange)**2*pm.dm_const/period*dmmax
 				const=(frac*np.pi*2.0).repeat(tmp).reshape(-1,tmp)*np.arange(tmp)
 				data1=shift(fftdata0,const)
 				data1=ma.masked_array(data1,mask=zaparray)
 				ax1.imshow(data1[::-1],aspect='auto',interpolation='nearest',extent=(0,1,freq_start0,freq_end0),cmap='jet')
-				ax1.plot(np.ones_like(freq0)*0.5,freq0,'r--')
-				ax2.plot((frac+0.5)%1,freq0,'r--')
+				ax1.plot(np.ones_like(frequency)*0.5,frequency,'r--')
+				ax2.plot((frac+0.5)%1,frequency,'r--')
 				if args.frequency:
 					ax1.plot([0,1],[freq_start,freq_start],'k--')
 					ax1.plot([0,1],[freq_end,freq_end],'k--')

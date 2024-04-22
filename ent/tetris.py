@@ -258,12 +258,12 @@ class tetris_class:
 			self.root.after(np.int16(self.deltat*1000),self.move)
 	#
 	def nextchapter(self):
-		self.axis.images=[]
-		self.axis.patches=[]
-		self.axis.texts=[]
-		self.axis1.images=[]
-		self.axis1.patches=[]
-		self.axis1.texts=[]
+		self.axis.images.clear()
+		self.axis.patches.clear()
+		self.axis.texts.clear()
+		self.axis1.images.clear()
+		self.axis1.patches.clear()
+		self.axis1.texts.clear()
 		self.canvas.draw()
 		self.canvas1.draw()
 		self.label.config(text=' Level : 0 ')
@@ -275,7 +275,7 @@ class tetris_class:
 			self.stopmark=False
 			if self.mask in self.axis.patches: 
 				self.axis.patches.remove(self.mask)
-				self.axis.texts=[]
+				self.axis.texts.clear()
 			self.stopbutton.config(text='Stop')
 			if not self.displaying:
 				self.displaying=True
@@ -289,8 +289,8 @@ class tetris_class:
 	#
 	def restart(self):
 		if not self.startmark or self.textmark: return
-		self.axis.texts=[]
-		self.axis.patches=[]
+		self.axis.texts.clear()
+		self.axis.patches.clear()
 		self.axis.add_patch(self.wall)
 		self.removenum=0
 		self.levelcmpt()
@@ -356,14 +356,14 @@ class tetris_class:
 			self.stopmark=False
 			if self.mask in self.axis.patches: 
 				self.axis.patches.remove(self.mask)
-				self.axis.texts=[]
+				self.axis.texts.clear()
 			self.stopbutton.config(text='Stop')
 			self.root.destroy()
 		else: self.quitmark=True
 		self.quitfunc()
 	#
 	def mainloop(self):
-		self.axis.images=[]
+		self.axis.images.clear()
 		if self.startmark: return
 		if self.textmark:
 			self.axis.text(self.width/30.0,self.height/2,'This is the chapter \nintroduction.\nYou can use \'wasd\' or \nUp/Down/Left/Right to play.\nPress \'Space\' to stop/continue \nand press \'Q\' to quit.\n\nNow click \'Start\' again \nor press \'Enter\' to start the \ngame.',family='serif', fontsize=13,color='b',verticalalignment='center', horizontalalignment='left')
@@ -372,7 +372,7 @@ class tetris_class:
 			return
 		self.ctrl.config(text='Restart',command=self.restart)
 		self.startmark=True
-		self.axis.texts=[]
+		self.axis.texts.clear()
 		while len(self.shape_sequence)<self.sequencelen:
 			self.update_shape_sequence()
 		self.current_cube=self.update_shape_sequence()

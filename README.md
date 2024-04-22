@@ -24,7 +24,7 @@ Dependence:
 
 	Software: PSRCAT (optional)
 
-	Python module: numpy, matplotlib, scipy, astropy, scikit-learn (optional), mpmath (optional) and tkinter
+	Python module: psutil, numpy, matplotlib, scipy, astropy, scikit-learn (optional), mpmath (optional) and tkinter
 
 For a better experience, the user can add the programme directory to the environment variable **PATH**, alternatively. 
 
@@ -96,13 +96,9 @@ Including the programme design, development, testing, maintenance.
 ### Contributors
 
 Shijun Dang
-
+Jui-An Hsu
 Yulan Liu
-
 Jiguang Lu
-
-Ruian Xu
-
 Zhengli Wang
 
 ## License

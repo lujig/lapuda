@@ -1,2 +1,0 @@
-# pressure and humidity of observatories
-FAST     92.5     0.7

@@ -3,7 +3,7 @@ import numpy as np
 import numpy.fft as fft
 import numpy.polynomial.chebyshev as nc
 import argparse as ap
-import os,sys,time,ld
+import os,sys,time,ld,platform
 import mpmath as mm
 mm.mp.dps=30
 import astropy.io.fits as ps
@@ -13,6 +13,7 @@ import psr_read as pr
 import time_eph as te
 import psr_model as pm
 import subprocess as sp
+import adfunc as af
 #
 version='JigLu_20200925'
 #
@@ -24,10 +25,10 @@ parser.add_argument("-a","--cal",dest="cal",nargs='+',help="name of calibration 
 parser.add_argument("--cal_period",dest="cal_period",default=0,type=np.float64,help="period of the calibration fits file (s)")
 parser.add_argument("--subi",action="store_true",default=False,help="take one subint as the calibration unit")
 parser.add_argument("--cal_para",dest='cal_para',default='',help="the time range of the calibration file")
-parser.add_argument("-t","--trend",action="store_true",default=False,help="fit the calibration parameter evolution")
+parser.add_argument("--trend",action="store_true",default=False,help="fit the calibration parameter evolution")
 parser.add_argument("-o","--output",dest="output",default="psr",help="output file name")
-parser.add_argument("-f","--frequency",dest='freqrange',default=0,help="output frequency range (MHz) in form start_freq,end_freq")
-parser.add_argument('-d','--dm',dest='dm',default=0,type=np.float64,help="dispersion measure")
+parser.add_argument("--fr",dest='freqrange',default=0,help="output frequency range (MHz) in form start_freq,end_freq")
+parser.add_argument('-d','--dm',dest='dm',default=-1,type=np.float64,help="dispersion measure")
 parser.add_argument('-p','--period',dest='period',default=0,type=np.float64,help="pulsar period (s)")
 parser.add_argument('-n','--pulsar_name',default=0,dest='psr_name',help='input pulsar name')
 parser.add_argument('-e','--pulsar_ephemeris',default=0,dest='par_file',help='input pulsar parameter file')
@@ -46,7 +47,22 @@ command=['dfpsr.py']
 #
 if args.verbose:
 	sys.stdout.write('Analyzing the arguments...\n')
-filelist=args.filename
+#
+platf=platform.system()
+if platf=='Windows':
+	if os.path.isfile(args.filename[0]): filelist=args.filename
+	else:
+		filepath,filere=os.path.split(args.filename[0])
+		filere=filere.replace('.','\.').replace('+','\+').replace('*','(.*)')
+		if filepath=='':filepath='.'
+		files0=os.listdir(filepath)
+		filelist=[]
+		for i in files0:
+			import re
+			ii=re.match(filere,i)
+			if ii: filelist.append(ii.string)
+else:
+	filelist=args.filename
 filenum=len(filelist)
 file_t0=[]
 file_time=[]
@@ -145,11 +161,11 @@ if args.cal:	# check the calibration file and parameters
 				parser.error('Calibration file name is invalid.')
 			noise=ld.ld(args.cal[0])
 			noise_info=noise.read_info()
-			if noise_info['mode']!='cal':
+			if noise_info['data_info']['mode']!='cal':
 				parser.error("LD file is not caliration file.")
-			elif telename!=noise_info['telename']:
+			elif telename!=noise_info['telescope_info']['telename']:
 				parser.error("LD calibration file has different telescope name.")
-			elif nchan!=noise_info['nchan']:
+			elif nchan!=noise_info['data_info']['nchan']:
 				parser.error("LD calibration file has different channel number.")
 		else:
 			noise_mark='fits'
@@ -158,13 +174,26 @@ if args.cal:	# check the calibration file and parameters
 	if noise_mark=='fits':
 		if not args.cal_period:
 			parser.error("Noise period is not given.")
-		noiselist=args.cal
+		if platf=='Windows':
+			if os.path.isfile(args.cal[0]): noiselist=args.cal
+			else:
+				filepath,filere=os.path.split(args.cal[0])
+				filere=filere.replace('.','\.').replace('+','\+').replace('*','(.*)')
+				if filepath=='':filepath='.'
+				files0=os.listdir(filepath)
+				noiselist=[]
+				for i in files0:
+					import re
+					ii=re.match(filere,i)
+					if ii: noiselist.append(ii.string)
+		else:
+			noiselist=args.cal
 		noisenum=len(noiselist)
 		noise_t0,noise_len=[],[]
 		for i in np.arange(noisenum):
 			file_check(noiselist[i],filetype='noise')
 			subint_t0=(offs_sub-tsamp*nsblk/2.0+stt_smjd+stt_offs)/86400.0+stt_imjd
-			noise_len.append(nsub)
+			noise_len.append(nsub*nsblk)
 			noise_t0.append(subint_t0)
 		#
 		noise_t0,noise_len,noiselist=np.array(noise_t0),np.array(noise_len),np.array(noiselist)
@@ -175,24 +204,25 @@ else:
 #
 channel_width=bandwidth*1.0/nchan
 if args.freqrange:
-	command.append('-f '+args.freqrange)
+	command.append('--fr '+args.freqrange)
 	freq_start,freq_end=np.float64(args.freqrange.split(','))
-	chanstart,chanend=np.int16(np.round((np.array([freq_start,freq_end])-freq)/channel_width+0.5*nchan))
-	if freq_start>freq_end:
+	chanstart,chanend=np.int16(np.round((np.array([freq_start,freq_end])-freq)/channel_width+0.5*nchan+0.5))
+	if chanstart>chanend:
 		parser.error("Starting frequency larger than ending frequency.")
-	elif freq_start<(freq-bandwidth/2.0) or freq_end>(freq+bandwidth/2.0):
+	elif chanstart<0 or chanend>nchan:
 		parser.error("Input frequency is overrange.")
 else:
 	chanstart,chanend=0,nchan
 nchan_new=chanend-chanstart
 #
-nbin=file_len.sum()*nsblk
+nbin0=file_len.sum()*nsblk
 stt_time=file_t0[0]
-freq_start,freq_end=(np.array([chanstart,chanend])-0.5*nchan)*channel_width+freq
-info={'nbin_origin':int(nbin),'telename':telename,'freq_start_origin':freq-bandwidth/2.0,'freq_end_origin':freq+bandwidth/2.0,'freq_start':freq_start,'freq_end':freq_end,'nchan_origin':int(nchan),'nchan':int(chanend-chanstart),'tsamp_origin':tsamp,'stt_time_origin':stt_time,'stt_time':stt_time,'npol':int(npol)}
+freq_start,freq_end=(np.array([chanstart,chanend])-0.5*nchan-0.5)*channel_width+freq
+#
+info={'data_info':{'freq_start':freq_start,'freq_end':freq_end,'nchan':int(chanend-chanstart),'stt_time':stt_time,'npol':int(npol)},'original_data_info':{'nbin_origin':int(nbin0),'freq_start_origin':freq-bandwidth*0.5-channel_width*0.5,'freq_end_origin':freq+bandwidth*0.5-channel_width*0.5,'nchan_origin':int(nchan),'tsamp_origin':tsamp,'stt_time_origin':stt_time},'telescope_info':{'telename':telename}}
 #
 if args.psr_name and args.par_file:	# check the conflict of folding flags
-	parser.error('At most one of flags -n and -p is required.')
+	parser.error('At most one of flags -n and -e is required.')
 elif args.psr_name or args.par_file:
 	if args.period:
 		parser.error('With pulsar name or ephemeris, period is needless.')
@@ -210,26 +240,28 @@ elif args.psr_name or args.par_file:
 		psr_par=par_file.readlines()
 		par_file.close()
 		psr=pr.psr(args.par_file,parfile=True)
-	info['psr_par']=psr_par
+	info['pulsar_info']={'psr_par':psr_par}
 	pepoch=False
+	if args.dm>=0:
+		psr.dm=args.dm
 	for line in psr_par:
 		elements=line.split()
 		if elements[0]=='PSRJ' or elements[0]=='NAME':
 			psr_name=elements[1].strip('\n')
-			info['psr_name']=psr_name
+			info['pulsar_info']['psr_name']=psr_name
 		elif elements[0]=='F0':
 			period=1./np.float64(elements[1])
 		elif elements[0]=='DM':
-			if not args.dm:
+			if args.dm<0:
 				dm=np.float64(elements[1])
 			else:
 				dm=args.dm
 		elif elements[0]=='PEPOCH':
 			pepoch=True
 else:
-	if not (args.dm or args.period):
+	if not args.period and args.dm<0:
 		parser.error('Pulsar Parameter should be provided.')
-	if not (args.dm and args.period):
+	if not args.period or args.dm<0:
 		parser.error('Both DM and period should be provided.')
 	period=args.period
 	dm=args.dm
@@ -243,40 +275,40 @@ if args.subint or args.nsub or args.sub_nperiod:	# check the subint flags
 			parser.error('Duration time of a subint is too short')
 		elif args.subint<(1.5*period):
 			sys.stdout.write('Warning: Duration time of a subint is too short, then the out put file is indeed single pulse mode.\n')
-			info['mode']='single'
+			info['data_info']['mode']='single'
 		else:
-			info['mode']='subint'
+			info['data_info']['mode']='subint'
 			sub_nperiod=np.int64(round(args.subint/period))
-			info['sublen']=period*sub_nperiod
+			info['data_info']['sublen']=period*sub_nperiod
 			command.append('-s '+str(args.subint))
 	elif args.nsub:
-		if args.nsub*period>nbin*tsamp:
+		if args.nsub*period>nbin0*tsamp:
 			parser.error('Duration time of a subint is too short')
-		elif args.nsub*period*1.5>nbin*tsamp:
+		elif args.nsub*period*1.5>nbin0*tsamp:
 			sys.stdout.write('Warning: Duration time of a subint is too short, then the out put file is indeed single pulse mode.\n')
-			info['mode']='single'
+			info['data_info']['mode']='single'
 		elif args.nsub<0:
 			parser.error('The sub-integration number can not be negative.')
 		else:
-			info['mode']='subint'
-			sub_nperiod=np.int64(round(nbin*tsamp/args.nsub/period))
-			info['sublen']=period*sub_nperiod
+			info['data_info']['mode']='subint'
+			sub_nperiod=np.int64(round(nbin0*tsamp/args.nsub/period))
+			info['data_info']['sublen']=period*sub_nperiod
 			command.append('--nsub '+str(args.nsub))
 	else:
 		if args.sub_nperiod==1:
 			sys.stdout.write('Warning: Period number in one sub-integration is too short, then the out put file is indeed single pulse mode.\n')
-			info['mode']='single'
-		elif args.sub_nperiod<0:
-			parser.error('The period number in one sub-integration can not be negative.')
+			info['data_info']['mode']='single'
+		elif args.sub_nperiod<=0:
+			parser.error('The period number in one sub-integration must be positive.')
 		else:
-			info['mode']='subint'
+			info['data_info']['mode']='subint'
 			sub_nperiod=np.int64(args.sub_nperiod)
-			info['sublen']=period*sub_nperiod
+			info['data_info']['sublen']=period*sub_nperiod
 			command.append('--sub_nperiod '+str(args.sub_nperiod))
 else:
-	info['mode']='single'
+	info['data_info']['mode']='single'
 #
-info['dm']=dm
+info['data_info']['dm']=dm
 #
 command.append('-c '+str(args.ncoeff))
 if args.nbin:	# check the nbin flag
@@ -297,9 +329,10 @@ if args.zap_file:
 		parser.error('The zapped channel number is overrange.')
 	weight=np.ones(nchan,dtype=np.float64)
 	weight[zchan]=0
-	info['chan_weight']=weight[chanstart:chanend]
+	weight=weight[chanstart:chanend]
 else:
 	zchan=[]
+	weight=np.ones(chanend-chanstart,dtype=np.float64)
 name=args.output
 if len(name)>3:
 	if name[-3:]=='.ld':
@@ -318,40 +351,68 @@ if args.reverse:
 	command.append('-r')
 #
 if args.multi:
+	if platf=='Windows' and args.multi>1:
+		parser.error('The multi-processes function is not supported on Windows!')
 	if args.multi>20:
 		parser.error('The processes number is too large!')
 	command.append('-m '+str(args.multi))
 #
 command=' '.join(command)
-info['history']=[command]
+info['history_info']={'history':[command]}
 #
-def deal_seg(n1,n2):	# processing the noise data segments
+def tmp_deal(n,noise_data,noise_cum,fsub,cumsub,n1,n2,multi,lock=0):
+	f=ps.open(noiselist[n],mmap=True)
+	for i in np.arange(fsub[n-n1]):
+		dtmp=f['SUBINT'].data[i]
+		data=np.int16(dtmp['DATA'].reshape(nsblk,npol,nchan)*dtmp['dat_scl'].reshape(1,npol,nchan)+dtmp['dat_offs'].reshape(1,npol,nchan))
+		del f['SUBINT'].data
+		if args.reverse or (not bw_sign):
+			data=data[:,:,::-1]
+		if args.subi:
+			noise_t=np.int64((cumsub[n-n1]+i)%noisen)
+			if multi: lock.acquire()
+			noise_data[noise_t]+=data.mean(0)
+			noise_cum[noise_t]+=1
+			if multi: lock.release()
+		else:
+			noise_t=np.int64((np.arange(nsblk)+(cumsub[n-n1]+i)*nsblk)*tsamp%args.cal_period//tsamp)
+			for k in np.arange(nsblk):
+				tmp_noise_t=noise_t[k]
+				if tmp_noise_t==noisen:
+					continue
+				if multi: lock.acquire()
+				noise_data[tmp_noise_t]+=data[k]
+				noise_cum[tmp_noise_t]+=1
+				if multi: lock.release()
+	f.close()
+#
+def deal_seg(n1,n2,multi=0):	# processing the noise data segments
 	cumsub=0
-	noise_data=np.zeros([noisen,npol,nchan])
-	noise_cum=np.zeros(noisen)
+	if multi:
+		manager=Manager()
+		noise_data=manager.list([np.zeros([npol,nchan])]*noisen)
+		noise_cum=manager.list(np.zeros(noisen))
+		pool0=Pool(processes=multi)
+		lock=manager.Lock()
+	else:
+		noise_data=np.zeros([noisen,npol,nchan])
+		noise_cum=np.zeros(noisen)
+	fsub=[]
 	for n in np.arange(n1,n2):
 		f=ps.open(noiselist[n],mmap=True)
-		fsub=f['SUBINT'].header['naxis2']
-		for i in np.arange(fsub):
-			dtmp=f['SUBINT'].data[i]
-			data=np.int16(dtmp['DATA'].reshape(nsblk,npol,nchan)*dtmp['dat_scl'].reshape(1,npol,nchan)+dtmp['dat_offs'].reshape(1,npol,nchan))
-			del f['SUBINT'].data
-			if args.reverse or (not bw_sign):
-				data=data[:,:,::-1]
-			if args.subi:
-				noise_t=np.int64(cumsub%noisen)
-				noise_data[noise_t]+=data.mean(0)
-				noise_cum[noise_t]+=1
-			else:
-				noise_t=np.int64((np.arange(nsblk)+cumsub*nsblk)*tsamp%args.cal_period//tsamp)
-				for k in np.arange(nsblk):
-					tmp_noise_t=noise_t[k]
-					if tmp_noise_t==noisen:
-						continue
-					noise_data[tmp_noise_t]+=data[k]
-					noise_cum[tmp_noise_t]+=1
-			cumsub+=1
+		fsub.append(f['SUBINT'].header['naxis2'])
 		f.close()
+	cumsub=np.cumsum(fsub)
+	#
+	for n in np.arange(n1,n2):
+		if multi: pool0.apply_async(tmp_deal,(n,noise_data,noise_cum,fsub,cumsub,n1,n2,multi,lock),error_callback=lambda x:print(x))
+		else: tmp_deal(n,noise_data,noise_cum,fsub,cumsub,n1,n2,multi)
+	if multi:
+		pool0.close()
+		pool0.join()
+		noise_data=np.array(noise_data)
+		noise_cum=np.array(noise_cum)
+	#
 	tmp_noise=noise_data[:,0].sum(1)/noise_cum
 	sorts=np.argsort(tmp_noise)
 	noise_data,noise_cum=noise_data[sorts],noise_cum[sorts]
@@ -359,10 +420,12 @@ def deal_seg(n1,n2):	# processing the noise data segments
 	if noisen>6:
 		noise_off=noise_data[2:(noisen_center-1)].sum(0)/noise_cum[2:(noisen_center-1)].sum().reshape(-1,1)
 		noise_on=noise_data[(noisen_center+2):-2].sum(0)/noise_cum[(noisen_center+2):-2].sum().reshape(-1,1)-noise_off
-	elif noisen>2:
-		sys.stdout.write('Warning: The noise data used in calulation is too short to get accurate calibration parameters.\n')
+	elif noisen>=2:
+		if not args.subi: sys.stdout.write('Warning: The noise data used in calulation is too short to get accurate calibration parameters.\n')
+		if noisen==2: tmp=0
+		else: tmp=1
 		noise_off=noise_data[:noisen_center].sum(0)/noise_cum[:noisen_center].sum().reshape(-1,1)
-		noise_on=noise_data[(noisen_center+1):].sum(0)/noise_cum[(noisen_center+1):].sum().reshape(-1,1)-noise_off
+		noise_on=noise_data[(noisen_center+tmp):].sum(0)/noise_cum[(noisen_center+tmp):].sum().reshape(-1,1)-noise_off
 	else:
 		parser.error('The noise data used in calulation is too short.')
 	noise_a12,noise_a22=noise_on[:2]
@@ -392,16 +455,27 @@ if noise_mark=='fits':	# the calibration data can be original fits data of noise
 			noise_time=np.zeros(file_nseg)
 			noise_data=np.zeros([file_nseg,4,nchan])
 			for i in np.arange(file_nseg):
-				noise_data[i]=deal_seg(jumps[i],jumps[i+1])
+				noise_data[i]=deal_seg(jumps[i],jumps[i+1],multi=args.multi)
 				noise_time[i]=(cumlen_noise[jumps[i+1]-1]+cumlen_noise[jumps[i]]+noise_len[jumps[i]]*tsamp/86400)/2
 			cal_mode='trend'
 		else:
 			if noisenum>1:
-				noise_time=(cumlen_noise[-1]+noise_len[-1]*tsamp/86400)/2
-				noise_data=np.zeros([noisenum,4,nchan])
+				noise_time=cumlen_noise+noise_len*tsamp/86400/2
+				if args.multi:
+					def trend_deal(i):
+						noise_data[i]=deal_seg(i,i+1)
+					noise_data=Manager().list([np.zeros([4,nchan])]*noisenum)
+					pool1=Pool(processes=args.multi)
+				else: noise_data=np.zeros([noisenum,4,nchan])
 				for i in np.arange(noisenum):
-					noise_data[i]=deal_seg(i,i+1)
+					if args.multi: pool1.apply_async(trend_deal,(i,))
+					else: noise_data[i]=deal_seg(i,i+1)
+				if args.multi:
+					pool1.close()
+					pool1.join()
+					noise_data=np.array(noise_data)
 				cal_mode='trend'
+				file_nseg=noisenum
 			else:
 				sys.stdout.write('Warning: Only one file is used to do the calibration and the calibration parameters are adopted without regard to the evolution.')
 				if args.cal_para:
@@ -416,26 +490,27 @@ if noise_mark=='fits':	# the calibration data can be original fits data of noise
 				parser.error('The calibration file time is out of the allowed range.')
 		noise_data=np.zeros([file_nseg,4,nchan])
 		for i in np.arange(file_nseg):
-			noise_data[i]=deal_seg(jumps[i],jumps[i+1])
+			noise_data[i]=deal_seg(jumps[i],jumps[i+1],multi=args.multi)
 		noise_data=noise_data.mean(0)
 		cal_mode='single'
 elif noise_mark=='ld':
-	if noise_info['cal_mode']=='trend':
-		noise_time0=noise_info['stt_time']
-		noise_time=noise_info['seg_time']
+	if noise_info['calibration_info']['cal_mode']=='trend':
+		noise_time0=noise_info['data_info']['stt_time']
+		noise_time=np.array(noise_info['calibration_info']['seg_time'])
 		if file_t0[0]<((1.25*noise_time[0]-0.25*noise_time[-1])+noise_time0) or file_t0[-1]>((1.25*noise_time[-1]-0.25*noise_time[0])+noise_time0):
 			parser.error('The file time is out of the extrapolating range.')
 		noise_data=noise.read_data().reshape(nchan,2,4).transpose(1,2,0)
 		cal_mode='trend'
-	elif noise_info['cal_mode']=='seg':
-		noise_time0=noise_info['stt_time']
-		noise_time=noise_info['seg_time']
+	elif noise_info['calibration_info']['cal_mode']=='seg':
+		noise_time0=noise_info['data_info']['stt_time']
+		noise_time=np.array(noise_info['calibration_info']['seg_time'])
 		noise_time_judge=((noise_time+noise_time0-file_t0[0])>(-cal_trend_eff/24.))&((noise_time+noise_time0-file_t0[-1])<(cal_trend_eff/24.))
 		noise_time_judge_1=((noise_time+noise_time0-file_t0[0])>(-cal_seg_eff/24.))&((noise_time+noise_time0-file_t0[-1])<(cal_seg_eff/24.))
 		noise_time_index=np.arange(len(noise_time))[noise_time_judge]
 		noise_time_index_1=np.arange(len(noise_time))[noise_time_judge_1]
 		nseg=len(noise_time_index)
 		nseg_1=len(noise_time_index_1)
+		#print(noise_time,file_t0[0]-noise_time0)
 		if not nseg_1:
 			parser.error('No valid calibration segment closed to the observation data.')
 		elif nseg<=1:
@@ -466,8 +541,8 @@ elif noise_mark=='ld':
 	else:
 		parser.error('The calibration file mode is unknown.')
 if args.cal:
-	info['cal_mode']=cal_mode
-	info['cal']=noise_data.reshape(-1,nchan).tolist()
+	info['calibration_info']={'cal_mode':cal_mode}
+	info['calibration_info']['cal']=noise_data.reshape(-1,npol,nchan)[:,:,chanstart:chanend].tolist()
 	if cal_mode=='single':
 		noise_a12,noise_a22,noise_cos,noise_sin=noise_data
 		noise_a12=np.where(noise_a12>0,1./noise_a12,0)
@@ -479,11 +554,6 @@ if args.cal:
 if args.verbose:
 	sys.stdout.write('Constructing the output file...\n')
 #
-nbin_old=nbin
-freq0=freq_start
-freq1=freq_end
-nbin0=nbin
-#
 # the delay in telescope line transmission
 roach_delay=8.192e-6*3
 gps_delay=1e-5
@@ -491,27 +561,29 @@ transline_delay=2e-5
 light_delay=(300.0+141.96)/3.0e8
 delay=transline_delay+light_delay-gps_delay-roach_delay
 #
-stt_time=info['stt_time']
+stt_time=info['data_info']['stt_time']
 end_time=stt_time+tsamp*nbin0/86400.0+60./86400
 stt_time-=60./86400
 time0=file_time[0]
+freq0=freq_start+channel_width*0.5
+freq1=freq_end+channel_width*0.5
 if args.period or (not pepoch):
 	if args.period:
 		period=args.period
 	phase=np.arange(nbin0)*tsamp/period
-	info['phase0']=0
+	info['additional_info']={'phase0':0}
 	nperiod=int(np.ceil(np.max(phase)))
-	stt_sec=time0[:-1].sum()-delay+offs_sub-tsamp*nsblk/2.0
+	stt_sec=time0[:-1].sum()-delay+offs_sub-tsamp*nsblk/2.0-dm/df[f]**2*pm.dm_const
 	stt_date=time0[-1]+stt_sec//86400
 	stt_sec=stt_sec%86400
-else:	# generate the Chebishev polynomials based on the time and frequency
+else:	# generate the Chebyshev polynomials based on the time and frequency
 	chebx_test0=nc.chebpts1(args.ncoeff)
 	chebx_test=np.concatenate(([-1],chebx_test0,[1]),axis=0)
 	second_test=(chebx_test+1)/2*nbin0*tsamp+file_time[0][:-1].sum()-delay+offs_sub-tsamp*nsblk/2.0
 	time_test=te.time(file_time[0][-1]*np.ones(args.ncoeff+2),second_test,scale=telename)
 	times_test=te.times(time_test)
-	timing_test_end=pm.psr_timing(psr,times_test,freq_end)
-	timing_test_start=pm.psr_timing(psr,times_test,freq_start)
+	timing_test_end=pm.psr_timing(psr,times_test,freq1)
+	timing_test_start=pm.psr_timing(psr,times_test,freq0)
 	phase_start=timing_test_end.phase.integer[0]+1
 	phase_end=timing_test_start.phase.integer[-1]
 	phase=timing_test_end.phase.integer-phase_start+timing_test_end.phase.offset
@@ -521,30 +593,30 @@ else:	# generate the Chebishev polynomials based on the time and frequency
 	roots=nc.chebroots(cheb_end)
 	roots=np.real(roots[np.isreal(roots)])
 	root=roots[np.argmin(np.abs(roots))]
-	stt_time_test=te.time(file_time[0][-1],(root+1)/2*nbin0*tsamp+file_time[0][:-1].sum()-delay+offs_sub-tsamp*nsblk/2.0,scale=telename)
+	stt_time_test=af.cal_time(psr,int(phase_start),ttest=file_time[0][-1]+((root+1)/2*nbin0*tsamp+file_time[0][:-1].sum()-delay+offs_sub-tsamp*nsblk/2.0)/86400,telescope=telename,freq=np.inf)
 	stt_sec=stt_time_test.second[0]
 	stt_date=stt_time_test.date[0]
-	info['phase0']=int(phase_start)
+	info['additional_info']={'phase0':int(phase_start)}
 	ncoeff_freq=10
 	phase_tmp=np.zeros([ncoeff_freq,args.ncoeff+2])
 	disp_tmp=np.zeros(ncoeff_freq)
 	cheby=nc.chebpts1(ncoeff_freq)
-	freqy=(cheby+1)/2*bandwidth+freq_start
+	freqy=(cheby+1)/2*bandwidth+freq0
 	for i in np.arange(ncoeff_freq):
 		timing_test=pm.psr_timing(psr,times_test,freqy[i])
 		disp_tmp[i]=((timing_test.tdis1+timing_test.tdis2)/period).mean()
 		phase_tmp[i]=timing_test.phase.integer-phase_start+timing_test.phase.offset+disp_tmp[i]
 	coeff_freq=np.polyfit(1/freqy,disp_tmp,4)
 	coeff=nc.chebfit(chebx_test,nc.chebfit(cheby,phase_tmp,1).T,args.ncoeff-1)
-	info['predictor']=coeff.tolist()
-	info['predictor_freq']=coeff_freq.tolist()
+	info['folding_info']={'predictor':coeff.tolist()}
+	info['folding_info']['predictor_freq']=coeff_freq.tolist()
 #
-info['stt_sec']=stt_sec
-info['stt_date']=int(stt_date)
-info['stt_time']=stt_date+stt_sec/86400.0
+info['data_info']['stt_sec']=stt_sec
+info['data_info']['stt_date']=int(stt_date)
+info['data_info']['stt_time']=stt_date+stt_sec/86400.0
 #
-info['nperiod']=int(nperiod)
-info['period']=period
+info['data_info']['nperiod']=int(nperiod)
+info['data_info']['period']=period
 #
 nbin_max=(nbin0-1)/(np.max(phase)-np.min(phase))
 if args.nbin:
@@ -556,26 +628,30 @@ if args.nbin:
 else:
 	nbin=2**np.int16(np.log2(nbin_max))
 	temp_multi=1
-info['nbin']=int(nbin)
-info['length']=period*nperiod
+info['data_info']['nbin']=int(nbin)
+info['data_info']['length']=period*nperiod
 #
 totalbin=nperiod*nbin*temp_multi
 dphasebin=1./(nbin*temp_multi)
-df=freq_start+np.arange(nchan_new)*channel_width
-df0=(df-freq_start)/(freq_end-freq_start)*2-1
+df=freq0+np.arange(nchan_new)*channel_width
+df0=(df-freq0)/(freq1-freq0)*2-1
 #
 d=ld.ld(name+'.ld')
-if info['mode']=='subint':
-	info['nsub']=int(np.ceil(nperiod*1.0/sub_nperiod))
+if info['data_info']['mode']=='subint':
+	info['data_info']['nsub']=int(np.ceil(nperiod*1.0/sub_nperiod))
 	tpsub=np.zeros([nchan_new,npol,nbin],dtype=np.float64)
 	sub_nperiod_last=(nperiod-1)%sub_nperiod+1
-	info['sub_nperiod']=int(sub_nperiod)
-	info['sub_nperiod_last']=int(sub_nperiod_last)
+	info['data_info']['sub_nperiod']=int(sub_nperiod)
+	info['data_info']['sub_nperiod_last']=int(sub_nperiod_last)
 	tpsubn=np.zeros(nchan_new)
-elif info['mode']=='single':
-	info['nsub']=int(nperiod)
-info['file_time']=time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())
-d.write_shape([nchan_new,info['nsub'],nbin,npol])
+elif info['data_info']['mode']=='single':
+	sub_nperiod=1
+	info['data_info']['nsub']=int(nperiod)
+	info['data_info']['sub_nperiod']=1
+	info['data_info']['sub_nperiod_last']=1
+info['data_info']['chan_weight']=(weight*(2**int(np.log2(period*info['data_info']['sub_nperiod']/nbin/tsamp))*1.5)).tolist()
+info['history_info']['file_time']=[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())]
+d.write_shape([nchan_new,info['data_info']['nsub'],nbin,npol])
 #
 def write_data(ldfile,data,startbin,channum,lock=0):
 	#if args.multi: lock.acquire()
@@ -591,9 +667,9 @@ def gendata(cums,data,tpsub=0,tpsubn=0,last=False,first=True,lock=0):	# analyze 
 	else:
 		data=data[chanstart:chanend]
 	if args.period:
-		dt=np.array([np.arange(nsblk*cums-2,nsblk*cums+nsblk+2)*tsamp]*nchan_new)
+		dt=np.array([np.arange(nsblk*cums-1.5,nsblk*cums+nsblk+2.5)*tsamp]*nchan_new)
 	else:
-		dt=np.arange(nsblk*cums-2,nsblk*cums+nsblk+2)/nbin0*2-1
+		dt=np.arange(nsblk*cums-1.5,nsblk*cums+nsblk+2.5)/nbin0*2-1
 	for f in np.arange(nchan_new):
 		if f+chanstart in zchan: continue
 		if args.period:
@@ -618,7 +694,7 @@ def gendata(cums,data,tpsub=0,tpsubn=0,last=False,first=True,lock=0):	# analyze 
 		else:
 			startphase=newphase[0]
 			nphase=newphase.size
-		if info['mode']=='single':
+		if info['data_info']['mode']=='single':
 			write_data(d,tpdata,startphase,f,lock=lock)
 		else:
 			startperiod,phaseres1=divmod(startphase,nbin)
@@ -644,7 +720,7 @@ def gendata(cums,data,tpsub=0,tpsubn=0,last=False,first=True,lock=0):	# analyze 
 						tpsub[f,:,phaseres1:]+=tpdata[:,:(nbin-phaseres1)]
 						tpdata=tpdata[:,(nbin-phaseres1):].reshape(npol,-1,nbin)
 						file_sub_data[:,0]=tpsub[f]+tpdata.sum(1)
-					write_data(d,file_sub_data.reshape(npol,-1),startsub*nbin,f,lock=lock)
+					write_data(d,file_sub_data.reshape(npol,-1)/sub_nperiod,startsub*nbin,f,lock=lock)
 				else:
 					periodres_left=sub_nperiod-periodres
 					periodres_right=(file_nsub-1)*sub_nperiod-periodres
@@ -661,11 +737,11 @@ def gendata(cums,data,tpsub=0,tpsubn=0,last=False,first=True,lock=0):	# analyze 
 						file_sub_data[:,0]+=tpsub[f]
 					else:
 						file_sub_data[:,1]+=tpsub[f]
-					write_data(d,file_sub_data[:,:-1].reshape(npol,-1),startsub*nbin,f,lock=lock)
+					write_data(d,file_sub_data[:,:-1].reshape(npol,-1)/sub_nperiod,startsub*nbin,f,lock=lock)
 					tpsub[f]=file_sub_data[:,-1]
 					tpsubn[f]=startsub+file_nsub-1
 					if last:
-						write_data(d,tpsub[f],tpsubn[f]*nbin,f,lock=lock)
+						write_data(d,tpsub[f]/sub_nperiod,tpsubn[f]*nbin,f,lock=lock)
 			else:
 				if file_nperiod>1:
 					phaseres_left=nbin-phaseres1
@@ -677,7 +753,7 @@ def gendata(cums,data,tpsub=0,tpsubn=0,last=False,first=True,lock=0):	# analyze 
 				else:
 					tpsub[f,:,phaseres1:(phaseres1+tpdata.shape[1])]+=tpdata
 				if last:
-					write_data(d,tpsub[f],startsub*nbin,f,lock=lock)
+					write_data(d,tpsub[f]/sub_nperiod,startsub*nbin,f,lock=lock)
 	return tpsub,tpsubn
 #
 if args.verbose:
@@ -690,10 +766,10 @@ def dealdata(filelist,n,lock=0):
 		sys.stdout.write('Processing the '+str(n+1)+'th fits file...\n')
 		if args.multi: lock.release()
 		timemark=time.time()
-	if info['mode']=='subint':
+	if info['data_info']['mode']=='subint':
 		tpsub=np.zeros([nchan_new,npol,nbin],dtype=np.float64)
 		tpsubn=np.zeros(nchan_new,dtype=np.int64)
-	elif info['mode']=='single':
+	elif info['data_info']['mode']=='single':
 		tpsub=0
 		tpsubn=0
 	f=ps.open(filelist[n],mmap=True)
@@ -755,12 +831,17 @@ if args.multi:
 	pool.close()
 	pool.join()
 #
+if info['data_info']['sub_nperiod']!=info['data_info']['sub_nperiod_last']:
+	data=d.read_period(info['data_info']['nsub']-1)
+	data*=(info['data_info']['sub_nperiod']/info['data_info']['sub_nperiod_last'])
+	d.write_period(data,info['data_info']['nsub']-1)
+#
 if args.cal:
-	info['pol_type']='IQUV'
+	info['data_info']['pol_type']='IQUV'
 	if cal_mode=='trend':
-		info['noise_time0']=noise_time0
+		info['calibration_info']['noise_time0']=noise_time0
 else:
-	info['pol_type']=pol_type
+	info['data_info']['pol_type']=pol_type
 d.write_info(info)
 #
 

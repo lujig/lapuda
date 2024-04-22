@@ -25,9 +25,9 @@ parser.add_argument("-a","--cal",dest="cal",nargs='+',help="name of calibration 
 parser.add_argument("--cal_period",dest="cal_period",default=0,type=np.float64,help="period of the calibration fits file (s)")
 parser.add_argument("--subi",action="store_true",default=False,help="take one subint as the calibration unit")
 parser.add_argument("--cal_para",dest='cal_para',default='',help="the time range of the calibration file")
-parser.add_argument("-t","--trend",action="store_true",default=False,help="fit the calibration parameter evolution")
+parser.add_argument("--trend",action="store_true",default=False,help="fit the calibration parameter evolution")
 parser.add_argument("-o","--output",dest="output",default="psr",help="output file name")
-parser.add_argument("-f","--frequency",dest='freqrange',default=0,help="output frequency range (MHz) in form start_freq,end_freq")
+parser.add_argument("--fr",dest='freqrange',default=0,help="output frequency range (MHz) in form start_freq,end_freq")
 parser.add_argument('-d','--dm',dest='dm',default=0,type=np.float64,help="dispersion measure")
 parser.add_argument('-n','--pulsar_name',default=0,dest='psr_name',help='input pulsar name')
 parser.add_argument('-e','--pulsar_ephemeris',default=0,dest='par_file',help='input pulsar parameter file')
@@ -138,11 +138,11 @@ if args.cal:	# check the calibration file and parameters
 				parser.error('Calibration file name is invalid.')
 			noise=ld.ld(args.cal[0])
 			noise_info=noise.read_info()
-			if noise_info['mode']!='cal':
+			if noise_info['data_info']['mode']!='cal':
 				parser.error("LD file is not caliration file.")
-			elif telename!=noise_info['telename']:
+			elif telename!=noise_info['telescope_info']['telename']:
 				parser.error("LD calibration file has different telescope name.")
-			elif nchan!=noise_info['nchan']:
+			elif nchan!=noise_info['data_info']['nchan']:
 				parser.error("LD calibration file has different channel number.")
 		else:
 			noise_mark='fits'
@@ -168,12 +168,12 @@ else:
 #
 channel_width=bandwidth*1.0/nchan
 if args.freqrange:
-	command.append('-f '+args.freqrange)
+	command.append('--fr '+args.freqrange)
 	freq_start,freq_end=np.float64(args.freqrange.split(','))
-	chanstart,chanend=np.int16(np.round((np.array([freq_start,freq_end])-freq)/channel_width+0.5*nchan))
-	if freq_start>freq_end:
+	chanstart,chanend=np.int16(np.round((np.array([freq_start,freq_end])-freq)/channel_width+0.5*nchan+0.5))
+	if chanstart>chanend:
 		parser.error("Starting frequency larger than ending frequency.")
-	elif freq_start<(freq-bandwidth/2.0) or freq_end>(freq+bandwidth/2.0):
+	elif chanstart<0 or chanend>nchan:
 		parser.error("Input frequency is overrange.")
 else:
 	chanstart,chanend=0,nchan
@@ -181,8 +181,8 @@ nchan_new=chanend-chanstart
 #
 nbin=file_len.sum()*nsblk
 stt_time=file_t0[0]
-freq_start,freq_end=(np.array([chanstart,chanend])-0.5*nchan)*channel_width+freq
-info={'nbin_origin':int(nbin),'telename':telename,'freq_start_origin':freq-bandwidth/2.0,'freq_end_origin':freq+bandwidth/2.0,'freq_start':freq_start,'freq_end':freq_end,'nchan_origin':int(nchan),'nchan':1,'tsamp_origin':tsamp,'stt_time_origin':stt_time,'stt_time':stt_time,'npol':int(npol),'freq_align':freq_end-channel_width}
+freq_start,freq_end=(np.array([chanstart,chanend])-0.5*nchan-0.5)*channel_width+freq
+info={'data_info':{'freq_start':freq_start,'freq_end':freq_end,'nchan':1,'stt_time':stt_time,'npol':int(npol),'freq_align':freq_end-channel_width},'original_data_info':{'nbin_origin':int(nbin),'freq_start_origin':freq-bandwidth*0.5-channel_width*0.5,'freq_end_origin':freq+bandwidth*0.5-channel_width*0.5,'tsamp_origin':tsamp,'stt_time_origin':stt_time,'nchan_origin':int(nchan)},'telescope_info':{'telename':telename}}
 #
 if args.psr_name and args.par_file:	# check the conflict of dispersion flags
 	parser.error('At most one of flags -n and -p is required.')
@@ -203,13 +203,13 @@ elif args.psr_name or args.par_file:
 		psr_par=par_file.readlines()
 		par_file.close()
 		psr=pr.psr(args.par_file,parfile=True)
-	info['psr_par']=psr_par
+	info['pulsar_info']={'psr_par':psr_par}
 	pepoch=False
 	for line in psr_par:
 		elements=line.split()
 		if elements[0]=='PSRJ' or elements[0]=='NAME':
 			psr_name=elements[1].strip('\n')
-			info['psr_name']=psr_name
+			info['pulsar_info']['psr_name']=psr_name
 		elif elements[0]=='DM':
 			if not args.dm:
 				dm=np.float64(elements[1])
@@ -223,8 +223,8 @@ else:
 	dm=args.dm
 	command.append(' -d '+str(args.dm))
 #
-info['mode']='unfold'
-info['dm']=dm
+info['data_info']['mode']='unfold'
+info['data_info']['dm']=dm
 #
 if args.zap_file:
 	command.append('-z')
@@ -235,9 +235,10 @@ if args.zap_file:
 		parser.error('The zapped channel number is overrange.')
 	weight=np.ones(nchan,dtype=np.float64)
 	weight[zchan]=0
-	info['chan_weight']=weight[chanstart:chanend]
+	info['data_info']['chan_weight']=(weight[chanstart:chanend]*1.5).tolist()
 else:
 	zchan=[]
+	info['data_info']['chan_weight']=(np.ones(chanend-chanstart,dtype=np.float64)*1.5).tolist()
 name=args.output
 if len(name)>3:
 	if name[-3:]=='.ld':
@@ -261,35 +262,60 @@ if args.multi:
 	command.append('-m '+str(args.multi))
 #
 command=' '.join(command)
-info['history']=[command]
+info['history_info']={'history':[command]}
 #
-def deal_seg(n1,n2):	# processing the noise data segments
+def deal_seg(n1,n2,multi=0):	# processing the noise data segments
 	cumsub=0
-	noise_data=np.zeros([noisen,npol,nchan])
-	noise_cum=np.zeros(noisen)
+	if multi:
+		manager=Manager()
+		noise_data=manager.list([np.zeros([npol,nchan])]*noisen)
+		noise_cum=manager.list(np.zeros(noisen))
+		pool0=Pool(processes=multi)
+		lock=manager.Lock()
+	else:
+		noise_data=np.zeros([noisen,npol,nchan])
+		noise_cum=np.zeros(noisen)
+	fsub=[]
 	for n in np.arange(n1,n2):
 		f=ps.open(noiselist[n],mmap=True)
-		fsub=f['SUBINT'].header['naxis2']
-		for i in np.arange(fsub):
+		fsub.append(f['SUBINT'].header['naxis2'])
+		f.close()
+	cumsub=np.cumsum(fsub)
+	def tmp_deal(n,lock=0):
+		f=ps.open(noiselist[n],mmap=True)
+		for i in np.arange(fsub[n-n1]):
 			dtmp=f['SUBINT'].data[i]
 			data=np.int16(dtmp['DATA'].reshape(nsblk,npol,nchan)*dtmp['dat_scl'].reshape(1,npol,nchan)+dtmp['dat_offs'].reshape(1,npol,nchan))
 			del f['SUBINT'].data
 			if args.reverse or (not bw_sign):
 				data=data[:,:,::-1]
 			if args.subi:
-				noise_t=np.int64(cumsub%noisen)
+				noise_t=np.int64((cumsub[n-n1]+i)%noisen)
+				if multi: lock.acquire()
 				noise_data[noise_t]+=data.mean(0)
 				noise_cum[noise_t]+=1
+				if multi: lock.release()
 			else:
-				noise_t=np.int64((np.arange(nsblk)+cumsub*nsblk)*tsamp%args.cal_period//tsamp)
+				noise_t=np.int64((np.arange(nsblk)+(cumsub[n-n1]+i)*nsblk)*tsamp%args.cal_period//tsamp)
 				for k in np.arange(nsblk):
 					tmp_noise_t=noise_t[k]
 					if tmp_noise_t==noisen:
 						continue
+					if multi: lock.acquire()
 					noise_data[tmp_noise_t]+=data[k]
 					noise_cum[tmp_noise_t]+=1
-			cumsub+=1
+					if multi: lock.release()
 		f.close()
+	#
+	for n in np.arange(n1,n2):
+		if multi: pool0.apply_async(tmp_deal,(n,lock))
+		else: tmp_deal(n)
+	if multi:
+		pool0.close()
+		pool0.join()
+		noise_data=np.array(noise_data)
+		noise_cum=np.array(noise_cum)
+	#
 	tmp_noise=noise_data[:,0].sum(1)/noise_cum
 	sorts=np.argsort(tmp_noise)
 	noise_data,noise_cum=noise_data[sorts],noise_cum[sorts]
@@ -297,10 +323,12 @@ def deal_seg(n1,n2):	# processing the noise data segments
 	if noisen>6:
 		noise_off=noise_data[2:(noisen_center-1)].sum(0)/noise_cum[2:(noisen_center-1)].sum().reshape(-1,1)
 		noise_on=noise_data[(noisen_center+2):-2].sum(0)/noise_cum[(noisen_center+2):-2].sum().reshape(-1,1)-noise_off
-	elif noisen>2:
-		sys.stdout.write('Warning: The noise data used in calulation is too short to get accurate calibration parameters.\n')
+	elif noisen>=2:
+		if not args.subi: sys.stdout.write('Warning: The noise data used in calulation is too short to get accurate calibration parameters.\n')
+		if noisen==2: tmp=0
+		else: tmp=1
 		noise_off=noise_data[:noisen_center].sum(0)/noise_cum[:noisen_center].sum().reshape(-1,1)
-		noise_on=noise_data[(noisen_center+1):].sum(0)/noise_cum[(noisen_center+1):].sum().reshape(-1,1)-noise_off
+		noise_on=noise_data[(noisen_center+tmp):].sum(0)/noise_cum[(noisen_center+tmp):].sum().reshape(-1,1)-noise_off
 	else:
 		parser.error('The noise data used in calulation is too short.')
 	noise_a12,noise_a22=noise_on[:2]
@@ -330,16 +358,27 @@ if noise_mark=='fits':	# the calibration data can be original fits data of noise
 			noise_time=np.zeros(file_nseg)
 			noise_data=np.zeros([file_nseg,4,nchan])
 			for i in np.arange(file_nseg):
-				noise_data[i]=deal_seg(jumps[i],jumps[i+1])
+				noise_data[i]=deal_seg(jumps[i],jumps[i+1],multi=args.multi)
 				noise_time[i]=(cumlen_noise[jumps[i+1]-1]+cumlen_noise[jumps[i]]+noise_len[jumps[i]]*tsamp/86400)/2
 			cal_mode='trend'
 		else:
 			if noisenum>1:
-				noise_time=(cumlen_noise[-1]+noise_len[-1]*tsamp/86400)/2
-				noise_data=np.zeros([noisenum,4,nchan])
+				noise_time=cumlen_noise+noise_len*tsamp/86400/2
+				if args.multi:
+					def trend_deal(i):
+						noise_data[i]=deal_seg(i,i+1)
+					noise_data=Manager().list([np.zeros([4,nchan])]*noisenum)
+					pool1=Pool(processes=args.multi)
+				else: noise_data=np.zeros([noisenum,4,nchan])
 				for i in np.arange(noisenum):
-					noise_data[i]=deal_seg(i,i+1)
+					if args.multi: pool1.apply_async(trend_deal,(i,))
+					else: noise_data[i]=deal_seg(i,i+1)
+				if args.multi:
+					pool1.close()
+					pool1.join()
+					noise_data=np.array(noise_data)
 				cal_mode='trend'
+				file_nseg=noisenum
 			else:
 				sys.stdout.write('Warning: Only one file is used to do the calibration and the calibration parameters are adopted without regard to the evolution.')
 				if args.cal_para:
@@ -354,20 +393,20 @@ if noise_mark=='fits':	# the calibration data can be original fits data of noise
 				parser.error('The calibration file time is out of the allowed range.')
 		noise_data=np.zeros([file_nseg,4,nchan])
 		for i in np.arange(file_nseg):
-			noise_data[i]=deal_seg(jumps[i],jumps[i+1])
+			noise_data[i]=deal_seg(jumps[i],jumps[i+1],multi=args.multi)
 		noise_data=noise_data.mean(0)
 		cal_mode='single'
 elif noise_mark=='ld':
-	if noise_info['cal_mode']=='trend':
-		noise_time0=noise_info['stt_time']
-		noise_time=noise_info['seg_time']
+	if noise_info['calibration_info']['cal_mode']=='trend':
+		noise_time0=noise_info['data_info']['stt_time']
+		noise_time=noise_info['calibration_info']['seg_time']
 		if file_t0[0]<((1.25*noise_time[0]-0.25*noise_time[-1])+noise_time0) or file_t0[-1]>((1.25*noise_time[-1]-0.25*noise_time[0])+noise_time0):
 			parser.error('The file time is out of the extrapolating range.')
 		noise_data=noise.read_data().reshape(nchan,2,4).transpose(1,2,0)
 		cal_mode='trend'
-	elif noise_info['cal_mode']=='seg':
-		noise_time0=noise_info['stt_time']
-		noise_time=noise_info['seg_time']
+	elif noise_info['calibration_info']['cal_mode']=='seg':
+		noise_time0=noise_info['data_info']['stt_time']
+		noise_time=noise_info['calibration_info']['seg_time']
 		noise_time_judge=((noise_time+noise_time0-file_t0[0])>(-cal_trend_eff/24.))&((noise_time+noise_time0-file_t0[-1])<(cal_trend_eff/24.))
 		noise_time_judge_1=((noise_time+noise_time0-file_t0[0])>(-cal_seg_eff/24.))&((noise_time+noise_time0-file_t0[-1])<(cal_seg_eff/24.))
 		noise_time_index=np.arange(len(noise_time))[noise_time_judge]
@@ -404,8 +443,8 @@ elif noise_mark=='ld':
 	else:
 		parser.error('The calibration file mode is unknown.')
 if args.cal:
-	info['cal_mode']=cal_mode
-	info['cal']=noise_data.reshape(-1,nchan).tolist()
+	info['calibration_info']={'cal_mode':cal_mode}
+	info['calibration_info']['cal']=noise_data.reshape(-1,npol,nchan).tolist()
 	if cal_mode=='single':
 		noise_a12,noise_a22,noise_cos,noise_sin=noise_data
 		noise_a12=np.where(noise_a12>0,1./noise_a12,0)
@@ -418,8 +457,8 @@ if args.verbose:
 	sys.stdout.write('Constructing the output file...\n')
 #
 nbin_old=nbin
-freq0=freq_start
-freq1=freq_end
+freq0=freq_start+channel_width*0.5
+freq1=freq_end+channel_width*0.5
 nbin0=nbin
 #
 # the delay in telescope line transmission
@@ -429,7 +468,7 @@ transline_delay=2e-5
 light_delay=(300.0+141.96)/3.0e8
 delay=transline_delay+light_delay-gps_delay-roach_delay
 #
-stt_time=info['stt_time']
+stt_time=info['data_info']['stt_time']
 end_time=stt_time+tsamp*nbin0/86400.0+60./86400
 stt_time-=60./86400
 time0=file_time[0]
@@ -438,21 +477,21 @@ dbin=int(np.ceil(dm*pm.dm_const*(1/freq0**2-1/freq1**2)/tsamp))
 nbin=nbin0-dbin
 phase=np.arange(nbin)*tsamp
 #
-info['phase0']=int(0)
-stt_sec=time0[:-1].sum()-delay
+info['additional_info']={'phase0':int(0)}
+stt_sec=time0[:-1].sum()-delay-dm*pm.dm_const*1/freq1**2
 stt_date=time0[-1]+stt_sec//86400
 stt_sec=stt_sec%86400
 #
-info['stt_sec']=stt_sec
-info['stt_date']=int(stt_date)
-info['stt_time']=stt_date+stt_sec/86400.0
-info['nbin']=int(nbin)
-info['length']=nbin0*tsamp
+info['data_info']['stt_sec']=stt_sec
+info['data_info']['stt_date']=int(stt_date)
+info['data_info']['stt_time']=stt_date+stt_sec/86400.0
+info['data_info']['nbin']=int(nbin)
+info['data_info']['length']=nbin0*tsamp
 #
-df=freq_start+np.arange(nchan_new)*channel_width
+df=freq0+np.arange(nchan_new)*channel_width
 #
-info['nsub']=int(1)
-info['file_time']=time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())
+info['data_info']['nsub']=int(1)
+info['history_info']['file_time']=time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())
 #
 def write_data(n,cumsub,fsub,data,lock=0):
 	if args.multi: lock.acquire()
@@ -497,7 +536,7 @@ def dealdata(filelist,n,lock=0):	# analyze the phase bin of the data
 	for i in np.arange(chanstart,chanend):
 		dtmp=f['SUBINT'].data['data'][:,:,:,i].reshape(fsub,nsblk,npol)
 		if i in zchan: continue
-		dphase=dm*pm.dm_const*(1/df[i-chanstart]**2-1/freq_end**2)/tsamp/nbin_tmp*2*np.pi
+		dphase=dm*pm.dm_const*(1/df[i-chanstart]**2-1/freq1**2)/tsamp/nbin_tmp*2*np.pi
 		data=(dtmp*scl[:,:,:,i]+offs[:,:,:,i]).reshape(fsub*nsblk,npol)
 		del f['SUBINT'].data
 		if args.cal:
@@ -542,14 +581,14 @@ if args.multi:
 	pool.join()
 #
 if args.cal:
-	info['pol_type']='IQUV'
+	info['data_info']['pol_type']='IQUV'
 	if cal_mode=='trend':
-		info['noise_time0']=noise_time0
+		info['calibration_info']['noise_time0']=noise_time0
 else:
-	info['pol_type']=pol_type
+	info['data_info']['pol_type']=pol_type
 #
 d0=ld.ld(name+'.ld')
-d0.write_shape([1,info['nsub'],nbin,npol])
+d0.write_shape([1,info['data_info']['nsub'],nbin,npol])
 d0.write_chan(d,0)
 d0.write_info(info)
 #

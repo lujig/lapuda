@@ -1,0 +1,23 @@
+The flags of the programme:
+	-t		time domain
+	-f		frequency domain
+	--nchan	number of frequency channels
+	--nsub		number of sub-integrations
+	-T		time scrunch and reserve only one sub-integration
+	-F		frequency scrunch and reserve only one frequency channel
+	-B		bin scrunch and reserve only one bin
+	-P		reserve only the Stokes parameter I
+	--tr		the time range of the data used in the programme
+	--sr		the sub-integration range of the data used in the programme
+	--fr		the frequency range of the data used in the programme
+	--cr		the channel range of the data used in the programme
+	--pr		the polarization indices of the data used in the programme
+	--br		the phase range of the data used in the programme
+Above flags and the corresponding properties are conventionalized, and other correspondance is not permitted.
+
+In the information of LD format file, the following fields in parameters are defined:
+	freq_start		the frequency of the lower edge of the first frequency channel
+	freq_end		the frequency of the upper edge of the last frequency channel
+	stt_time		the corresponding time as the same phase as the leading edge of the first data bin at infinity frequency
+	chan_weight		the weight for the data each channel (except the last sub-integration)
+	weights		the weight for each data bin

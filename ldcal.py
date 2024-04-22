@@ -18,7 +18,7 @@ parser.add_argument("filename",nargs='+',help="name of file or filelist")
 parser.add_argument("--cal_period",dest="cal_period",default=0,type=np.float64,help="period of the calibration fits file (s)")
 parser.add_argument("-o","--output",dest="output",default="psr",help="output file name")
 parser.add_argument("-r","--reverse",action="store_true",default=False,help="reverse the band")
-parser.add_argument("-t","--trend",action="store_true",default=False,help="fit the calibration parameter evolution")
+parser.add_argument("--trend",action="store_true",default=False,help="fit the calibration parameter evolution")
 parser.add_argument("-s","--subi",action="store_true",default=False,help="take one subint as the calculation unit")
 parser.add_argument("-w","--overwrite",action="store_true",default=False,help="overwrite the existed output file")
 args=(parser.parse_args())
@@ -100,28 +100,28 @@ def ld_check(fname,notfirst=True,filetype='Ld file'):	# check the consistency of
 	except:
 		parser.error(filetype+' '+fname+' is invalid.')
 	global telename,npol,nchan,freq_start,freq_end,stt_time,seg_time,flen
-	if finfo['mode']=='cal':
-		if not finfo['cal_mode']=='seg':
+	if finfo['data_info']['mode']=='cal':
+		if not finfo['calibration_info']['cal_mode']=='seg':
 			parser.error(filetype+' '+fname+' is not segmented calibration file.')
 	else:
 		parser.error(filetype+' '+fname+' is not calibration file.')
 	if not notfirst:
-		telename,npol,nchan,freq_start,freq_end=finfo['telename'],finfo['npol'],finfo['nchan'],finfo['freq_start'],finfo['freq_end']
+		telename,npol,nchan,freq_start,freq_end=finfo['telescope_info']['telename'],finfo['data_info']['npol'],finfo['data_info']['nchan'],finfo['data_info']['freq_start'],finfo['data_info']['freq_end']
 	else:
-		if telename!=finfo['telename']:
+		if telename!=finfo['telescope_info']['telename']:
 			file_error('telescope name',filetype)
-		if npol!=finfo['npol']:
+		if npol!=finfo['data_info']['npol']:
 			file_error('number of polorisations',filetype)
-		if nchan!=finfo['nchan']:
+		if nchan!=finfo['data_info']['nchan']:
 			file_error('number of channels',filetype)
-		if (freq_start-finfo['freq_start'])>1e-3:
+		if (freq_start-finfo['data_info']['freq_start'])>1e-3:
 			file_error('start frequency',filetype)
-		if (freq_end-finfo['freq_end'])>1e-3:
+		if (freq_end-finfo['data_info']['freq_end'])>1e-3:
 			file_error('end frequency',filetype)
 		#
-	flen=finfo['length']
-	stt_time=finfo['stt_time']
-	seg_time=list(np.float64([finfo['seg_time']]).reshape(-1)+stt_time)
+	flen=finfo['data_info']['length']
+	stt_time=finfo['data_info']['stt_time']
+	seg_time=list(np.float64([finfo['calibration_info']['seg_time']]).reshape(-1)+stt_time)
 #
 for i in np.arange(filenum):
 	if mark=='fits':
@@ -145,8 +145,8 @@ if mark=='fits':
 	#
 	nbin=file_len.sum()
 	stt_time=file_t0[0]
-	freq_start,freq_end=np.array([-0.5,0.5])*nchan*channel_width+freq
-	info={'nbin_origin':int(nbin),'telename':telename,'freq_start':freq_start,'freq_end':freq_end,'nchan':int(nchan),'tsamp_origin':tsamp,'stt_time':stt_time,'npol':int(npol),'mode':'cal','length':nbin*tsamp}
+	freq_start,freq_end=(np.array([-0.5,0.5])*nchan-0.5)*channel_width+freq
+	info={'data_info':{'freq_start':freq_start,'freq_end':freq_end,'nchan':int(nchan),'stt_time':stt_time,'npol':int(npol),'mode':'cal','length':nbin*tsamp},'original_data_info':{'nbin_origin':int(nbin),'tsamp_origin':tsamp},'telescope_info':{'telename':telename}}
 	if args.reverse:
 		command.append('-r')
 	if args.subi:
@@ -172,7 +172,7 @@ elif mark=='ld':
 	seg_sorts=np.argsort(seg_times)
 	lseg=list(map(len,segs))
 	nseg=len(seg_times)
-	info={'telename':telename,'freq_start':freq_start,'freq_end':freq_end,'nchan':int(nchan),'npol':int(npol),'mode':'cal','stt_time':stt_time,'length':np.sum(file_len)}
+	info={'data_info':{'freq_start':freq_start,'freq_end':freq_end,'nchan':int(nchan),'stt_time':stt_time,'npol':int(npol),'mode':'cal','length':np.sum(file_len)},'telescope_info':{'telename':telename}}
 	if args.reverse:
 		sys.stdout.write('Warning: Band of the ld file will not be reversed, and the flag \'-r\' will be ignored.\n')
 	if args.subi:
@@ -197,9 +197,9 @@ if args.verbose:
 d=ld.ld(name+'.ld')
 #
 if args.trend:
-	command.append('-t')
+	command.append('--trend')
 command=' '.join(command)
-info['history']=[command]
+info['history_info']={'history':[command]}
 #
 sys.stdout.write('Processing the noise file...\n')
 #
@@ -261,12 +261,12 @@ if mark=='fits':
 			for i in np.arange(filenum):
 				noise_info[i]=deal_seg(i,i+1)
 		noise_info=np.polyfit(noise_time,noise_info.reshape(file_nseg,-1),1).reshape(2,npol,nchan)
-		info['cal_mode']='trend'
+		info['calibration_info']={'cal_mode':'trend'}
 		d.write_shape([nchan,2,1,npol])
 		d.write_period(noise_info[0].T,0)
 		d.write_period(noise_info[1].T,1)
 	else:
-		info['cal_mode']='seg'
+		info['calibration_info']={'cal_mode':'seg'}
 		noise_time=np.zeros(file_nseg)
 		d.write_shape([nchan,file_nseg,1,npol])
 		for i in np.arange(file_nseg):
@@ -285,16 +285,16 @@ elif mark=='ld':
 	noise_time=seg_times[seg_sorts]-stt_time
 	if args.trend:
 		noise_info=np.polyfit(noise_time,noise_data.reshape(nseg,-1),1).reshape(2,nchan,npol)
-		info['cal_mode']='trend'
+		info['calibration_info']={'cal_mode':'trend'}
 		d.write_shape([nchan,2,1,npol])
 		d.write_period(noise_info[0],0)
 		d.write_period(noise_info[1],1)
 	else:
-		info['cal_mode']='seg'
+		info['calibration_info']={'cal_mode':'seg'}
 		d.write_shape([nchan,nseg,1,npol])
 		for i in np.arange(nseg):
 			d.write_period(noise_data[i],i)
 #
-info['seg_time']=list(noise_time)
-info['file_time']=time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())
+info['calibration_info']['seg_time']=list(noise_time)
+info['history_info']['file_time']=time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())
 d.write_info(info)

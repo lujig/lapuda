@@ -17,7 +17,7 @@ parser.add_argument('--verbose', action="store_true",default=False,help="print d
 parser.add_argument("filename",nargs='+',help="name of file or filelist")
 parser.add_argument('-j','--crit',dest='crit',default=0.1,type=np.float64,help="the criterion to screen the interfered channels on calibration parameters")
 parser.add_argument("-p","--polynum",dest="polynum",default=7,type=int,help="numbers of Chebyshev polynomial coefficients on calibration parameters")
-parser.add_argument("-f","--channel",dest='chanrange',default="1,650",help="channel range without interference in form start_chan,end_chan")
+parser.add_argument("--cr",dest='chanrange',default="1,650",help="channel range without interference in form start_chan,end_chan")
 parser.add_argument('-m',action='store_true',default=False,dest='modify',help='modify the zap parameter of the LD file')
 parser.add_argument('-c',action='store_true',default=False,dest='correct',help='correct the data of the LD file')
 args=(parser.parse_args())
@@ -40,18 +40,18 @@ def ld_check(fname,notfirst=True):	# check the validity of file
 	except:
 		parser.error('Ld files '+fname+' is invalid.')
 	global nchan
-	if not ((finfo['mode']=='single')|(finfo['mode']=='subint')):
+	if not ((finfo['data_info']['mode']=='single')|(finfo['data_info']['mode']=='subint')):
 		parser.error('Ld files '+fname+' is not pulsar data file.')
 	if not notfirst:
-		nchan=np.int16(finfo['nchan'])
+		nchan=np.int16(finfo['data_info']['nchan'])
 	else:
-		if nchan!=np.int16(finfo['nchan']):
+		if nchan!=np.int16(finfo['data_info']['nchan']):
 			parser.error("Ld files have different channel numbers.")
 #
 for i in np.arange(filenum):
 	ld_check(filelist[i],notfirst=i)
 #
-command.append('-f '+args.chanrange)
+command.append('--cr '+args.chanrange)
 chanstart,chanend=np.int16(args.chanrange.split(','))
 if chanstart>chanend:
 	parser.error("Starting channel number larger than ending channel number.")
@@ -91,10 +91,10 @@ def calzap(aa,bb,cr,ci):	# consider the smoothness of aa and bb and the elliptic
 	da/=da.std()
 	db=bb-bb0
 	db/=db.std()
-	jj=np.zeros_like(da,dtype=np.bool)
+	jj=np.zeros_like(da,dtype=bool)
 	x0=np.arange(nchan)
-	j1a=np.zeros(nchan,dtype=np.bool)
-	j1t=np.ones(nchan,dtype=np.bool)
+	j1a=np.zeros(nchan,dtype=bool)
+	j1t=np.ones(nchan,dtype=bool)
 	loop=0
 	while not np.all(j1t==j1a):
 		j1t=j1a.copy()
@@ -105,7 +105,7 @@ def calzap(aa,bb,cr,ci):	# consider the smoothness of aa and bb and the elliptic
 			j0a=np.abs(da)<=3
 			loop+=1
 			if loop>1000: break
-		if loop>1000: return np.zeros(nchan,dtype=np.bool)
+		if loop>1000: return np.zeros(nchan,dtype=bool)
 		xtmp=x0[j0a]
 		aa1=np.interp(x0,xtmp,aa[j0a])
 		aa0=ss.filtfilt(b,a,aa1)
@@ -118,7 +118,7 @@ def calzap(aa,bb,cr,ci):	# consider the smoothness of aa and bb and the elliptic
 	y0=nc.chebval(x2,nc.chebfit(x2,aa2,args.polynum))
 	dy=aa2-y0
 	j0a=np.abs(dy)<=0.1
-	j2a=np.zeros(len(dy),dtype=np.bool)
+	j2a=np.zeros(len(dy),dtype=bool)
 	while not np.all(j0a|j2a):
 		j2a=np.abs(dy)>0.1
 		xtmp=x2[j0a]
@@ -128,8 +128,8 @@ def calzap(aa,bb,cr,ci):	# consider the smoothness of aa and bb and the elliptic
 	j01a=np.logical_not(j1a)
 	j02a=np.logical_not(j2a)
 	#
-	j1b=np.zeros(nchan,dtype=np.bool)
-	j1t=np.ones(nchan,dtype=np.bool)
+	j1b=np.zeros(nchan,dtype=bool)
+	j1t=np.ones(nchan,dtype=bool)
 	while not np.all(j1t==j1b):
 		j1t=j1b.copy()
 		j0b=np.abs(db)<=3
@@ -149,7 +149,7 @@ def calzap(aa,bb,cr,ci):	# consider the smoothness of aa and bb and the elliptic
 	y0=nc.chebval(x2,nc.chebfit(x2,bb2,args.polynum))
 	dy=bb2-y0
 	j0b=np.abs(dy)<=args.crit
-	j2b=np.zeros(len(dy),dtype=np.bool)
+	j2b=np.zeros(len(dy),dtype=bool)
 	while not np.all(j0b|j2b):
 		j2b=np.abs(dy)>args.crit
 		xtmp=x2[j0b]
@@ -167,17 +167,17 @@ def calzap(aa,bb,cr,ci):	# consider the smoothness of aa and bb and the elliptic
 	jj=jj[jj1]
 	y1=k*x0+b0
 	#
-	tmp=np.zeros(nchan,dtype=np.bool)
+	tmp=np.zeros(nchan,dtype=bool)
 	tmp[jj]=True
 	tmp1a=np.arange(nchan,dtype=np.int32)
 	tmp1a=tmp1a[j01a][j02a]
 	j0a=tmp1a.copy()
-	tmp2a=np.zeros(nchan,dtype=np.bool)
+	tmp2a=np.zeros(nchan,dtype=bool)
 	tmp2a[j0a]=True
 	tmp1b=np.arange(nchan,dtype=np.int32)
 	tmp1b=tmp1b[j01b][j02b]
 	j0b=tmp1b.copy()
-	tmp2b=np.zeros(nchan,dtype=np.bool)
+	tmp2b=np.zeros(nchan,dtype=bool)
 	tmp2b[j0b]=True
 	jj=tmp&tmp2a&tmp2b	
 	return jj
@@ -186,9 +186,9 @@ for i in filelist:
 	dfile=ld.ld(i)
 	d=dfile.period_scrunch()[:,:,0]
 	info=dfile.read_info()
-	d*=info['chan_weight'].reshape(-1,1)
+	d*=info['data_info']['chan_weight'].reshape(-1,1)
 	nchan,nperiod,nbin0,npol=dfile.read_shape()
-	cal=info['cal'][-4:].reshape(4,-1)
+	cal=info['calibration_info']['cal'][-4:].reshape(4,-1)
 	aa,bb,cr,ci=cal
 	jc=calzap(aa,bb,cr,ci)&(d.mean(1)>0)
 	if jc.sum()==0:
@@ -204,21 +204,22 @@ for i in filelist:
 	ff=np.abs(f0*f0.conj())
 	a=ff[:,1:nbin].sum(1)/ff[:,nbin:].sum(1)
 	j1=r2<=r2[rs][(np.argmax(a))]
-	tmp=np.ones(nchan,dtype=np.bool)
+	tmp=np.ones(nchan,dtype=bool)
 	tmp[np.arange(nchan,dtype=np.int32)[jc][j1]]=False
 	zchan0=np.arange(nchan,dtype=np.int32)[tmp]
-	zchan1=np.where(info['chan_weight']==0)[0]
+	zchan1=np.where(info['data_info']['chan_weight']==0)[0]
 	zchan=list(set(zchan0).union(zchan1))
 	if args.modify or args.correct:
-		weight=info['chan_weight']
+		weight=info['data_info']['chan_weight']
 		weight[zchan]=0
-		info['chan_weight']=weight
-		if 'history' in info.keys():
-			info['history'].append(command)
-			info['file_time'].append(time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime()))
+		info['data_info']['chan_weight']=weight
+		if 'history_info' in info.keys():
+			info['history_info']['history'].append(command)
+			info['history_info']['file_time'].append(time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime()))
 		else:
-			info['history']=[command]
-			info['file_time']=[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())]
+			info['history_info']={}
+			info['history_info']['history']=[command]
+			info['history_info']['file_time']=[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())]
 		if args.correct:
 			for k in zchan:
 				dfile.write_chan(np.zeros([nperiod,nbin0,npol]),k)

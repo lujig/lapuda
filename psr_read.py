@@ -2,12 +2,14 @@ import numpy as np
 import time_eph as te
 import subprocess as sp
 import copy as cp
-import os
+import os,sys
 #
 class psr:
-	def __init__(self,name,parfile=False,glitch=False):
+	def __init__(self,name,parfile=False,glitch=False,warning=True):
 		self.name=name
+		if not warning: sys.stdout=open(os.devnull,'w')
 		self.readpara(parfile=parfile,glitch=glitch)
+		if not warning: sys.stdout=sys.__stdout__
 		if self.units=='TDB':
 			self.change_units()
 		if 'raj' in self.paras: self.cal_pos()
@@ -177,7 +179,7 @@ class psr:
 			self.acc=te.vector(0,0,0,center='bary',scale='si',coord='ecl',unit=te.sl,type0='acc')
 			self.acc_equ=te.vector(0,0,0,center='bary',scale='si',coord='equ',unit=te.sl,type0='acc')
 	#
-	def dpos(self,vectype,coord1,coord2):,	# calculate the derivative of pulsar position along different coordinate axes
+	def dpos(self,vectype,coord1,coord2):	# calculate the derivative of pulsar position along different coordinate axes
 		arcsec2rad=np.pi/648000.0
 		obliq=84381.4059*arcsec2rad
 		ce=np.cos(obliq)

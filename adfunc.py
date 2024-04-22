@@ -1,15 +1,117 @@
 import numpy as np
 import numpy.fft as fft
 import scipy.optimize as so
+import os
+import sys
 #
 def reco(x):	# recognize the telescope name from its aliases
 	dirname=os.path.split(os.path.realpath(__file__))[0]
-	with open(dirname+'/conventions/aliase.txt') as f:
+	with open(dirname+'/materials/aliase.txt') as f:
 		names=f.readlines()
 	for i in names:
 		if x in i.split('    '):
 			return i.split()[0]
-	return x
+	raise
+#
+def poly(x,lseg,dtj,p):	# polynomial fit for the clock correction
+	dt0j=np.array([1538314761])
+	start=0
+	y=np.zeros_like(x,dtype=np.float64)
+	y0=0
+	polyn=(np.ones(lseg,dtype=np.int8)*2).cumsum()
+	for i in np.arange(lseg):
+		coeff=p[start:polyn[i]]
+		start=polyn[i]
+		xj=(x>=dtj[i])&(x<=dtj[i+1])
+		px=x[xj]
+		if int(dtj[i]) in dt0j:
+			y0+=p[polyn[-1]+np.where(dt0j==int(dtj[i]))[0][0]]
+		y[xj]=np.polyval(coeff,px-dtj[i])*(px-dtj[i])+y0
+		y0=np.polyval(coeff,dtj[i+1]-dtj[i])*(dtj[i+1]-dtj[i])+y0
+	return y+p[-1]
+#
+def cal_time(psr,phase,freq=np.inf,telescope='FAST',ttest=0):
+	import psr_read as pr
+	import time_eph as te
+	import psr_model as pm
+	if ttest==0:
+		ttest=psr.pepoch.mjd+phase*(psr.p0+1/2*phase*(psr.p0*psr.p1+1/3*phase*(psr.p2*psr.p0**2+psr.p1**2*psr.p0+1/4*phase*(psr.p3*psr.p0**3+4*psr.p2*psr.p1*psr.p0**2+psr.p1**3*psr.p0))))/86400
+	dt=1
+	ttestd=int(ttest)
+	ttests=(ttest-ttestd)*86400
+	ti=te.time(ttestd,ttests,scale=telescope)
+	p0=pm.psr_timing(psr,te.times(ti),freq)
+	while np.abs(dt)>p0.period_now*1e-7:
+		p0=pm.psr_timing(psr,te.times(ti),freq)
+		dt=(phase-p0.phase.integer[0]-p0.phase.offset[0])*p0.period_now
+		ti=ti.add(dt)
+	return te.time(ttestd,ttests,scale=telescope)
+#
+def parakey():
+	dirname=os.path.split(os.path.realpath(__file__))[0]
+	sys.path.append(dirname+'/doc')
+	from functools import reduce
+	import class_doc as cd
+	li=cd.ld_file_info
+	ldic=dict(zip(reduce(lambda x,y:x+y,list(map(lambda x: list(x.keys()),li.values()))),reduce(lambda x,y:x+y,list(map(lambda x:[x]*len(li[x]),li.keys())))))
+	return li,ldic
+#
+def dic2json(dic):
+	dk=dic.keys()
+	dj={}
+	li,ldic=parakey()
+	for i in dk:
+		if i=='zchan':
+			djk='data_info'
+			if djk not in dj.keys(): dj[djk]={}
+			va=np.ones(int(dic['nchan']))
+			va[np.int32(dic[i].split(','))]=0
+			if 'nchan_new' in dic.keys():
+				va=va.reshape(int(dic['nchan_new']),-1).sum(1)
+				va[va>0]=1/va[va>0]
+				dj[djk]['chan_weight']=va.tolist()
+			else:
+				dj[djk]['chan_weight']=va.tolist()
+		elif i in ['nchan_new', 'nsub_new', 'nbin_new', 'npol_new']:
+			itmp=i[:-4]
+			djk=ldic[itmp]
+			if djk not in dj.keys(): dj[djk]={}
+			dj[djk][itmp]=int(dic[i])
+		elif i=='cal':
+			djk='calibration_info'
+			if djk not in dj.keys(): dj[djk]={}
+			dj[djk][i]=np.float64(dic[i]).reshape(-1,4,int(dic['nchan'])).tolist()
+		elif i=='predictor':
+			djk='folding_info'
+			if djk not in dj.keys(): dj[djk]={}
+			dj[djk][i]=list(map(lambda x:np.float64(x[1:-1].split(',')).tolist(),dic[i]))
+		else:
+			djk=ldic[i]
+			if djk not in dj.keys(): dj[djk]={}
+			ti=li[djk][i]
+			if type(ti) is not list:
+				dj[djk][i]=ti(dic[i])
+			elif len(ti[1])==1:
+				if type(dic[i]) is not list:
+					dj[djk][i]=[ti[2](dic[i])]
+				else:
+					dj[djk][i]=list(map(ti[2],dic[i]))
+			elif len(ti[1])>1:
+				if type(dic[i]) is not list:
+					dj[djk][i]=[ti[2](dic[i])]
+				else:
+					dj[djk][i]=np.array(dic[i],dtype=ti[2]).tolist()
+			else:
+				raise
+	if 'data_info' in dj.keys():
+		if 'chan_weight' not in dj['data_info'].keys():
+			dj['data_info']['chan_weight']=np.ones(int(dj['data_info']['nchan'])).tolist()
+	return dj
+#
+def json2dic(js):
+	dic={}
+	list(map(lambda x:dic.update(x),js.values()))
+	return dic
 #
 def shift(y,x):	# assistant function for dmdet(); return the shifted counterpart of the Fourier-domain array
 	ffts=y*np.exp(x*1j)
@@ -79,16 +181,15 @@ def baseline(data,base_nbin=0,pos=False):	# determine the baseline of the data
 	else:
 		return base
 #
-def radipos(data,crit=10,base=False,base_nbin=0):	# determine the radiation position of the data
+def radipos(data,crit=10,base0=False,base_nbin=0):	# determine the radiation position of the data
 	base,pos=baseline(data,pos=True,base_nbin=base_nbin)
 	nbin=data.size
 	base_nbin=int(nbin/10)
 	noise=data[pos:(pos+base_nbin)].std()
 	data-=base
 	bin0=np.arange(nbin)[data>(crit*noise)]
-	if base:
+	if base0:
 		return bin0,pos
 	else:
 		return bin0
 #
-

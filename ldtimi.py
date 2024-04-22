@@ -16,22 +16,30 @@ parser=ap.ArgumentParser(prog='ldtim',description='Get the timing solution the T
 parser.add_argument('-v','--version',action='version',version=version)
 parser.add_argument("filename",help="input ToA file with ld or txt format")
 parser.add_argument('-p','--par',dest='par',help="input par file")
+parser.add_argument('--tr',dest='trange',help="limit the time range")
 #
 args=(parser.parse_args())
 #
 if not os.path.isfile(args.filename):
 	parser.error('ToA file name is invalid.')
 d=ld.ld(args.filename)
-
+#
 data=d.read_chan(0)[:,:,0]
 info=d.read_info()
 if args.par:
 	psr0=pr.psr(args.par,parfile=True)
 else:
-	psr0=pr.psr(info['psr_name'])
+	psr0=pr.psr(info['pulsar_info']['psr_name'])
 #
-jj_list=[np.ones(len(data),dtype=np.bool)]	# the list which records the reserved ToAs
-select_list=[np.ones(len(data),dtype=np.bool)]	# the list which records the ToAs in zoom in region
+if args.trange:
+	time_start0,time_end0=np.float64(args.trange.split(','))
+	if time_end0<=time_start0: parser.error("Starting time larger than ending time.")
+	mjdtime=data[:,0]+data[:,1]/86400
+	jj_list=[(mjdtime>time_start0)&(mjdtime<time_end0)]
+else:
+	jj_list=[np.ones(len(data),dtype=bool)]	# the list which records the reserved ToAs
+#
+select_list=[np.ones(len(data),dtype=bool)]	# the list which records the ToAs in zoom in region
 time_jump=np.ones(len(data),dtype=np.int64)	# the list which records the time-jump for each ToAs
 plotlim_list=[]	# the list recording the zoom in history
 merge_mark,restart,reset_select,fit_mark=False,True,False,False	# the marks for merging ToAs, restart fitting, reset zoom in region, and fitting the ToAs
@@ -86,20 +94,24 @@ def merge(time,dt,dterr,freq,dm,dmerr,period,jj1,se):	# merge the adjacent ToAs
 			setj=setj0
 		else:
 			setj=setj1
-		t0=dt[setj]
-		ta=dterr[setj]
-		errtmp=np.sqrt(1/(1/ta**2).sum())+t0.std()
 		date2.append(date[setj].mean())
 		sec2.append(sec[setj].mean())
 		dm2.append(dm[setj].mean())
 		dmerr2.append(dmerr[setj].mean())
-		t0a=(t0/ta**2).sum()/(1/ta**2).sum()
-		dt2.append(t0a)
-		dt2err.append(np.sqrt(((t0-t0a)**2/ta**2).sum()/(1/ta**2).sum()))
 		freq2.append(freq[setj].mean())
 		period2.append(period[setj].mean())
+		t0=dt[setj]
+		ta=dterr[setj]
+		errtmp=np.sqrt(1/(1/ta**2).sum())+t0.std()
 		jj2.append(np.any(jj1[setj])&(errtmp<err_limit))
 		se2.append(np.any(se[setj]))
+		if len(t0)==1:
+			dt2.append(t0[0])
+			dt2err.append(ta[0])
+		else:
+			t0a=(t0/ta**2).sum()/(1/ta**2).sum()
+			dt2.append(t0a)
+			dt2err.append(np.sqrt(((t0-t0a)**2/ta**2).sum()/(1/ta**2).sum()))
 	date2=np.array(date2)
 	sec2=np.array(sec2)
 	dt2=np.array(dt2)
@@ -110,10 +122,10 @@ def merge(time,dt,dterr,freq,dm,dmerr,period,jj1,se):	# merge the adjacent ToAs
 	period2=np.array(period2)
 	jj2=np.array(jj2)
 	se2=np.array(se2)
-	return te.times(te.time(date2,sec2,scale=info['telename'])),dt2,dt2err,freq2,dm2,dmerr2,period2,jj2,se2
+	return te.times(te.time(date2,sec2,scale=info['telescope_info']['telename'])),dt2,dt2err,freq2,dm2,dmerr2,period2,jj2,se2
 #
 def psrfit(psr,paras,time,dt,toae,freq,jj,se):	# fit the ToAs with pulsar parameters
-	psrt=pm.psr_timing(psr,time,freq)
+	psrt=pm.psr_timing(psr,time,np.inf)
 	lpara=len(paras)
 	x0=np.zeros(lpara+1)
 	jj0=jj&se
@@ -128,7 +140,7 @@ def psrfit(psr,paras,time,dt,toae,freq,jj,se):	# fit the ToAs with pulsar parame
 		psr1=psr.copy()
 		for i in np.arange(lpara):
 			psr1.modify(paras[i],para[i])
-		psrt1=pm.psr_timing(psr1,time,freq)
+		psrt1=pm.psr_timing(psr1,time,np.inf)
 		dphase=psrt1.phase.minus(psrt.phase)
 		return dphase.phase+para[-1]
 	#
@@ -136,7 +148,7 @@ def psrfit(psr,paras,time,dt,toae,freq,jj,se):	# fit the ToAs with pulsar parame
 		psr1=psr.copy()
 		for i in np.arange(lpara):
 			psr1.modify(paras[i],para[i])
-		psrt1=pm.psr_timing(psr1,time,freq)
+		psrt1=pm.psr_timing(psr1,time,np.inf)
 		tmp=psrt1.phase_der_para(paras).T
 		return (np.concatenate((tmp,np.ones([time.size,1])),axis=1)/toae.reshape(-1,1))[jj0]
 	#
@@ -148,9 +160,9 @@ def psrfit(psr,paras,time,dt,toae,freq,jj,se):	# fit the ToAs with pulsar parame
 	psr1=psr.copy()
 	for i in np.arange(lpara):
 		psr1.modify(paras[i],popt[i])
-	psrt2=pm.psr_timing(psr1,time,freq)
+	psrt2=pm.psr_timing(psr1,time,np.inf)
 	#print(fit(popt),dt,x0)
-	return popt,np.sqrt(pcov),fit(popt)+dt,resi(popt),psr1,psrt2
+	return popt,pcov,fit(popt)+dt,resi(popt),psr1,psrt2
 #
 def plot(time,psrt,dt,dterr,dm,dmerr,jj,se):	# plot the figure with options
 	global ax1,xax,yax,xaxis,yaxis,yerr,plotlim_list,lines,points,yunit
@@ -230,15 +242,16 @@ def plot(time,psrt,dt,dterr,dm,dmerr,jj,se):	# plot the figure with options
 	ax1.set_ylim(ylim)
 	fig.text(x2-0.05,y3-0.05,mark_text,fontsize=25,family='serif',color='green',va='top',ha='right')
 	canvas.draw()
-	plotlim=[*ax1.get_xlim(),*ax1.get_ylim()]
-	plotlim_list=[plotlim]
+	if len(plotlim_list)==0:
+		plotlim=[*ax1.get_xlim(),*ax1.get_ylim()]
+		plotlim_list=[plotlim]
 #
 def adjust():	# adjust the zoom in region, set of ToAs to be fitted, and plot options
 	global jj_list,psr,time,dt,res,dterr,dm,yunit,select_list,reset_select,freq,dmerr,period,restart,fit_mark,time_jump
 	errentry.delete(0,np.int(np.uint32(-1)/2))
 	errentry.insert(0,str(err_limit))
 	if reset_select:
-		select_list=[np.ones(len(data),dtype=np.bool)]
+		select_list=[np.ones(len(data),dtype=bool)]
 		reset_select=False
 	if restart:
 		date,sec,toae,dt,dterr,freq_start,freq_end,dm,dmerr,period=data.T
@@ -249,9 +262,9 @@ def adjust():	# adjust the zoom in region, set of ToAs to be fitted, and plot op
 		se=select_list[-1]
 		freq=(freq_start+freq_end)/2
 		nt=len(date)
-		time=te.times(te.time(date,sec,scale=info['telename']))
+		time=te.times(te.time(date,sec,scale=info['telescope_info']['telename']))
 		psr=psr0.copy()
-		psrt=pm.psr_timing(psr,time,freq)
+		psrt=pm.psr_timing(psr,time,np.inf)
 		phase=psrt.phase
 		dt=phase.offset%1
 		dterr=toae/period
@@ -263,7 +276,7 @@ def adjust():	# adjust the zoom in region, set of ToAs to be fitted, and plot op
 		se=select_list[-1]
 		jj=jj0&(dterr<err_limit)
 		if np.any(jj0!=jj): jj_list.append(jj)
-		psrt=pm.psr_timing(psr,time,freq)
+		psrt=pm.psr_timing(psr,time,np.inf)
 		phase=psrt.phase
 		dt=phase.offset%1
 		dt[dt>0.5]-=1
@@ -287,7 +300,7 @@ def adjust():	# adjust the zoom in region, set of ToAs to be fitted, and plot op
 		phasestd=np.sqrt((rese**2).sum()/(1/dterr1[jj1]**2).sum())
 		if dtunit=='time': phasestd/=1e6
 		else: phasestd*=period1.mean()
-		print('RMS of the fit residuals (s):',phasestd)
+		print('RMS of the fit residuals (s):',phasestd,', chi-square/d.o.f.:',(rese**2).sum()/len(rese-1-len(paras)))
 		fit_mark=False
 	if dtunit=='time':
 		yunit=' ($\mu$s)'
@@ -319,8 +332,8 @@ def delete_range():	# delete ToAs in set of ToA to be fitted
 		se=select_list[-1]
 		jj0=jj.copy()
 	else:
-		jj=np.zeros(len(jj_list[0]),dtype=np.bool)
-		se=np.zeros_like(jj0,dtype=np.bool)
+		jj=np.zeros(len(jj_list[0]),dtype=bool)
+		se=np.zeros_like(jj0,dtype=bool)
 		for i in np.arange(len(jj0))+1:
 			setj=mergej==i
 			jj0[i-1]&=np.any(jj_list[-1][setj])
@@ -340,7 +353,7 @@ def fit(fit=True,merge=True):	# implement the fitting process
 	xlim1,xlim2,ylim1,ylim2=*ax1.get_xlim(),*ax1.get_ylim()
 	se=(xaxis>xlim1)&(xaxis<xlim2)&(yaxis>ylim1)&(yaxis<ylim2)
 	if not np.logical_xor(merge_mark,merge):
-		se0=np.zeros(len(select_list[0]),dtype=np.bool)
+		se0=np.zeros(len(select_list[0]),dtype=bool)
 		for i in np.arange(len(se))+1:
 			se0[mergej==i]=se[i-1]
 		se=se0.copy()
@@ -406,7 +419,7 @@ def add_jump(a):	# add or minus a one-period jump for the ToAs of the right side
 	else: jump=-1
 	jump=(xaxis>cur_x)*jump
 	if merge_mark:
-		time_jump0=np.zeros(len(jj_list[0]),dtype=np.bool)
+		time_jump0=np.zeros(len(jj_list[0]),dtype=bool)
 		for i in np.arange(len(jump))+1:
 			setj=mergej==i
 			time_jump[setj]=jump[i-1]
@@ -421,7 +434,7 @@ def keymotion(a):
 		if len(plotlim_list)>1:
 			plotlim_list.pop()
 			ax1.set_xlim(*plotlim_list[-1][:2])
-			ax1.set_ylim(*plotlim_list[-1][2:])
+			#ax1.set_ylim(*plotlim_list[-1][2:])
 			canvas.draw()
 	elif a=='e':	# reset the zoom in region to origin
 		if len(select_list)>1:
@@ -440,8 +453,8 @@ def keymotion(a):
 			jj0=jj_list[-1]
 			se0=select_list[-1]
 			if merge_mark:
-				jj=np.zeros(len(xaxis),dtype=np.bool)
-				se=np.zeros_like(jj,dtype=np.bool)
+				jj=np.zeros(len(xaxis),dtype=bool)
+				se=np.zeros_like(jj,dtype=bool)
 				for i in np.arange(len(jj))+1:
 					setj=mergej==i
 					jj[i-1]=np.any(jj0[setj])
@@ -479,6 +492,7 @@ def keymotion(a):
 		if resfile:
 			tmp=np.array([time.local.date,time.local.second,dt,dterr,np.int8(jj_list[-1]),np.int8(select_list[-1])]).T
 			np.savetxt(resfile,tmp,fmt=['%i', '%5.11f', '%.16f', '%.16f', '%i', '%i'])
+			#psr.writepar(resfile[:-4]+'.par')
 	elif a=='h':
 		sys.stdout.write("\nldzap interactive commands\n\n")
 		sys.stdout.write("Mouse:\n")

@@ -155,12 +155,12 @@ class snake_class:
 		self.root.after(np.int16(self.deltat*1000),self.move)
 	#
 	def nextchapter(self):
-		self.axis.images=[]
-		self.axis.patches=[]
-		self.axis.texts=[]
-		self.axis1.images=[]
-		self.axis1.patches=[]
-		self.axis1.texts=[]
+		self.axis.images.clear()
+		self.axis.patches.clear()
+		self.axis.texts.clear()
+		self.axis1.images.clear()
+		self.axis1.patches.clear()
+		self.axis1.texts.clear()
 		self.canvas.draw()
 		self.canvas1.draw()
 		self.label.config(text=' Level : 0 ')
@@ -172,7 +172,7 @@ class snake_class:
 			self.stopmark=False
 			if self.mask in self.axis.patches: 
 				self.axis.patches.remove(self.mask)
-				self.axis.texts=[]
+				self.axis.texts.clear()
 			self.stopbutton.config(text='Stop')
 			self.display()
 		elif self.stopbutton['text']!='Next\nChapter':
@@ -183,8 +183,8 @@ class snake_class:
 	#
 	def restart(self):
 		if not self.startmark or self.textmark: return
-		self.axis.texts=[]
-		self.axis.patches=[]
+		self.axis.texts.clear()
+		self.axis.patches.clear()
 		self.pos=[[self.width/2,self.height/2+1],[self.width/2,self.height/2],[self.width/2,self.height/2-1]]
 		self.head=self.axis.add_patch(plt.Circle((self.pos[0][0]+0.5,self.pos[0][1]+0.5),0.75,linewidth=0,facecolor='r'))
 		self.head.zorder=2
@@ -196,7 +196,7 @@ class snake_class:
 		self.direct0=[0,1]
 		self.cube={}
 		self.bomb={}
-		self.axis.images=[]
+		self.axis.images.clear()
 		self.levelcmpt()
 		self.newcube()
 		self.stopbutton.config(text='Stop',command=self.stop)
@@ -241,7 +241,7 @@ class snake_class:
 		self.quitfunc()
 	#
 	def mainloop(self):
-		self.axis.images=[]
+		self.axis.images.clear()
 		if self.startmark: return
 		if self.textmark:
 			self.axis.text(self.width/20.0,self.height/2,'This is the chapter \nintroduction.\nYou can use \'wasd\' or \nUp/Down/Left/Right to play.\nPress \'Space\' to stop/continue \nand press \'Q\' to quit.\n\nNow click \'Start\' again \nor press \'Enter\' to start the \ngame.',family='serif', fontsize=13,color='k',verticalalignment='center', horizontalalignment='left')
@@ -250,7 +250,7 @@ class snake_class:
 			return
 		self.ctrl.config(text='Restart',command=self.restart)
 		self.startmark=True
-		self.axis.texts=[]
+		self.axis.texts.clear()
 		self.head=self.axis.add_patch(plt.Circle((self.pos[0][0]+0.5,self.pos[0][1]+0.5),0.75,linewidth=0,facecolor='r'))
 		self.head.zorder=2
 		self.snakecube=[]

@@ -10,7 +10,6 @@ import psr_read as pr
 import psr_model as pm
 import warnings as wn
 import adfunc as af
-import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 wn.filterwarnings('ignore')
 #
@@ -19,8 +18,8 @@ parser=ap.ArgumentParser(prog='ldtem',description='Generate the profile template
 parser.add_argument('-v','--version',action='version',version=version)
 parser.add_argument("filename",nargs='+',help="input ld file or files")
 parser.add_argument('-T','--tscrunch',action='store_true',default=False,dest='tscrunch',help='time scrunch to one subint for each file')
-parser.add_argument('-r','--frequency_range',default=0,dest='freqrange',help='calculate in the frequency range (FREQ0,FREQ1)')
-parser.add_argument('-s','--subint_range',default=0,dest='subint_range',help='calculate in the subint range (SUBINT0,SUBINT1)')
+parser.add_argument('--fr','--frequency_range',default=0,dest='freqrange',help='calculate in the frequency range (FREQ0,FREQ1)')
+parser.add_argument('--sr','--subint_range',default=0,dest='subint_range',help='calculate in the subint range (SUBINT0,SUBINT1)')
 parser.add_argument('-z',"--zap",dest="zap_file",default=0,help="file recording zap channels")
 parser.add_argument('-o',"--output",dest="output",default="template",help="outputfile name")
 parser.add_argument('-d',action='store_true',default=False,dest='dm_corr',help='the progress will not correcting the DM deviation before calculating rotating phase')
@@ -29,7 +28,8 @@ parser.add_argument('-b',"--nbin",dest="nbin",type=np.int16,default=256,help="th
 parser.add_argument('-a',action='store_true',default=False,dest='auto',help='do not discard the low-rms data')
 parser.add_argument('-m','--red',action='store_true',default=False,dest='red',help='use only red component of the profile as template')
 parser.add_argument('-c','--component',action='store_true',default=False,dest='component',help='the template has multi-components')
-parser.add_argument('-f','--freqtem',action='store_true',default=False,dest='freqtem',help='generate 2-D freqdomain template')
+parser.add_argument('--freqtem',action='store_true',default=False,dest='freqtem',help='generate 2-D freqdomain template')
+parser.add_argument('-p','--peak_fit',action='store_true',default=False,dest='peakfit',help='fit the template with several peaks')
 args=(parser.parse_args())
 command=['ldtem.py']
 #
@@ -44,7 +44,7 @@ else:
 	zchan=np.int32([])
 #
 if args.subint_range:
-	command.append('-s '+args.subint_range)
+	command.append('--sr '+args.subint_range)
 	sub_start,sub_end=np.int32(args.subint_range.split(','))
 	if sub_end>0 and sub_start>sub_end:
 		parser.error("Starting subint number larger than ending subint number.")
@@ -55,13 +55,13 @@ if args.tscrunch:
 	command.append('-T')
 #
 if args.freqrange:
-	command.append('-r '+args.freqrange)
+	command.append('--fr '+args.freqrange)
 	freq_s,freq_e=np.float64(args.freqrange.split(','))
 	if freq_s>freq_e:
 		parser.error("Starting frequency larger than ending frequency.")
 else:
 	freq_s,freq_e=1,1e6
-	freq_s_tmp,freq_e_tmp=freq_s,freq_e
+freq_s_tmp,freq_e_tmp=freq_s,freq_e
 #
 name=args.output
 if not name:
@@ -89,16 +89,16 @@ def ld_check(fname,filetype='Ld file',notfirst=True):
 	except:
 		parser.error(filetype+' '+fname+' is invalid.')
 	if notfirst:
-		tmpname=pr.psr(finfo['psr_par']).name
+		tmpname=pr.psr(finfo['pulsar_info']['psr_par'],warning=False).name
 		if psrname!=tmpname:
 			parser.error('The pulsar recorded in '+fname+' is different from the template.')
 	else:
-		psr=pr.psr(finfo['psr_par'])
+		psr=pr.psr(finfo['pulsar_info']['psr_par'],warning=False)
 		psrname=psr.name
 		dm=psr.dm
 	#
-	nchan=finfo['nchan']
-	nperiod=finfo['nsub']
+	nchan=finfo['data_info']['nchan']
+	nperiod=finfo['data_info']['nsub']
 	#
 	if args.zap_file:
 		if np.max(zchan)>=nchan or np.min(zchan)<0: parser.error('The zapped channel number is overrange.')
@@ -113,31 +113,25 @@ def ld_check(fname,filetype='Ld file',notfirst=True):
 	elif args.subint_range: nsub_new.append(sub_end_tmp-sub_start)
 	else: nsub_new.append(nperiod)
 	#
-	freq_start,freq_end=finfo['freq_start'],finfo['freq_end']
+	freq_start,freq_end=finfo['data_info']['freq_start'],finfo['data_info']['freq_end']
 	freq=(freq_start+freq_end)/2.0
 	channel_width=(freq_end-freq_start)/nchan
-	if notfirst:
-		if args.freqtem and not args.freqrange:
-			if freq_start!=freq_s_tmp or freq_end!=freq_e_tmp: parser.error("The frequency ranges of the input data are different.")
-		freq_s_tmp=min(freq_start,freq_s_tmp)
-		freq_e_tmp=max(freq_end,freq_e_tmp)
-	else:
-		freq_s_tmp=freq_start
-		freq_e_tmp=freq_end
+	if args.freqtem and not args.freqrange:
+		if freq_start!=freq_s_tmp or freq_end!=freq_e_tmp: parser.error("The frequency ranges of the input data are different.")
+	freq_s_tmp=min(freq_start,freq_s_tmp)
+	freq_e_tmp=max(freq_end,freq_e_tmp)
 	if args.freqrange:
 		if freq_s<freq_start or freq_e>freq_end: parser.error("Input frequency is overrange.")
 	if args.freqtem:
-		chanstart,chanend=np.int16(np.round((np.array([max(freq_s,freq_start),min(freq_e,freq_end)])-freq)/channel_width+0.5*nchan))
+		chanstart,chanend=np.int16(np.round((np.array([max(freq_s,freq_start),min(freq_e,freq_end)])-freq_start)/channel_width))
 		nchan_new=chanend-chanstart
 		if notfirst:
 			if nchan_new!=nchan0: parser.error("The freq-domain template cannot be constructed for data with different frequency parameters.")				
 		else:
 			nchan0=nchan_new
 #
-sys.stdout=open(os.devnull,'w')
 for i in np.arange(filenum):
 	ld_check(filelist[i],notfirst=i)
-sys.stdout=sys.__stdout__
 if not args.freqrange:
 	freq_s=freq_s_tmp
 	freq_e=freq_e_tmp
@@ -185,18 +179,23 @@ if args.lnumber:
 	command.append('-l '+str(args.lnumber))
 #
 if args.auto:
-	command.append('-a ')
+	command.append('-a')
 #
 if args.red:
-	command.append('-m ')
+	command.append('-m')
 	if args.component:
 		parser.error('The multi-component mode doesnot support red component template.')
 #
+if args.peakfit:
+	command.append('-p')
+#
 if args.component:
+	if args.peakfit: parser.error('The multi-component mode doesnot support peak-fit.')
 	command.append('-c')
 #
 if args.freqtem:
-	command.append('-f')
+	if args.peakfit: parser.error('The multi-frequency mode doesnot support peak-fit.')
+	command.append('--freqtem')
 #
 def lin(x,k):
 	return k*x
@@ -214,12 +213,12 @@ for k in np.arange(filenum):	# read all data in files
 	d=ld.ld(filelist[k])
 	info=d.read_info()
 	#
-	nchan=info['nchan']
-	nbin=info['nbin']
-	nperiod=info['nsub']
-	npol=info['npol']
+	nchan=info['data_info']['nchan']
+	nbin=info['data_info']['nbin']
+	nperiod=info['data_info']['nsub']
+	npol=info['data_info']['npol']
 	#
-	zchan_tmp=np.array(list(set(np.where(info['chan_weight']==0)[0]).union(zchan)))
+	zchan_tmp=np.array(list(set(np.where(info['data_info']['chan_weight']==0)[0]).union(zchan)))
 	#
 	if args.subint_range:
 		if sub_end<0:
@@ -230,10 +229,11 @@ for k in np.arange(filenum):	# read all data in files
 	else:
 		sub_s,sub_e=0,nperiod
 	#
-	freq_start,freq_end=info['freq_start'],info['freq_end']
-	freq=(freq_start+freq_end)/2.0
-	channel_width=(freq_end-freq_start)/nchan
-	chanstart,chanend=np.int16(np.round((np.array([max(freq_s,freq_start),min(freq_e,freq_end)])-freq)/channel_width+0.5*nchan))
+	freq_start0,freq_end0=info['data_info']['freq_start'],info['data_info']['freq_end']
+	freq=(freq_start0+freq_end0)/2.0
+	channel_width=(freq_end0-freq_start0)/nchan
+	chanstart,chanend=np.int16(np.round((np.array([max(freq_s,freq_start0),min(freq_e,freq_end0)])-freq_start0)/channel_width))
+	freq_start,freq_end=np.array([chanstart,chanend])*channel_width+freq_start0
 	#
 	nchan_new=chanend-chanstart
 	if nchan==1:
@@ -242,27 +242,28 @@ for k in np.arange(filenum):	# read all data in files
 		rchan=np.array(list(set(range(chanstart,chanend))-set(list(zchan_tmp))))-chanstart
 	if not args.freqtem:
 		if not args.dm_corr:
-			data1=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]*info['chan_weight'][chanstart:chanend].reshape(-1,1)
-			freq_real=np.linspace(freq_start,freq_end,nchan+1)[:-1]
+			data1=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]*np.asarray(info['data_info']['chan_weight'])[chanstart:chanend].reshape(-1,1)
+			freq_real=np.arange(freq_start,freq_end,channel_width)+channel_width*0.5
 			data1-=data1.mean(1).reshape(-1,1)
 			data1/=data1.max(1).reshape(-1,1)
 			if np.any(np.isnan(data1)) or np.any(np.isinf(data1)):
 				discard+=1
 				continue
-			if 'best_dm' in info.keys():
-				ddm=info['best_dm'][0]-info['dm']
+			if 'additional_info' in info.keys():
+				if 'best_dm' in info['additional_info'].keys(): ddm=info['additional_info']['best_dm'][0]-info['data_info']['dm']
+				else: ddm,ddmerr=dmcor(data1,freq_real,rchan,info['data_info']['period'],output=0)
 			else:
-				ddm,ddmerr=dmcor(data1,freq_real,rchan,info['period'],output=0)
-			const=(1/freq_real**2*pm.dm_const/info['period']*np.pi*2.0)*ddm
+				ddm,ddmerr=dmcor(data1,freq_real,rchan,info['data_info']['period'],output=0)
+			const=(1/freq_real**2*pm.dm_const/info['data_info']['period']*np.pi*2.0)*ddm
 		else:
-			data1=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]*info['chan_weight'][chanstart:chanend].reshape(-1,1)
+			data1=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]*np.asarray(info['data_info']['chan_weight'])[chanstart:chanend].reshape(-1,1)
 			if np.any(np.isnan(data1)) or np.any(np.isinf(data1)):
 				discard+=1
 				continue
 			const=0
 	if not args.tscrunch:
 		for s in np.arange(nsub_new[k]):
-			data=d.read_period(s+sub_s)[chanstart:chanend,:,0]*info['chan_weight'][chanstart:chanend].reshape(-1,1)
+			data=d.read_period(s+sub_s)[chanstart:chanend,:,0]*np.asarray(info['data_info']['chan_weight'])[chanstart:chanend].reshape(-1,1)
 			if np.any(np.isnan(data)) or np.any(np.isinf(data)):
 				discard+=1
 				continue
@@ -294,7 +295,7 @@ for k in np.arange(filenum):	# read all data in files
 			else:
 				result0[0,cumsub[k]-discard]=data
 		else:
-			data=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]*info['chan_weight'][chanstart:chanend].reshape(-1,1)
+			data=d.period_scrunch(sub_s,sub_e)[chanstart:chanend,:,0]*np.asarray(info['data_info']['chan_weight'])[chanstart:chanend].reshape(-1,1)
 			if np.any(np.isnan(data)) or np.any(np.isinf(data)):
 				discard+=1
 				continue
@@ -314,16 +315,17 @@ if args.component:
 else:
 	prof=np.zeros([nchan_res,args.nbin])
 #
-
 for s in np.arange(nchan_res):
 	result=result0[s]
 	if np.all(result.mean(1)==0): continue
+	import matplotlib.pyplot as plt
+	#print(result.std(1))
 	result-=result.mean(1).reshape(-1,1)
-	result/=np.sqrt((result**2).sum(1)).reshape(-1,1)
-	jj=(result.sum(1)**2)>=0
+	jj=((result**2).sum(1))>0
 	result=result[jj]
+	result/=np.sqrt((result**2).sum(1)).reshape(-1,1)
 	fres=fft.rfft(result,axis=1)
-	if not args.auto:	# remove profiles with strong noise
+	if not args.auto and len(result)>=5:	# remove profiles with strong noise
 		fabs=np.abs(fres)
 		fabss=fabs.sum(0)
 		ntmp=int(np.round(fabss.sum()/fabss.max()))
@@ -395,7 +397,7 @@ for s in np.arange(nchan_res):
 			k/=k.std()
 			jj=np.abs(k)<1
 		else:
-			jj=np.ones(nsub,dtype=np.bool)
+			jj=np.ones(nsub,dtype=bool)
 		ang1=popt[:(knumber-2)]
 		ang1=np.append(ang1,sum0-ang1.sum())
 		weight=1/(np.var(fres[:,-errbinnum:].real,1)+np.var(fres[:,-errbinnum:].imag,1))[jj]
@@ -482,19 +484,249 @@ if args.freqtem:	# align the multi-frequency template
 		prof[1:,0]=shift(prof[1:,0],-dt*2*np.pi)
 		prof[1:,1]=shift(prof[1:,1],-dt*2*np.pi)
 	else: prof[1:]=shift(prof[1:],-dt*2*np.pi)
-
-if np.sum(prof**2)==0: parser.error('Unexpected error. The produced profile is zero in every phase bin.')
-info={'mode':'template','nchan':int(nchan_res), 'nbin':int(args.nbin), 'npol':1, 'file_time':[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())], 'pol_type':'I','compressed':True,'history':[command],'psr_name':psrname,'freq_start':freq_s,'freq_end':freq_e,'length':1}
+#
+if args.peakfit:
+	def peak(x,x0,sigma,a):
+		x1=(x-x0)%1
+		x1[x1>0.5]-=1
+		# return a/np.cosh(x1*(2/np.pi)**0.5/sigma)**2
+		return a*np.exp((np.cos((x-x0)*2*np.pi)-1)/(sigma*4*np.pi)**2)	# not a standard von-Mises peak, the width is doubled.
+	#
+	def mpeak(x,*para):
+		m=int((len(para)-1)/3)
+		y=np.zeros(len(x))
+		for i in np.arange(m):
+			y+=peak(x,*para[i*3:(i+1)*3])
+		return y+para[-1]
+	#
+	def xcal(x):
+		xlim=ax2.get_xlim()
+		return (x-ax2.bbox.extents[0])/ax2.bbox.bounds[2]*(xlim[1]-xlim[0])+xlim[0]
+	#
+	def ycal(y):
+		ylim=ax2.get_ylim()
+		return (fig.bbox.extents[3]-y-ax2.bbox.extents[1])/ax2.bbox.bounds[3]*(ylim[1]-ylim[0])+ylim[0]
+	#
+	import tkinter as tk
+	from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+	from matplotlib.figure import Figure
+	import matplotlib.lines as ln
+	import matplotlib.pyplot as plt
+	import matplotlib as mpl
+	mpl.use('TkAgg')
+	plt.rcParams['font.family']='Serif'
+	root=tk.Tk()
+	root.title('Peak Fit')
+	root.geometry('800x600+100+100')
+	#
+	fig=Figure(figsize=(40,30),dpi=80)
+	fig.clf()
+	x0,x1=0.13,0.95
+	y0,y1,y2=0.11,0.35,0.96
+	ax1=fig.add_axes([x0,y0,x1-x0,y1-y0])
+	ax2=fig.add_axes([x0,y1,x1-x0,y2-y1])
+	l1 = ln.Line2D([0.5,0.5],[0,1],color='k',transform=fig.transFigure,figure=fig)
+	l2 = ln.Line2D([0,1],[0,0],color='k',transform=fig.transFigure,figure=fig)
+	l3 = ln.Line2D([-1,-1],[0,1],color='y',transform=fig.transFigure,figure=fig)
+	l4 = ln.Line2D([-1,-1],[0,1],color='y',transform=fig.transFigure,figure=fig)
+	fig.lines.extend([l1,l2,l3,l4])
+	#
+	phase=np.arange(0,1,1/args.nbin)
+	fitmark='x0'
+	xymark='x'
+	paras=[]
+	prof1=prof[0].copy()
+	bbin0=int((af.baseline(prof1,pos=True)[1]+int(args.nbin/20))%args.nbin)
+	prof1=np.append(prof1[bbin0:],prof1[:bbin0])
+	tmppara=np.zeros(3)
+	h0=af.baseline(prof1)
+	prof1-=h0
+	prof1/=prof1.max()
+	prof2=prof1.copy()
+	h0=0
+	savemark=False
+	def update_fig():
+		global fprof
+		ax1.cla()
+		ax2.cla()
+		ax1.plot(phase,prof1,'b-')
+		ax2.plot(phase,prof2-h0,'k-')
+		fprof=np.zeros_like(phase)
+		for para in paras:
+			ftmp=peak(phase,*para)
+			ax2.plot(phase,ftmp,'y:')
+			fprof+=ftmp
+		ax2.plot(phase,fprof,'r--')
+		ax2.plot(phase,prof1,'b-')
+		ax1.set_xlabel('Pulse Phase',fontsize=30)
+		ax2.set_ylabel('Intensity (a.u.)',fontsize=30)
+		ax1.set_ylabel('resi.',fontsize=30)
+	#
+	def keymotion(event):	# press a key
+		global fitmark,xymark,paras,h0,prof1,tmppara,savemark
+		a=event.keysym
+		if a=='a':
+			if fitmark=='x0':
+				try:
+					height=np.max(prof1)
+					b0=np.argmax(prof1)
+					peakprof=np.zeros(args.nbin)
+					for i in np.arange(args.nbin-1):
+						if prof1[(i+b0)%args.nbin]<0: break
+						else: peakprof[b0+i]=prof1[b0+i]
+					for i in np.arange(1,args.nbin-1):
+						if prof1[(b0-i)%args.nbin]<0: break
+						else: peakprof[b0-i]=prof1[b0-i]
+					width=peakprof.sum()/height/args.nbin
+					x0=phase[b0]
+					tmppara=[x0,width,height]
+					popt,pcov=so.curve_fit(mpeak,phase,prof2,p0=np.concatenate((np.reshape(paras,-1),tmppara,[h0])))
+					paras=popt[:-1].reshape(-1,3)
+					h0=popt[-1]
+					prof1=prof2-mpeak(phase,*popt)
+				except:
+					sys.stdout.write("Failed to add a new peak automatically, please add it manually.\n")
+				update_fig()
+				tmppara=np.zeros(3)
+				canvas.draw()
+			if np.size(paras)*2>args.nbin:
+				fitmark='stop'
+				sys.stdout.write("The peak number is too large, and the fitting has stopped.\n\n")
+		if a=='f':
+			if fitmark=='fit':
+				try: 
+					popt,pcov=so.curve_fit(mpeak,phase,prof2,p0=np.concatenate((np.reshape(paras,-1),tmppara,[h0])))
+					paras=popt[:-1].reshape(-1,3)
+					h0=popt[-1]
+					prof1=prof2-mpeak(phase,*popt)
+				except:
+					sys.stdout.write("The fiting for the peak "+str(list(tmppara))+" failed.\n")
+				update_fig()
+				fitmark='x0'
+				xymark='x'
+				tmppara=np.zeros(3)
+				x=event.x/fig.bbox.extents[2]
+				l1.set_xdata([x,x])
+				canvas.draw()
+			if np.size(paras)*2>args.nbin:
+				fitmark='stop'
+				sys.stdout.write("The peak number is too large, and the fitting has stopped.\n\n")
+		if a=='q':
+			root.destroy()
+			savemark=True
+		if a=='b':
+			root.destroy()
+		if a=='r':
+			if fitmark!='stop':
+				fitmark='x0'
+				xymark='x'
+				tmppara=np.zeros(3)
+				x=event.x/fig.bbox.extents[2]
+				l1.set_xdata([x,x])
+				l3.set_xdata([1,1])
+				l4.set_xdata([1,1])
+				canvas.draw()
+				update_fig()
+		if a=='h':
+			sys.stdout.write("\nldtem interactive commands\n\n")
+			sys.stdout.write("Black solid curve       :   processed pulse profile\n")
+			sys.stdout.write("Yellow dotted curve     :   fitted peak\n")
+			sys.stdout.write("Red dashed curve        :   fitting curve for pulse profile\n")
+			sys.stdout.write("Green dash-dotted curve :   a new peak to be fitted\n")
+			sys.stdout.write("Blue solid curve        :   fitting residuals\n\n")
+			sys.stdout.write("Mouse:\n")
+			sys.stdout.write("  Left-click to select the centre of a peak\n")
+			sys.stdout.write("    then left-click again to select a width of a peak.\n")
+			sys.stdout.write("    then left-click again to select a height of a peak.\n")
+			sys.stdout.write("Keyboard:\n")
+			sys.stdout.write("  h  Show this help\n")
+			sys.stdout.write("  f  fit the profile with appending the green dash-dotted peak\n")
+			sys.stdout.write("  r  Reset a peak\n")
+			sys.stdout.write("  q  Exit peak fitting and save the template.\n")
+			sys.stdout.write("  b  Exit peak fitting without saving.\n\n")
+	#
+	def leftclick(event):
+		global fitmark,xymark,tmppara
+		if fitmark=='x0':
+			if event.y<(fig.bbox.extents[3]-ax2.bbox.extents[1]) and event.y>(fig.bbox.extents[3]-ax2.bbox.extents[3]) and event.x>ax2.bbox.extents[0] and event.x<ax2.bbox.extents[2]: 
+				tmppara[0]=xcal(event.x)
+				fitmark='sigma'
+				xymark='x'
+				x=event.x/fig.bbox.extents[2]
+				l3.set_xdata([x,x])
+				canvas.draw()
+		elif fitmark=='sigma':
+			if event.y<(fig.bbox.extents[3]-ax2.bbox.extents[1]) and event.y>(fig.bbox.extents[3]-ax2.bbox.extents[3]) and event.x>ax2.bbox.extents[0] and event.x<ax2.bbox.extents[2]: 
+				tmppara[1]=np.abs(xcal(event.x)-tmppara[0])
+				fitmark='a'
+				xymark='y'
+				x=event.x/fig.bbox.extents[2]
+				l4.set_xdata([x,x])
+				l1.set_xdata([1,1])
+				l2.set_ydata([0.5,0.5])
+				canvas.draw()
+		elif fitmark=='a':
+			if event.y<(fig.bbox.extents[3]-ax2.bbox.extents[1]) and event.y>(fig.bbox.extents[3]-ax2.bbox.extents[3]) and event.x>ax2.bbox.extents[0] and event.x<ax2.bbox.extents[2]: 
+				tmppara[2]=ycal(event.y)
+				fitmark='fit'
+				xymark='0'
+				ax2.plot(phase,peak(phase,*tmppara),'g-.')
+				l3.set_xdata([1,1])
+				l4.set_xdata([1,1])
+				canvas.draw()
+	#
+	def move(event):
+		if xymark=='x':
+			if event.y<(fig.bbox.extents[3]-ax2.bbox.extents[1]) and event.y>(fig.bbox.extents[3]-ax2.bbox.extents[3]): 
+				x=event.x/fig.bbox.extents[2]
+				l1.set_xdata([x,x])
+				l2.set_ydata([1,1])
+				canvas.draw()
+		elif xymark=='y':
+			if event.y<(fig.bbox.extents[3]-ax2.bbox.extents[1]) and event.y>(fig.bbox.extents[3]-ax2.bbox.extents[3]): 
+				y=(fig.bbox.extents[3]-event.y)/fig.bbox.extents[3]
+				l2.set_ydata([y,y])
+				l1.set_xdata([1,1])
+				canvas.draw()
+		else:
+				l2.set_ydata([1,1])
+				l1.set_xdata([1,1])
+				canvas.draw()			
+	#
+	update_fig()
+	#
+	canvas=FigureCanvasTkAgg(fig,master=root)
+	canvas.get_tk_widget().grid()  
+	canvas.get_tk_widget().pack(fill='both')
+	root.bind('<KeyPress>',keymotion)
+	root.bind('<ButtonPress-1>',leftclick)
+	root.bind('<Motion>',move)
+	canvas.draw()
+	root.mainloop()
+	#
+#
+info={'data_info':{'mode':'template','nchan':int(nchan_res),'chan_weight':list(np.ones(nchan_res)),'nbin':int(args.nbin),'npol':1,'pol_type':'I','compressed':True,'freq_start':freq_s,'freq_end':freq_e,'length':1},'pulsar_info':{'psr_name':psrname},'history_info':{'file_time':[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())],'history':[command]}}
+#
+if args.peakfit:
+	if not savemark:sys.exit()
+	if np.sum(np.array(paras)**2)==0:
+		print('The produced template is zero on every phase bin, and it will not be saved.')
+		sys.exit()
+	info['template_info']={'peak_paras':paras.tolist()}
+	prof=[fprof]
+else:
+	if np.sum(prof**2)==0: parser.error('Unexpected error. The produced profile is zero on every phase bin.')
+#
 do=ld.ld(name+'.ld')
-
 if args.component:
 	do.write_shape([nchan_res,2,args.nbin,1])
-	info['krange']=krange
-	info['nsub']=2
+	info['additional_info']={'krange':krange}
+	info['data_info']['nsub']=2
 else:
 	do.write_shape([nchan_res,1,args.nbin,1])
-	info['nsub']=1
+	info['data_info']['nsub']=1
 for i in np.arange(nchan_res):
 	do.write_chan(prof[i],i)
+#
 do.write_info(info)
 #

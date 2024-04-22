@@ -42,10 +42,10 @@ class psr_timing:
 		else:
 			self.tropo_delay=np.zeros(self.time.size)
 			return
-		values=np.loadtxt(dirname+'/conventions/'+'pressure_humidity.txt',dtype='|S30')
+		values=np.loadtxt(te.dirname+'/materials/'+'pressure_humidity.txt',dtype='|S30').reshape(-1,3)
 		if hasattr(self.time,'local'):
 			if af.reco(self.time.local.scale) in values[:,0]:
-				pressure=np.float64(values[:,1][values[:,0]==self.time.local.scale.encode()]
+				pressure=np.float64(values[:,1][values[:,0]==self.time.local.scale.encode()])
 			else:
 				pressure=101.325
 		else:
@@ -653,6 +653,7 @@ class psr_timing:
 				phaseW+=self.psr.f0*prefac*(self.psr.gwb_amp[0]*resp+self.psr.gwb_amp[1]*resc)
 		#
 		phase1=phase3+phase4+phaseJ+phaseW+phase2state
+		self.dt_intr=phase3*self.psr.p0
 		#print(nf0*ntpd[0]*86400.0, phase2[0],phase3[0],phase1[0]+phase2[0])
 		self.phase=phase0.add(phase1)
 	#
@@ -1618,7 +1619,7 @@ class psr_timing:
 		shapparam=-np.log(1-ecc*cu-(np.sin(omega)*(cu-ecc)+np.sqrt(1-ecc**2)*np.cos(omega)*su)*si)
 		torb-=shapmax*shapparam
 		if si==0: cpx=0
-		else: cpx=1e2*te.sl*x**2/2*(1/si**2-0.5+0.5*ecc**2*(1+sw**2-3/si**2)-2*ecc*(1/si**2-sw**2)*cume+sqr1me2*np.sin(2*omega)*(ecc*su-0.5*np.sin(2*u))+0.5*(np.cos(2*omega)+ecc**2*(1./si**2+cw**2))*np.cos(2*u))
+		else: cpx=1e2*te.sl*x**2/2*(1/si**2-0.5+0.5*ecc**2*(1+sw**2-3/si**2)-2*ecc*(1/si**2-sw**2)*cume+sqr1me2*np.sin(2*omega)*(ecc*su-0.5*np.sin(2*u))+0.5*(np.cos(2*omega)+ecc**2*(1./si**2-cw**2))*np.cos(2*u))
 		torb-=cpx*orbpx
 		if not der:
 			return torb

@@ -6,6 +6,7 @@ import scipy.signal as ss
 import argparse as ap
 import matplotlib.pyplot as plt
 import scipy.optimize as so
+import adfunc as af
 plt.rcParams['font.family']='Serif'
 #
 version='JigLu_20220317'
@@ -36,7 +37,7 @@ def poly(x,*p):	# polynomial fit for the clock correction
 	return y+p[-1]
 #
 dirname=os.path.split(os.path.realpath(__file__))[0]
-outfile=dirname+'/clock/FAST.txt'
+outfile=dirname+'/materials/clock/FAST.txt'
 if args.rewrite:
 	d0=open(outfile,'w+')
 	d0.close()
@@ -46,13 +47,13 @@ else:
 	end0=d0[-1,0]
 	if end0>dtj0[-1]: endunix=dtj0[-1]
 	else: endunix=end0
-	end=te.time(endunix,0,scale='unix',unit=1).unix2local().mjd[0]
+	end=te.time(endunix,0,scale='unix',unit=1).unix2local('FAST').mjd[0]
 	endyr,endmo,endday,_,_=te.mjd2datetime(end)
 #
 str0='FAST_CLOCKDIFF-'
 l0=len(str0)
 deltat=50
-flist=os.listdir(dirname+'/clock/FAST_tmp')
+flist=os.listdir(dirname+'/materials/clock/FAST_tmp')
 t0=[]
 dt0=[]
 for i in flist:	# merge clock correction files
@@ -62,7 +63,7 @@ for i in flist:	# merge clock correction files
 		if int(date[:4])<endyr: continue
 		if len(date)==6:
 			if int(date[:4])==endyr and int(date[-2:])<endmo: continue
-	tmp=np.genfromtxt(dirname+'/clock/FAST_tmp/'+i,skip_header=21)
+	tmp=np.genfromtxt(dirname+'/materials/clock/FAST_tmp/'+i,skip_header=21)
 	if not args.rewrite:
 		if tmp[-1,0]-endunix<=50: continue
 	t0.extend(np.int64(tmp[:,0]))
@@ -128,9 +129,8 @@ else:	# fit the clock correction with polynomials
 	lseg=len(dtj)-1
 	polyn=(np.ones(lseg,dtype=np.int8)*2).cumsum()
 	a=so.curve_fit(poly,t3,dt3,p0=np.zeros(polyn[-1]+ldt0j+1))
-	dt3a=poly(t3,*a[0])
 	#b,a=ss.butter(15,0.15,'lowpass')
-	#dt3a=ss.filtfilt(b,a,dt3)
+	#dt3a=poly(t3,*a[0])
 	if args.rewrite: stt=sttunix
 	else: stt=sttunix-(sttunix-end0)%deltat
 	t4=np.arange(stt,t3[-1],deltat)
@@ -144,10 +144,16 @@ else:	# fit the clock correction with polynomials
 	for i in range(len(t4)):
 		f.write(str(int(t4[i]))+'     '+'{:.12f}'.format(dt4[i])+'\n')
 	f.close()
+	f=open(dirname+'/materials/clock/FAST_poly.txt','w+')
+	f.write(str(lseg)+'\n')
+	for i in dtj: f.write(str(i)+' ')
+	f.write('\n')
+	for i in a[0]: f.write(str(i)+' ')
+	f.close()
 #
 if args.show:
 	unix,dt=np.loadtxt(outfile).T
-	local=te.time(unix,np.zeros_like(unix),scale='unix',unit=1).unix2local().mjd
+	local=te.time(unix,np.zeros_like(unix),scale='unix',unit=1).unix2local('FAST').mjd
 	fig=plt.figure(1)
 	ax=fig.add_axes([0.13,0.14,0.82,0.81])
 	ax.plot(local,dt*1e6)
