@@ -114,7 +114,7 @@ ld_file_info={
 		'nchan_origin':int,			# the number of the frequency channels in the observed data
 		'stt_time_origin':float,		# the start time of the observed data
 		'tsamp_origin':float,			# the sample time of the observed data
-		'filenames':[list,['number_of_files',2],str]	# the names of original files to generate the data
+		'filenames':[list,['number_of_files',3],str]	# the names of original files to generate the data
 	},
 	'telescope_info':{
 		'telename':str,			# the name of the observing telescope
@@ -126,7 +126,7 @@ ld_file_info={
 		'psr_par':[list,['number_of_lines'],str]		# the parameters of pulsar
 	},
 	'template_info':{
-		'peak_paras':[list,['number_of_peaks',3],str]		# peak parameters for fitting the pulse profile template
+		'peak_paras':[list,['number_of_peaks',2 or 3],str]		# peak parameters for fitting the pulse profile template
 	},
 	'toa_info':{
 		'method':str				# the method to obtain ToA
@@ -366,6 +366,8 @@ times={
 		[]),
 	'tcb2tt()':(dict(),			# return the corresponding TT from TCB
 		[te.time]),
+	'tcbratio()':(dict(),			# calculate the ratio between the frequencies of TCB and local time
+		[[np.ndarray,['size'],float]]),
 	'tdb2tt()':(dict(),			# return the corresponding TT from TDB
 		[te.time]),
 	'tt2tdb()':(dict(),			# transform TT to TDB and TCB
@@ -447,6 +449,8 @@ psr={
 		[np.ndarray,[3,3],float]),
 	'modify()':(dict(para=str,paraval=float),	# modify the specified parameter to the given value
 		[]),
+	'output()':(dict(paras=[list,['nparas'],str]),	# print the specified parameters
+		[]),
 	'readpara()':(dict(parfile=bool,glitch=bool),		# read parameters from a file or a string
 		[]),
 	'tdb_par()':(dict(),			# return a TDB unit psr instance counterpart
@@ -476,6 +480,8 @@ functions_variables_psr_model={
 psr_timing={
 	'__init__()':(dict(psr=pr.psr,time=te.times,freq=float),
 		[]),
+	'cal_period_tcb':(dict(),		# calculate the pulsar period in TCB
+		[[np.ndarray,['size'],float]]),
 	'copy()':(dict(),			# produce a counterpart of this psr instance
 		[pm.psr_timing]),
 	'compute_binary()':(dict(),		# calculate the binary system induced delay
@@ -536,7 +542,7 @@ functions_variables_ad_func={
 		[float]),
 	'baseline0()':(dict(data=[np.ndarray,['nbin'],float]),	# determine the baseline of the data (old version)
 		[float]),
-	'cal_time()':(dict(psr=pr.psr,phase=np.int64,freq=np.float64,telescope=str,ttest=np.float64),		# calculate the corresponding time with a specified pulse phase
+	'cal_time()':(dict(psr=pr.psr,phase=te.phase,freq=np.float64,telescope=str,ttest=np.float64),		# calculate the corresponding time with a specified pulse phase
 		[te.time]),
 	'dic2json()':(dict(dic=dict),	# transform a 1-level information dictionary to a 2-level information dictionary
 		[str]),

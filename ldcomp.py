@@ -126,7 +126,6 @@ if args.zap_file:
 if args.freqrange:
 	command0.append('--fr '+args.freqrange)
 	freq_start,freq_end=np.float64(args.freqrange.split(','))
-	chanstart,chanend=np.int16(np.round((np.array([freq_start,freq_end])-freq_start0)/channel_width))
 	if freq_start>freq_end:
 		parser.error("Starting frequency larger than ending frequency.")
 	elif freq_start<freq_start0 or freq_end>freq_end0:
@@ -185,7 +184,7 @@ for filei in filelist:
 			zchan=list(set(np.where(weights.sum(1)==0)[0]).union(zchan))
 		else:
 			zchan=list(set(np.where(weight==0)[0]).union(zchan))
-		if weigths_mark: weights[zchan]=0		
+		if weights_mark: weights[zchan]=0		
 		weight[zchan]=0
 	else:
 		if weights_comp: zchan=list(np.where(weights.sum(1)==0)[0])

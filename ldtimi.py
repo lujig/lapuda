@@ -23,6 +23,7 @@ args=(parser.parse_args())
 if not os.path.isfile(args.filename):
 	parser.error('ToA file name is invalid.')
 d=ld.ld(args.filename)
+dirname,_=os.path.split(os.path.abspath(args.filename))
 #
 data=d.read_chan(0)[:,:,0]
 info=d.read_info()
@@ -35,48 +36,47 @@ if args.trange:
 	time_start0,time_end0=np.float64(args.trange.split(','))
 	if time_end0<=time_start0: parser.error("Starting time larger than ending time.")
 	mjdtime=data[:,0]+data[:,1]/86400
-	jj_list=[(mjdtime>time_start0)&(mjdtime<time_end0)]
+	jj_list=[-1,['Time limit',(mjdtime>time_start0)&(mjdtime<time_end0)]]
 else:
-	jj_list=[np.ones(len(data),dtype=bool)]	# the list which records the reserved ToAs
+	jj_list=[-1,['No Delete',np.ones(len(data),dtype=bool)]]	# the list which records the reserved ToAs
 #
-select_list=[np.ones(len(data),dtype=bool)]	# the list which records the ToAs in zoom in region
-time_jump=np.ones(len(data),dtype=np.int64)	# the list which records the time-jump for each ToAs
-plotlim_list=[]	# the list recording the zoom in history
-merge_mark,restart,reset_select,fit_mark=False,True,False,False	# the marks for merging ToAs, restart fitting, reset zoom in region, and fitting the ToAs
+fileinfo=info['original_data_info']['filenames']
+filenames=np.array(list(map(lambda x:x[0],fileinfo)))
+uniqf=np.unique(filenames)
+select_list=[-1,['All points',np.ones(len(data),dtype=bool)]]	# the list which records the ToAs in zoom in region
+jump_list=[-1,['No jumps',np.zeros(len(data),dtype=np.int64)]]	# the list which records the time-jump for each ToAs
+merge_mark,zoom_mark,profwindow=False,False,False	# the marks for merging ToAs, zooming region and plotting profile
 err_limit=1.0
 dtunit='phase'
-xax='mjd'
-yax='post'
 paralist0=['f0', 'f1', 'f2', 'f3', 'f4', 'f5', 'raj', 'decj', 'pmra', 'pmdec', 'pmra2', 'pmdec2', 'elong', 'elat', 'pmelong', 'pmelat', 'pmelong2', 'pmelat2', 't0', 'tasc', 'pb', 'ecc', 'a1', 'om', 'eps1', 'eps2', 'sini', 'm2', 'fb0', 'fb1', 'fb2', 'fb3', 'pbdot', 'a1dot', 'omdot', 'edot', 'eps1dot', 'eps2dot', 'gamma', 'bpjph','bpja1','bpjec','bpjom','bpjpb', 'h3', 'h4', 'stig', 'kom', 'kin', 'mtot', 'a2dot', 'e2dot', 'orbpx', 'dr', 'dtheta', 'dth', 'a0', 'b0', 'om2dot', 'pb2dot', 'shapmax']
+date,sec,toae,dt,dterr,freq_start,freq_end,dm,dmerr,period=data.T
+freq=(freq_start+freq_end)/2
+period=period.mean()
+nt=len(date)
+time=te.times(te.time(date,sec,scale=info['telescope_info']['telename']))
+psr=psr0.copy()
+psrt=pm.psr_timing(psr,time,np.inf)
+phase=psrt.phase
+dt=phase.offset%1
+dterr=toae/period
+dt[dt>0.5]-=1
+fit_list=[[dt,dterr,freq,dm,dmerr,psr,psrt,jj_list[jj_list[0]][1]&select_list[select_list[0]][1]]]
+action_list=[-1]
+#
 cur_x,cur_y,cur_x0,cur_y0=0,0,0,0
-key_on,mouse_on,rect=False,False,0
+key_on,mouse_on,rect='',False,0
 #
 fig=Figure(figsize=(8,6),dpi=100)
 fig.clf()
 x1,x2=0.18,0.95
 y1,y2,y3=0.16,0.56,0.96
 #
-def merge(time,dt,dterr,freq,dm,dmerr,period,jj1,se):	# merge the adjacent ToAs
-	global mergej
+def merge():	# merge the ToAs in one observation
+	dt,dterr,freq,dm,dmerr,psr,psrt,fitj=copy.deepcopy(fit_list[-1])
+	se=select_list[select_list[0]][1].copy()
+	jj=jj_list[jj_list[0]][1].copy()
+	jump=jump_list[jump_list[0]][1].copy()
 	date,sec=time.local.date,time.local.second
-	if 'mergej' in locals().keys():
-		jj=mergej.copy()
-	else:
-		ttmp=time.local.mjd
-		nt=len(ttmp)
-		jj=np.zeros(nt,dtype=np.int32)
-		j0=1
-		t0=ttmp[0]
-		merge_time=0.5
-		for i in np.arange(nt):
-			if np.abs(ttmp[i]-t0)<merge_time:
-				jj[i]=j0
-			else:
-				t0=ttmp[i]
-				j0+=1
-				jj[i]=j0
-		mergej=jj
-	#
 	dt2=[]
 	dt2err=[]
 	date2=[]
@@ -84,12 +84,11 @@ def merge(time,dt,dterr,freq,dm,dmerr,period,jj1,se):	# merge the adjacent ToAs
 	dm2=[]
 	dmerr2=[]
 	freq2=[]
-	period2=[]
 	jj2=[]
 	se2=[]
-	for i in np.arange(jj[-1])+1:
-		setj0=jj==i
-		setj1=setj0&jj1&se
+	for i in np.arange(uniqf.size):
+		setj0=(filenames==uniqf[i])
+		setj1=setj0&jj
 		if not np.any(setj1):
 			setj=setj0
 		else:
@@ -99,12 +98,11 @@ def merge(time,dt,dterr,freq,dm,dmerr,period,jj1,se):	# merge the adjacent ToAs
 		dm2.append(dm[setj].mean())
 		dmerr2.append(dmerr[setj].mean())
 		freq2.append(freq[setj].mean())
-		period2.append(period[setj].mean())
-		t0=dt[setj]
+		t0=dt[setj]+jump[setj]
 		ta=dterr[setj]
 		errtmp=np.sqrt(1/(1/ta**2).sum())+t0.std()
-		jj2.append(np.any(jj1[setj])&(errtmp<err_limit))
-		se2.append(np.any(se[setj]))
+		if not np.any(setj1): jj2.append(False)
+		else: jj2.append(np.any(jj[setj]))
 		if len(t0)==1:
 			dt2.append(t0[0])
 			dt2err.append(ta[0])
@@ -119,13 +117,20 @@ def merge(time,dt,dterr,freq,dm,dmerr,period,jj1,se):	# merge the adjacent ToAs
 	freq2=np.array(freq2)
 	dm2=np.array(dm2)
 	dmerr2=np.array(dmerr2)
-	period2=np.array(period2)
 	jj2=np.array(jj2)
-	se2=np.array(se2)
-	return te.times(te.time(date2,sec2,scale=info['telescope_info']['telename'])),dt2,dt2err,freq2,dm2,dmerr2,period2,jj2,se2
+	time2=te.times(te.time(date2,sec2,scale=info['telescope_info']['telename']))
+	psrt2=pm.psr_timing(psr,time2,np.inf)
+	if not merge_mark:
+		return [dt2,dt2err,freq2,dm2,dmerr2,jj2,np.ones_like(jj2),psr,psrt2]
+	else:
+		return [dt2,dt2err,freq2,dm2,dmerr2,jj2,mfit[6],psr,psrt2]
 #
-def psrfit(psr,paras,time,dt,toae,freq,jj,se):	# fit the ToAs with pulsar parameters
-	psrt=pm.psr_timing(psr,time,np.inf)
+def psrfit(paras):	# fit the ToAs with pulsar parameters
+	dt,dterr,freq,dm,dmerr,psr,psrt,fitj=copy.deepcopy(fit_list[-1])
+	jj=jj_list[jj_list[0]][1].copy()
+	se=select_list[select_list[0]][1].copy()
+	jump=jump_list[jump_list[0]][1].copy()
+	dt+=jump
 	lpara=len(paras)
 	x0=np.zeros(lpara+1)
 	jj0=jj&se
@@ -150,26 +155,35 @@ def psrfit(psr,paras,time,dt,toae,freq,jj,se):	# fit the ToAs with pulsar parame
 			psr1.modify(paras[i],para[i])
 		psrt1=pm.psr_timing(psr1,time,np.inf)
 		tmp=psrt1.phase_der_para(paras).T
-		return (np.concatenate((tmp,np.ones([time.size,1])),axis=1)/toae.reshape(-1,1))[jj0]
+		return (np.concatenate((tmp,np.ones([time.size,1])),axis=1)/dterr.reshape(-1,1))[jj0]
 	#
 	def resi(para):
-		return ((fit(para)+dt)/toae)[jj0]
+		return ((fit(para)+dt)/dterr)[jj0]
 	#
 	a=so.leastsq(resi,x0=x0,full_output=True,Dfun=dfunc)
-	popt,pcov=a[0],(np.diag(a[1])*(resi(a[0])**2).sum()/(len(dt)-len(x0)))**0.5
+	popt,pcov=a[0],(np.diag(a[1])*(resi(a[0])**2).sum()/(jj0.sum()-len(x0)))**0.5
 	psr1=psr.copy()
 	for i in np.arange(lpara):
 		psr1.modify(paras[i],popt[i])
 	psrt2=pm.psr_timing(psr1,time,np.inf)
 	#print(fit(popt),dt,x0)
-	return popt,pcov,fit(popt)+dt,resi(popt),psr1,psrt2
+	fit_list.append([fit(popt)+dt-jump,dterr,freq,dm,dmerr,psr1,psrt2,jj0])
 #
-def plot(time,psrt,dt,dterr,dm,dmerr,jj,se):	# plot the figure with options
-	global ax1,xax,yax,xaxis,yaxis,yerr,plotlim_list,lines,points,yunit
+def plot():	# plot the figure with options
+	global ax1,xax,yax,points,lines,xaxis,yaxis,yerr,point0
+	zoom_mark=False
+	if merge_mark: 
+		res,dterr,freq,dm,dmerr,jj,se,psr,psrt=copy.deepcopy(mfit)
+	else:
+		res,dterr,freq,dm,dmerr,psr,psrt,fitj=copy.deepcopy(fit_list[-1])
+		se=select_list[select_list[0]][1].copy()
+		jj=jj_list[jj_list[0]][1].copy()
+		jump=jump_list[jump_list[0]][1].copy()
+		res+=jump
 	marker_colors=np.array(['b']*len(jj))
-	marker_colors[np.logical_not(se)]='c'
+	if len(select_list)==2 or select_list[0]==1: marker_colors[np.logical_not(se)]='c'
+	else: marker_colors[se]='c'
 	marker_colors[np.logical_not(jj)]='r'
-	jj0=jj&se
 	fig.clf()
 	if xax=='orbit':
 		xaxis=psrt.orbits%1
@@ -182,10 +196,10 @@ def plot(time,psrt,dt,dterr,dm,dmerr,jj,se):	# plot the figure with options
 		xaxis=lst*24
 		xlabel='Sidereal Time (h)'
 	elif xax=='mjd':
-		xaxis=time.local.mjd
+		xaxis=psrt.time.local.mjd
 		xlabel='MJD (d)'
 	elif xax=='year':
-		xaxis=te.mjd2datetime(time.local.mjd)[4]
+		xaxis=te.mjd2datetime(psrt.time.local.mjd)[4]
 		xlim=0,366
 		xlabel='Day in a Year (d)'
 	#
@@ -195,36 +209,62 @@ def plot(time,psrt,dt,dterr,dm,dmerr,jj,se):	# plot the figure with options
 			setj=mergej==(i+1)
 			xaxtmp[i]=xaxis[setj].mean()
 		xaxis=xaxtmp
+	if jj.sum()==0: jlim=np.ones_like(jj,dtype=np.bool)
+	else: jlim=jj
 	if xax=='lst':
-		xmax,xmin=np.max(xaxis[jj0]),np.min(xaxis[jj0])
+		xmax,xmin=np.max(xaxis[jlim]),np.min(xaxis[jlim])
 		xlim=xmin*1.05-xmax*0.05,-xmin*0.05+xmax*1.05
 	elif xax=='mjd':
-		xlim=xaxis[jj0][0]*1.05-xaxis[jj0][-1]*0.05,-xaxis[jj0][0]*0.05+xaxis[jj0][-1]*1.05	
+		xlim=xaxis[jlim][0]*1.05-xaxis[jlim][-1]*0.05,-xaxis[jlim][0]*0.05+xaxis[jlim][-1]*1.05	
 	#
+	if dtunit=='time':
+		yunit=' ($\mu$s)'
+	elif dtunit=='phase':
+		yunit=''
 	if yax=='prepost':
 		ax1=fig.add_axes((x1,y2,x2-x1,y3-y2))
 		ax2=fig.add_axes((x1,y1,x2-x1,y2-y1))
-		yaxis,yerr=dt,dterr
-		lines=ax1.errorbar(xaxis,yaxis,yerr,fmt='none').get_children()[0]
-		points=ax1.scatter(xaxis,yaxis,marker='.')
-		line2=ax2.errorbar(xaxis,res,dterr,fmt='none').get_children()[0]
-		points2=ax2.scatter(xaxis,res,marker='.')
+		if len(fit_list)>1:
+			yaxis,yerr=fit_list[-2][0].copy(),fit_list[-2][1].copy()
+			yaxis+=jump
+		else: yaxis,yerr=res.copy(),dterr.copy()
+		if dtunit=='time':
+			period_tmp=period*1e6
+			yaxis*=period_tmp
+			yerr*=period_tmp
+			res*=period_tmp
+			dterr*=period_tmp
+		lines2=ax2.errorbar(xaxis,yaxis,yerr,fmt='none').get_children()[0]
+		points2=ax2.scatter(xaxis,yaxis,marker='.')
+		lines=ax1.errorbar(xaxis,res,dterr,fmt='none').get_children()[0]
+		points=ax1.scatter(xaxis,res,marker='.')
 		points2.set_color(marker_colors)
-		line2.set_color(marker_colors)
-		ax2.set_xlim(*xlim)
-		ax2.set_xlabel(xlabel,fontsize=25,family='serif')
-		ax1.set_ylabel('Phase Resi.'+yunit,fontsize=25,family='serif')
-		ax2.set_ylabel('Fit Resi.'+yunit,fontsize=25,family='serif')
-		ax1.set_xticks([])
+		lines2.set_color(marker_colors)
+		ax1.set_xlim(*xlim)
+		ax1.set_xlabel(xlabel,fontsize=25,family='serif')
+		ax2.set_ylabel('Phase Resi.'+yunit,fontsize=25,family='serif')
+		ax1.set_ylabel('Fit Resi.'+yunit,fontsize=25,family='serif')
+		ax2.set_xticks([])
 		mark_text='Pre-fit and Post-fit'
 	else:
 		ax1=fig.add_axes((x1,y1,x2-x1,y3-y1))
 		if yax=='post':
 			yaxis,yerr=res,dterr
+			if dtunit=='time':
+				period_tmp=period*1e6
+				yaxis*=period_tmp
+				yerr*=period_tmp
 			ax1.set_ylabel('Fit Resi.'+yunit,fontsize=25,family='serif')
 			mark_text='Post-fit'
 		if yax=='pre':
-			yaxis,yerr=dt,dterr
+			if len(fit_list)>1:
+				yaxis,yerr=fit_list[-2][0].copy(),fit_list[-2][1].copy()
+				yaxis+=jump
+			else: yaxis,yerr=res.copy(),dterr.copy()
+			if dtunit=='time':
+				period_tmp=period*1e6
+				yaxis*=period_tmp
+				yerr*=period_tmp
 			ax1.set_ylabel('Phase Resi.'+yunit,fontsize=25,family='serif')
 			mark_text='Pre-fit'
 		elif yax=='dm':
@@ -236,131 +276,175 @@ def plot(time,psrt,dt,dterr,dm,dmerr,jj,se):	# plot the figure with options
 		ax1.set_xlabel(xlabel,fontsize=25,family='serif')
 	lines.set_color(marker_colors)
 	points.set_color(marker_colors)
-	ymax,ymin=np.max((yaxis+yerr)[jj0]),np.min((yaxis-yerr)[jj0])
+	ymax,ymin=np.max((yaxis+yerr)[jj]),np.min((yaxis-yerr)[jj])
 	ylim=ymin*1.05-ymax*0.05,-ymin*0.05+ymax*1.05
 	ax1.set_xlim(*xlim)
 	ax1.set_ylim(ylim)
+	point0,=ax1.plot(-10000,10000,'o',c='#00FF00',zorder=-1)
 	fig.text(x2-0.05,y3-0.05,mark_text,fontsize=25,family='serif',color='green',va='top',ha='right')
 	canvas.draw()
-	if len(plotlim_list)==0:
-		plotlim=[*ax1.get_xlim(),*ax1.get_ylim()]
-		plotlim_list=[plotlim]
 #
-def adjust():	# adjust the zoom in region, set of ToAs to be fitted, and plot options
-	global jj_list,psr,time,dt,res,dterr,dm,yunit,select_list,reset_select,freq,dmerr,period,restart,fit_mark,time_jump
+def restart():	# restart
+	global jj_list,select_list,jump_list,fit_list,dtunit,xax,yax,merge_mark,zoom_mark,action_list
+	fit_list=[fit_list[0]]
+	jj_list=jj_list[0:2]
+	jj_list[0]=-1
+	select_list=select_list[0:2]
+	select_list[0]=-1
+	jump_list=jump_list[0:2]
+	jump_list[0]=-1
+	combo1['value']=[combo1['value'][-1]]
+	combo1.current(0)
+	combo2['value']=[combo2['value'][-1]]
+	combo2.current(0)
+	combo3['value']=[combo3['value'][-1]]
+	combo3.current(0)
+	errentry.delete(0,np.int(np.uint32(-1)/2))
+	errentry.insert(0,str(1))
+	dtunit='phase'
+	setxax('mjd')
+	setyax('post')
+	merge_mark,zoom_mark=False,False
+	action_list=[-1]
+	err_limit=1.0
 	errentry.delete(0,np.int(np.uint32(-1)/2))
 	errentry.insert(0,str(err_limit))
-	if reset_select:
-		select_list=[np.ones(len(data),dtype=bool)]
-		reset_select=False
-	if restart:
-		date,sec,toae,dt,dterr,freq_start,freq_end,dm,dmerr,period=data.T
-		jj_list=[jj_list[0]]
-		jj=jj_list[0]&(dterr<err_limit)
-		if np.any(jj_list[0]!=jj): jj_list.append(jj)
-		select_list=[select_list[0]]
-		se=select_list[-1]
-		freq=(freq_start+freq_end)/2
-		nt=len(date)
-		time=te.times(te.time(date,sec,scale=info['telescope_info']['telename']))
-		psr=psr0.copy()
-		psrt=pm.psr_timing(psr,time,np.inf)
-		phase=psrt.phase
-		dt=phase.offset%1
-		dterr=toae/period
-		dt[dt>0.5]-=1
-		restart=False
-		time_jump=np.zeros_like(dt,dtype=np.int64)
-	else:
-		jj0=jj_list[-1]
-		se=select_list[-1]
-		jj=jj0&(dterr<err_limit)
-		if np.any(jj0!=jj): jj_list.append(jj)
-		psrt=pm.psr_timing(psr,time,np.inf)
-		phase=psrt.phase
-		dt=phase.offset%1
-		dt[dt>0.5]-=1
-		dt+=time_jump
+	frame0.focus()
+	plot()
+#
+def select(cur_x0,cur_x,cur_y0,cur_y,reset=False):	# set the zoom in region
+	jj=(xaxis>cur_x0)&(xaxis<cur_x)&(yaxis>cur_y0)&(yaxis<cur_y)
+	if jj.sum()==0:
+		if ind>=0: jj[ind]=True
+		else: return
 	if merge_mark:
-		time1,dt1,dterr1,freq1,dm1,dmerr1,period1,jj1,se1=merge(time,dt,dterr,freq,dm,dmerr,period,jj,se)
+		sem=mfit[6]
+		if len(select_list)==2 or select_list[0]==1:
+			if key_on in ['Shift_L','v']:
+				change=np.zeros_like(sem)
+				change[jj]=1
+			else:
+				change=np.ones_like(sem)
+				change[jj]=0
+		else:
+			change=np.zeros_like(sem)
+			if key_on in ['Shift_L','v']:
+				change[jj&(sem==1)]=1
+			else:
+				change[jj&(sem==0)]=1
+		sem[change]=np.logical_not(sem[change])
+		sea=np.zeros(len(filenames),dtype=np.bool)
+		for i in np.arange(uniqf.size):
+			if not jj[i]: continue
+			setj=(filenames==uniqf[i])
+			sea[setj]=True
+		jj=sea
+	se=select_list[select_list[0]][1].copy()
+	if len(select_list)==2 or select_list[0]==1:
+		if key_on in ['Shift_L','v']:
+			change=np.zeros_like(se)
+			change[jj]=1
+		else:
+			change=np.ones_like(se)
+			change[jj]=0
+		sinfo='Cancel '
 	else:
-		time1,dt1,dterr1,freq1,dm1,dmerr1,period1,jj1,se1=time.copy(),dt.copy(),dterr.copy(),freq.copy(),dm.copy(),dmerr.copy(),period.copy(),jj,se
-	paras=np.array(paralist)[list(pbox.curselection())]
-	if len(paras) and fit_mark:
-		psrp,psrpe,res,rese,psr,psrt=psrfit(psr,paras,time1,dt1,dterr1,freq1,jj1,se1)
-	else:
-		res=dt1
-	time_jump=np.zeros_like(dt,dtype=np.int64)
-	if dtunit=='time':
-		period_tmp=period1.mean()*1e6
-		res=res*period_tmp
-		dt1=(dt1-dt1.mean())*period_tmp
-		dterr1*=period_tmp
-	if len(paras) and fit_mark:
-		phasestd=np.sqrt((rese**2).sum()/(1/dterr1[jj1]**2).sum())
-		if dtunit=='time': phasestd/=1e6
-		else: phasestd*=period1.mean()
-		print('RMS of the fit residuals (s):',phasestd,', chi-square/d.o.f.:',(rese**2).sum()/len(rese-1-len(paras)))
-		fit_mark=False
-	if dtunit=='time':
-		yunit=' ($\mu$s)'
-	elif dtunit=='phase':
-		yunit=''
-	plot(time1,psrt,dt1,dterr1,dm1,dmerr1,jj1,se1)
+		change=np.zeros_like(se)
+		if key_on in ['Shift_L','v']:
+			change[jj&(se==1)]=1
+			sinfo='Cancel '
+		else:
+			change[jj&(se==0)]=1
+			sinfo='Add '
+	if change.sum()==0: return
+	sinfo+=str(change.sum())+' points'
+	se[change]=np.logical_not(se[change])
+	select_list.append([sinfo,se])
+	if merge_mark: plot()
+	else: update_fig()
+	combo2['value']=list(map(lambda x,y:str(y)+' '+x[0],select_list[1:],np.arange(len(select_list)-1)))[::-1]
+	combo2.current(0)
+	select_list[0]=-1
 #
-def zoom(cur_x0,cur_x,cur_y0,cur_y,reset=False):	# set the zoom in region
-	global ax1,plotlim_list
-	tmp_x0,tmp_x1=np.sort([cur_x0,cur_x])
-	tmp_y0,tmp_y1=np.sort([cur_y0,cur_y])
-	ax1.set_xlim(tmp_x0,tmp_x1)
-	ax1.set_ylim(tmp_y0,tmp_y1)
+def zoom(cur_x0,cur_x,cur_y0,cur_y,reset=False):
+	ax1.set_xlim(cur_x0,cur_x)
+	ax1.set_ylim(cur_y0,cur_y)
+	zoom_mark=True
 	canvas.draw()
-	if reset:
-		plotlim_list=[[tmp_x0,tmp_x1,tmp_y0,tmp_y1]]
-	else:
-		plotlim=[*ax1.get_xlim(),*ax1.get_ylim()]
-		if plotlim!=plotlim_list[-1]:
-			plotlim_list.append(plotlim)
 #
-def delete_range():	# delete ToAs in set of ToA to be fitted
-	global jj_list,ax1,lines,points
-	tmp_x0,tmp_x1=np.sort([cur_x0,cur_x])
-	tmp_y0,tmp_y1=np.sort([cur_y0,cur_y])
-	jj0=(xaxis<tmp_x0)|(xaxis>tmp_x1)|(yaxis<tmp_y0)|(yaxis>tmp_y1)
-	if not merge_mark:
-		jj=jj_list[-1]&jj0
-		se=select_list[-1]
-		jj0=jj.copy()
+def delete(cur_x0,cur_x,cur_y0,cur_y,reset=False):	# delete ToAs in set of ToA to be fitted
+	global action_list
+	jj0=(xaxis>cur_x0)&(xaxis<cur_x)&(yaxis>cur_y0)&(yaxis<cur_y)
+	if jj0.sum()==0:
+		if ind>=0: jj0[ind]=True
+		else: return
+	if merge_mark:
+		jjm=mfit[5]
+		jjm0=jjm.copy()
+		change=np.zeros_like(jjm)
+		if key_on in ['Shift_L','v']:
+			change[jj0&(jjm==0)]=1
+		else:
+			change[jj0&(jjm==1)]=1
+		jjm[change]=np.logical_not(jjm[change])
+		jja=np.zeros(len(filenames),dtype=np.bool)
+		for i in np.arange(uniqf.size):
+			if not jj0[i]: continue
+			setj=(filenames==uniqf[i])
+			jja[setj]=True
+		jj0=jja
+	jj=jj_list[jj_list[0]][1].copy()
+	change=np.zeros_like(jj)
+	if key_on in ['Shift_L','v']:
+		change[jj0&(jj==0)]=1
+		jinfo='Cancel '
 	else:
-		jj=np.zeros(len(jj_list[0]),dtype=bool)
-		se=np.zeros_like(jj0,dtype=bool)
-		for i in np.arange(len(jj0))+1:
-			setj=mergej==i
-			jj0[i-1]&=np.any(jj_list[-1][setj])
-			se[i-1]=np.any(select_list[-1][setj])
-			jj[setj]=jj0[i-1]
-	if np.any(jj!=jj_list[-1]):
-		jj_list.append(jj)
-		marker_colors=np.array(['b']*len(jj0))
-		marker_colors[np.logical_not(se)]='c'
-		marker_colors[np.logical_not(jj0)]='r'
-		lines.set_color(marker_colors)
-		points.set_color(marker_colors)
-		canvas.draw()	
+		change[jj0&(jj==1)]=1
+		jinfo='Delete '
+	if change.sum()==0: return
+	jinfo+=str(change.sum())+' points'
+	jj[change]=np.logical_not(jj[change])
+	jj_list.append([jinfo,jj])
+	if zoom_mark: update_fig()
+	else: plot()
+	if action_list[0]!=-1:
+		action_list=action_list[:int(action_list[0]+1)]
+		action_list[0]=-1
+	if merge_mark: action_list.append(['add_jj',[jj_list[0],jjm0,jjm]])
+	else: action_list.append(['add_jj',[jj_list[0]]])
+	combo1['value']=list(map(lambda x,y:str(y)+' '+x[0],jj_list[1:],np.arange(len(jj_list)-1)))[::-1]
+	combo1.current(0)
+	jj_list[0]=-1
 #
-def fit(fit=True,merge=True):	# implement the fitting process
-	global select_list,fit_mark
-	xlim1,xlim2,ylim1,ylim2=*ax1.get_xlim(),*ax1.get_ylim()
-	se=(xaxis>xlim1)&(xaxis<xlim2)&(yaxis>ylim1)&(yaxis<ylim2)
-	if not np.logical_xor(merge_mark,merge):
-		se0=np.zeros(len(select_list[0]),dtype=bool)
-		for i in np.arange(len(se))+1:
-			se0[mergej==i]=se[i-1]
-		se=se0.copy()
-	if np.any(se!=select_list[-1]):
-		select_list.append(se)
-	fit_mark=fit
-	adjust()
+def fit(fit=True):	# implement the fitting process
+	global action_list,mfit
+	paras=np.array(paralist)[list(pbox.curselection())]
+	if len(paras)==0: return
+	jj=jj_list[jj_list[0]][1].copy()
+	se=select_list[select_list[0]][1].copy()
+	lpara=len(paras)
+	jj0=jj&se
+	if jj0.sum<=(lpara+2):
+		print('Warning: the ToAs are too few to be fitted.')
+		return
+	psrfit(paras)
+	if merge_mark:
+		mfit=merge()
+		res,dterr,freq,dm,dmerr,jj,se,psr,psrt=copy.deepcopy(mfit)
+	else:
+		res,dterr,freq,dm,dmerr,psr,psrt,fitj=copy.deepcopy(fit_list[-1])
+		se=select_list[select_list[0]][1].copy()
+		jj=jj_list[jj_list[0]][1].copy()
+		jump=jump_list[jump_list[0]][1].copy()
+		res+=jump
+	rese=res[jj]/dterr[jj]
+	phasestd=np.sqrt((rese**2).sum()/(1/dterr[jj]**2).sum())*period
+	print('RMS of the fit residuals (s):',phasestd,', chi-square/d.o.f.:',(rese**2).sum()/len(rese-1-len(paras)),'\n')
+	plot()
+	if action_list[0]!=-1:
+		action_list=action_list[:int(action_list[0]+1)]
+		action_list[0]=-1
+	action_list.append(['fit',[paras]])
 #
 def click(event):	# handle the click event
 	global cur_x0,cur_y0,mouse_on,rect
@@ -377,36 +461,107 @@ def click(event):	# handle the click event
 	canvas.draw()
 #
 def leftrelease(event):
-	global mouse_on
+	global mouse_on,cur_x0,cur_y0
 	if not mouse_on: return
 	mouse_on=False
-	zoom(cur_x0,cur_x,cur_y0,cur_y)
 	ax1.patches.clear()
-	canvas.draw()
+	cur_x0,cur_x1=np.sort([cur_x0,cur_x])
+	cur_y0,cur_y1=np.sort([cur_y0,cur_y])
+	if key_on in ['Control_L','z']: zoom(cur_x0,cur_x1,cur_y0,cur_y1)
+	else: select(cur_x0,cur_x1,cur_y0,cur_y1)
 #
 def rightrelease(event):
-	global mouse_on
+	global mouse_on,cur_x0,cur_y0
 	if not mouse_on: return
 	mouse_on=False
-	delete_range()
+	cur_x0,cur_x1=np.sort([cur_x0,cur_x])
+	cur_y0,cur_y1=np.sort([cur_y0,cur_y])
+	delete(cur_x0,cur_x1,cur_y0,cur_y1)
 	ax1.patches.clear()
-	canvas.draw()
+#
+def middleclick(event):
+	global profwindow,profax,profcanvas,prof
+	if ind<0: return
+	profinfo=fileinfo[ind]
+	profname=profinfo[0]
+	if not os.path.isfile(profname):
+		profname=os.path.join(dirname,os.path.split(profinfo[0])[1])
+		if os.path.isfile(profname):
+			print('Warning: the pulse data file is not found, and use the file with same name in the directory of ToA file instead.')
+		else:
+			profname=os.path.split(profinfo[0])[1]
+			if os.path.isfile(profname):
+				print('Warning: the pulse data file is not found, and use the file with same name in this instead.')
+			else:
+				print('The corresponding file does not exist.')
+				return
+	ldfile=ld.ld(profname)
+	finfo=ldfile.read_info()
+	freq_start1,freq_end1=np.float64(finfo['data_info']['freq_start']),np.float64(finfo['data_info']['freq_end'])
+	nchan1=int(finfo['data_info']['nchan'])
+	nbin1=int(finfo['data_info']['nbin'])
+	channel_width1=(freq_end1-freq_start1)/nchan1 #MHz
+	chanstart,chanend=np.int16(np.round((np.array([freq_start[ind],freq_end[ind]])-freq_start1)/channel_width1))
+	substart=profinfo[1]
+	if len(profinfo)==3: subend=profinfo[2]
+	else: subend=substart+1
+	profdata=ldfile.chan_scrunch(np.arange(chanstart,chanend),substart,subend,pol=0).reshape(-1)
+	if not profwindow:
+		proffig=Figure(figsize=(6,4.5),dpi=100)
+		proffig.clf()
+		profax=proffig.add_axes((0.18,0.16,0.77,0.8))
+		prof=tk.Toplevel(root)
+		prof.title('')
+		prof.geometry('600x450+180+180')
+		prof.configure(bg='white')
+		prof.resizable(False,False)
+		prof.attributes('-type','splash')
+		prof.attributes('-topmost',1)
+		profframe=tk.Frame(prof,bg='white')
+		profframe.grid(row=0,column=0)
+		profcanvas=FigureCanvasTkAgg(proffig,master=profframe)
+		def close(event):
+			global profwindow
+			prof.destroy()
+			profwindow=False
+		prof.bind('<ButtonPress-1>',close)
+		prof.bind('<Escape>',close)
+		profcanvas.get_tk_widget().pack(side=tk.TOP,fill='both',expand=1)
+		#prof.mainloop()
+		profwindow=True
+	profax.cla()
+	profax.plot(np.arange(nbin1)/nbin1,profdata)
+	profax.set_xlabel('Phase',fontsize=20)
+	profax.set_ylabel('Flux (arbi.)',fontsize=20)
+	profcanvas.draw()
+	prof.focus_set()
+#
+def dist(x,y,dx,dy):
+	d=((xaxis-x)/dx)**2+((yaxis-y)/dy)**2
+	#print(xaxis,event)
+	ind=np.argmin(d)
+	if d[ind]<0.0001: return ind
+	else: return -1
 #
 def move_tk(event):
-	global cur_x,cur_y,rect
+	global cur_x,cur_y,rect,ind
 	xlim1,xlim2,ylim1,ylim2=*ax1.get_xlim(),*ax1.get_ylim()
 	axx1,axy1,axx2,axy2=ax1.get_position().extents
 	cur_x=((event.x-fig.bbox.extents[0])/fig.bbox.extents[2]-axx1)*(xlim1-xlim2)/(axx1-axx2)+xlim1
 	cur_y=((fig.bbox.extents[3]-event.y)/fig.bbox.extents[3]-axy1)*(ylim1-ylim2)/(axy1-axy2)+ylim1
-	if not mouse_on: return
-	rect.set_height(cur_y-cur_y0)
-	rect.set_width(cur_x-cur_x0)
+	if yax=='post':
+		ind=dist(cur_x,cur_y,np.abs(xlim2-xlim1)*0.75,np.abs(ylim2-ylim1))
+		if ind>=0: point0.set_data([xaxis[ind]],[yaxis[ind]])
+		else: point0.set_data([-10000],[10000])
+	if mouse_on:
+		rect.set_height(cur_y-cur_y0)
+		rect.set_width(cur_x-cur_x0)
 	canvas.draw()
 #
 def press(event):
 	global key_on
 	key_on=event.keysym
-	if key_on in ['r','e','a','s','u','f','m','b','h','p','q','d','x']:
+	if key_on in ['r','a','e','s','u','y','f','m','b','h','p','q','d','x']:
 		keymotion(key_on)
 #
 def release(event):
@@ -414,100 +569,230 @@ def release(event):
 	key_on=''
 #
 def add_jump(a):	# add or minus a one-period jump for the ToAs of the right side of the cursor
-	global time_jump
-	if a=='a': jump=1
-	else: jump=-1
-	jump=(xaxis>cur_x)*jump
+	global mfit,action_list
+	if merge_mark: se=mfit[6]
+	else: se=select_list[select_list[0]][1].copy()
+	if a=='a': 
+		jump=1
+		jinfo='+1'
+	else: 
+		jump=-1
+		jinfo='-1'
+	if se.sum()>0 and se.sum()!=se.size:jump=se*jump
+	else: jump=(xaxis>cur_x)*jump
 	if merge_mark:
-		time_jump0=np.zeros(len(jj_list[0]),dtype=bool)
-		for i in np.arange(len(jump))+1:
-			setj=mergej==i
-			time_jump[setj]=jump[i-1]
+		time_jump=np.zeros(len(filenames),dtype=np.int64)
+		for i in np.arange(uniqf.size):
+			if not jump[i]: continue
+			setj=(filenames==uniqf[i])
+			time_jump[setj]=jump[i]
 	else:
-		time_jump0=jump
+		time_jump=jump
+	time_jump0=jump_list[jump_list[0]][1].copy()
+	jinfo=str(int(np.abs(time_jump.sum())))+' points '+jinfo
 	time_jump+=time_jump0
-	adjust()
+	jump_list.append([jinfo,time_jump])
+	if merge_mark: mfit=merge()
+	plot()
+	if action_list[0]!=-1:
+		action_list=action_list[:int(action_list[0]+1)]
+		action_list[0]=-1
+	action_list.append(['add_jump',[jump_list[0]]])
+	combo3['value']=list(map(lambda x,y:str(y)+' '+x[0],jump_list[1:],np.arange(len(jump_list)-1)))[::-1]
+	combo3.current(0)
+	jump_list[0]=-1
+#
+def merge_act():
+	global merge_mark,mfit,select_list
+	if not merge_mark: mfit=merge()
+	merge_mark=not merge_mark
+	select_list=select_list[0:2]
+	combo2['value']=[combo2['value'][-1]]
+	combo2.current(0)
+	plot()
+#
+def undo():
+	global mfit,err_limit
+	if len(action_list)+action_list[0]<=0: return
+	action=action_list[action_list[0]]
+	if action[0]=='add_jump':
+		tmp=jump_list.pop()
+		combo3['value']=list(map(lambda x,y:str(y)+' '+x[0],jump_list[1:],np.arange(len(jump_list)-1)))[::-1]
+		combo3.current(len(jump_list)-1-action[1][0]%len(jump_list))
+		jump_list[0]=action[1][0]
+		if merge_mark: mfit=merge()
+		action[1]=[tmp]
+		plot()
+	elif action[0]=='jump_combo':
+		combo3.current(len(jump_list)-1-action[1][0]%len(jump_list))
+		tmp=jump_list[0]
+		jump_list[0]=action[1][0]
+		action[1]=[tmp]
+		if merge_mark: mfit=merge()
+		if zoom_mark: update_fig()
+		else: plot()
+	elif action[0]=='add_jj':
+		tmp=jj_list.pop()
+		if merge_mark: mfit[5]=action[1][1]
+		if zoom_mark: update_fig()
+		else: plot()
+		jj_list[0]=action[1][0]
+		combo1['value']=list(map(lambda x,y:str(y)+' '+x[0],jj_list[1:],np.arange(len(jj_list)-1)))[::-1]
+		combo1.current(len(jj_list)-1-action[1][0]%len(jj_list))
+		if merge_mark: action[1]=[tmp,action[1][2]]
+		else: action[1]=[tmp]
+	elif action[0]=='jj_combo':
+		combo1.current(len(jj_list)-1-action[1][0]%len(jj_list))
+		tmp=jj_list[0]
+		jj_list[0]=action[1][0]
+		action[1]=[tmp]
+		if merge_mark: mfit=merge()
+		if zoom_mark: update_fig()
+		else: plot()
+	elif action[0]=='submit_err':
+		tmp=err_limit
+		tmp1=jj_list.pop()
+		errentry.delete(0,np.int(np.uint32(-1)/2))
+		errentry.insert(0,str(action[1][0]))
+		combo1['value']=list(map(lambda x,y:str(y)+' '+x[0],jj_list[1:],np.arange(len(jj_list)-1)))[::-1]
+		combo1.current(len(jj_list)-1-action[1][1]%len(jj_list))
+		err_limit=action[1][0]
+		jj_list[0]=action[1][1]
+		action[1]=[tmp,tmp1]
+		frame0.focus()
+		if merge_mark: mfit=merge()
+		if zoom_mark: update_fig()
+		else: plot()
+	elif action[0]=='merge':
+		merge_act()
+	elif action[0]=='fit':
+		tmp=fit_list.pop()
+		if merge_mark: mfit=merge()
+		for i in np.arange(len(paralist)):
+			pbox.selection_clear(i)
+			if paralist[i] in action[1][0]:
+				pbox.selection_set(i)
+		action[1]=[tmp]
+		plot()
+	action_list[0]-=1
+#
+def redo():
+	global mfit,err_limit
+	if action_list[0]==-1: return
+	action=action_list[int(action_list[0]+1)]
+	if action[0]=='add_jump':
+		jump_list.append(action[1][0])
+		if merge_mark: mfit=merge()
+		plot()
+		combo3['value']=list(map(lambda x,y:str(y)+' '+x[0],jump_list[1:],np.arange(len(jump_list)-1)))[::-1]
+		combo3.current(0)
+		jump_list[0]=-1
+	elif action[0]=='jump_combo':
+		combo3.current(len(jump_list)-1-action[1][0]%len(jump_list))
+		jump_list[0]=action[1][0]
+		if merge_mark: mfit=merge()
+		if zoom_mark: update_fig()
+		else: plot()
+	elif action[0]=='add_jj':
+		jj_list.append(action[1][0])
+		if merge_mark: mfit[5]=action[1][1]
+		if zoom_mark: update_fig()
+		else: plot()
+		combo1['value']=list(map(lambda x,y:str(y)+' '+x[0],jj_list[1:],np.arange(len(jj_list)-1)))[::-1]
+		combo1.current(0)
+		jj_list[0]=-1
+	elif action[0]=='jj_combo':
+		combo1.current(len(jj_list)-1-action[1][0]%len(jj_list))
+		jj_list[0]=action[1][0]
+		if merge_mark: mfit=merge()
+		if zoom_mark: update_fig()
+		else: plot()
+	elif action[0]=='submit_err':
+		jj_list.append(action[1][1])
+		errentry.delete(0,np.int(np.uint32(-1)/2))
+		errentry.insert(0,str(action[1][0]))
+		combo1['value']=list(map(lambda x,y:str(y)+' '+x[0],jj_list[1:],np.arange(len(jj_list)-1)))[::-1]
+		combo1.current(0)
+		err_limit=action[1][0]
+		jj_list[0]=-1	
+		frame0.focus()
+		if merge_mark: mfit=merge()
+		if zoom_mark: update_fig()
+		else: plot()
+	elif action[0]=='merge':
+		merge_act()
+	elif action[0]=='fit':
+		fit_list.append(action[1][0])
+		if merge_mark: mfit=merge()
+		plot()
+	action_list[0]+=1
 #
 def keymotion(a):
-	global plotlim_list,select_list,jj_list,lines,points,merge_mark,reset_select,restart
+	global select_list,jj_list,action_list,mfit
 	if a=='r':	# reset the zoom in region
-		if len(plotlim_list)>1:
-			plotlim_list.pop()
-			ax1.set_xlim(*plotlim_list[-1][:2])
-			#ax1.set_ylim(*plotlim_list[-1][2:])
-			canvas.draw()
-	elif a=='e':	# reset the zoom in region to origin
-		if len(select_list)>1:
-			if xax=='orbit': xlim=0,1
-			elif xax=='year': xlim=0,366
-			else: 
-				xmax,xmin=np.max(xaxis),np.min(xaxis)
-				xlim=xmin*1.05-xmax*0.05,-xmin*0.05+xmax*1.05
-			ymax,ymin=np.max(yaxis),np.min(yaxis)
-			ylim=ymin*1.05-ymax*0.05,-ymin*0.05+ymax*1.05
-			zoom(*xlim,*ylim,reset=True)
-			reset_select=True
+		plot()
 	elif a=='u':	# undo the last delete
-		if len(jj_list)>1:
-			jj_list.pop()
-			jj0=jj_list[-1]
-			se0=select_list[-1]
-			if merge_mark:
-				jj=np.zeros(len(xaxis),dtype=bool)
-				se=np.zeros_like(jj,dtype=bool)
-				for i in np.arange(len(jj))+1:
-					setj=mergej==i
-					jj[i-1]=np.any(jj0[setj])
-					se[i-1]=np.any(se0[setj])
-			else:
-				jj=jj0
-				se=se0
-			marker_colors=np.array(['b']*len(jj))
-			marker_colors[np.logical_not(se)]='c'
-			marker_colors[np.logical_not(jj)]='r'
-			lines.set_color(marker_colors)
-			points.set_color(marker_colors)
-			canvas.draw()
+		undo()
+	elif a=='y':	# undo the last delete
+		redo()
 	elif a=='f':	# fit
-		fit(fit=True)
+		fit()
 	elif a=='a' or a=='d':	# add or minus a jump
 		add_jump(a)
 	elif a=='m':	# merge or unmerge the ToAs
-		merge_mark=not merge_mark
-		fit(fit=False,merge=False)
+		merge_act()
+		if action_list[0]!=-1:
+			action_list=action_list[:int(action_list[0]+1)]
+			action_list[0]=-1
+		action_list.append(['merge'])
+	elif a=='e':
+		select_list=select_list[0:2]
+		select_list[0]=-1
+		if merge_mark: mfit[6]=np.ones(len(mfit[6]))
+		combo2['value']=[combo2['value'][-1]]
+		combo2.current(0)
+		plot()
 	elif a=='b':	# restart the fitting process
-		restart=True
-		adjust()	
-	elif a=='p':	# print present fitted pulsar parameters
+		restart()
+	elif a=='p':	# print present selected pulsar parameters
+		psr=fit_list[-1][-3]
+		paras=np.array(paralist)[list(pbox.curselection())]
 		print('Pulsar parameters:')
-		print(psr)
+		psr.output(paras)
 	elif a=='q':	# quit
 		root.destroy()
 	elif a=='s':	# save the pulsar parameters to file
+		psr=fit_list[-1][-3]
 		psrfile=tk.filedialog.asksaveasfilename(defaultextension='.par')
 		if psrfile:
 			psr.writepar(psrfile)
 	elif a=='x':	# save the timing residuals to file
 		resfile=tk.filedialog.asksaveasfilename(defaultextension='.res')
 		if resfile:
-			tmp=np.array([time.local.date,time.local.second,dt,dterr,np.int8(jj_list[-1]),np.int8(select_list[-1])]).T
-			np.savetxt(resfile,tmp,fmt=['%i', '%5.11f', '%.16f', '%.16f', '%i', '%i'])
+			tmp=np.array([time.local.date,time.local.second,dt,dterr,fit_list[-1][-1]]).T
+			np.savetxt(resfile,tmp,fmt=['%i', '%5.11f', '%.16f', '%.16f', '%i'])
 			#psr.writepar(resfile[:-4]+'.par')
 	elif a=='h':
 		sys.stdout.write("\nldzap interactive commands\n\n")
 		sys.stdout.write("Mouse:\n")
-		sys.stdout.write("  Left-click select a rectangle region to zoom in.\n")
-		sys.stdout.write("  Right-click select a rectangle region to delete the ToAs therein.\n\n")
+		sys.stdout.write("  Left-click and drag to select or unselect (with the key 'v' or left Shift holded on) ToAs in a rectangle region. \n")
+		sys.stdout.write("      Left-click on a single ToA to select or unselect (with the key 'v' or left Shift holded on) it. \n")
+		sys.stdout.write("      Hold on the key 'z' or left-Ctrl and left-drag to select a rectangle region to zoom in. \n")
+		sys.stdout.write("  Right-click and drag to delete or undelete (with the key 'v' or left Shift holded on) ToAs in a rectangle region.\n")
+		sys.stdout.write("      Right-click on a single ToA to delete or undelete (with the key 'v' or left Shift holded on) it.\n")
+		sys.stdout.write("  Middle-click on a single ToA to check the corresponding pulse profile of it.\n\n")
+		sys.stdout.write("      Left-click on the figure or press ESC to close the figure.\n\n")
 		sys.stdout.write("Keyboard:\n")
 		sys.stdout.write("  h    Show this help\n")
 		sys.stdout.write("  u    Undo last delete command\n")
-		sys.stdout.write("  r    Reset zoom to the last selection\n")
-		sys.stdout.write("  e    Reset zoom to the initial region\n")
+		sys.stdout.write("  y    Redo last undo command\n")
+		sys.stdout.write("  r    Reset zoom to the initial region\n")
+		sys.stdout.write("  e    Reset selection\n")
 		sys.stdout.write("  b    Restart the fitting\n")
 		sys.stdout.write("  m    Merge the neighboring ToAs\n")
-		sys.stdout.write("  a/d  Add/substract one period for the ToAs on the right side of the cursor\n")
+		sys.stdout.write("  a/d  Add/substract one period for the selected ToAs or the ToAs on the right side of the cursor\n")
 		sys.stdout.write("  f    Fit the ToAs displayed currently\n")
-		sys.stdout.write("  p    Print the current parfile\n")
+		sys.stdout.write("  p    Print the selected parameters\n")
 		sys.stdout.write("  s    Save parfile to a specified file\n")
 		sys.stdout.write("  x    Save the fit residuals to a specified file\n")
 		sys.stdout.write("  q    Exit program\n\n")
@@ -516,45 +801,140 @@ def keymotion(a):
 def xmode(mode):	# choose the x-axis mode
 	global xax,select_list
 	if mode==xax: return
-	xax=mode
-	select_list=[select_list[0]]
-	adjust()
+	if mode=='orbit' and 'binary' not in psr0.paras:
+		print('Warning: this pulsar is not a binary, and the X-Axis cannot be Orbit phase.')
+		return
+	setxax(mode)
+	select_list=select_list[0:2]
+	plot()
 #
 def ymode(mode):	# choose the y-axis mode
-	global yax,select_list,dtunit,y5bttn
+	global select_list,dtunit
 	if mode==yax: return
-	select_list=[select_list[0]]
+	select_list=select_list[0:2]
 	if mode=='time':
-		if dtunit=='time': dtunit,tmp='phase','Time'
-		else: dtunit,tmp='time','Phase'
+		if dtunit=='time': dtunit,tmp='phase','Y-Unit\nPhase'
+		else: dtunit,tmp='time','Y-Unit\nTime'
 		y5bttn.config(text=tmp)
-		adjust()
+		plot()
 	else:
-		yax=mode
-		adjust()
+		setyax(mode)
+		plot()
+#
+def setyax(mode):
+	global yax
+	yaxlist=['pre','post','prepost','dm']
+	ind=yaxlist.index(mode)
+	yax=mode
+	y1bttn.config(bg='white')
+	y2bttn.config(bg='white')
+	y3bttn.config(bg='white')
+	y4bttn.config(bg='white')
+	exec('y'+str(ind+1)+'bttn.config(bg=\'#E5E35B\')')
+#
+def setxax(mode):
+	global xax
+	yaxlist=['mjd','orbit','lst','year']
+	ind=yaxlist.index(mode)
+	xax=mode
+	x1bttn.config(bg='white')
+	x2bttn.config(bg='white')
+	x3bttn.config(bg='white')
+	x4bttn.config(bg='white')
+	exec('x'+str(ind+1)+'bttn.config(bg=\'#E5E35B\')')
 #
 def submit_err(event):	# screen the large noise ToAs
-	global err_limit
+	global err_limit,mfit,action_list
 	err=errentry.get()
 	try:
-		err_limit=np.float64(err)
+		err_limit0=np.float64(err)
 	except:
 		tk.messagebox.showwarning('Error!','The inputing error limit is invalid!')
+		return
+	jj=jj_list[jj_list[0]][1]&(dterr<err_limit0)
+	if np.any(jj_list[jj_list[0]]!=jj): jj_list.append(['Error_limit',jj])
 	errentry.delete(0,np.int(np.uint32(-1)/2))
-	errentry.insert(0,str(err_limit))
+	errentry.insert(0,str(err_limit0))
+	combo1['value']=list(map(lambda x,y:str(y)+' '+x[0],jj_list[1:],np.arange(len(jj_list)-1)))[::-1]
+	combo1.current(0)
+	if action_list[0]!=-1:
+		action_list=action_list[:int(action_list[0]+1)]
+		action_list[0]=-1
+	action_list.append(['submit_err',[err_limit,jj_list[0]]])
+	err_limit=err_limit0
+	jj_list[0]=-1	
 	frame0.focus()
+	if merge_mark:
+		mfit=merge()
+		#print(mfit[5])
+	if zoom_mark: update_fig()
+	else: plot()
+#
+def update_fig():
+	if merge_mark: jj,se=mfit[5:7]
+	else:
+		se=select_list[select_list[0]][1].copy()
+		jj=jj_list[jj_list[0]][1].copy()
+	marker_colors=np.array(['b']*len(jj))
+	if len(select_list)==2 or select_list[0]==1: marker_colors[np.logical_not(se)]='c'
+	else: marker_colors[se]='c'
+	marker_colors[np.logical_not(jj)]='r'
+	lines.set_color(marker_colors)
+	points.set_color(marker_colors)
+	canvas.draw()
+#
+def jjcombo(event):
+	global mouse_on,mfit,action_list
+	value=list(combo1['value'])
+	index=value.index(combo1.get())
+	combo1.current(index)
+	if action_list[0]!=-1:
+		action_list=action_list[:int(action_list[0]+1)]
+		action_list[0]=-1
+	action_list.append(['jj_combo',[jj_list[0]]])
+	jj_list[0]=len(value)-index
+	mouse_on=False
+	if merge_mark: mfit=merge()
+	if zoom_mark: update_fig()
+	else: plot()
+#
+def selcombo(event):
+	global mouse_on,mfit
+	value=list(combo2['value'])
+	index=value.index(combo2.get())
+	combo2.current(index)
+	select_list[0]=len(value)-index
+	mouse_on=False
+	if merge_mark: mfit=merge()
+	update_fig()
+#
+def jumpcombo(widget):
+	global mouse_on,mfit,action_list
+	value=list(combo3['value'])
+	index=value.index(combo3.get())
+	combo3.current(index)
+	if action_list[0]!=-1:
+		action_list=action_list[:int(action_list[0]+1)]
+		action_list[0]=-1
+	action_list.append(['jump_combo',[jump_list[0]]])
+	jump_list[0]=len(value)-index
+	mouse_on=False
+	if merge_mark: mfit=merge()
+	if zoom_mark: update_fig()
+	else: plot()
 #
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk
+from tkinter import ttk
 import matplotlib as mpl
 mpl.use('TkAgg')
 root=tk.Tk()
 root.title('Timing of PSR '+psr0.name)
-root.geometry('950x700+100+100')
+root.geometry('950x750+100+100')
 root.configure(bg='white')
 root.resizable(False,False)
 frame0=tk.Frame(root,bg='white')
-frame0.grid(row=0,column=0)
+frame0.grid(row=1,column=0)
 canvas=FigureCanvasTkAgg(fig,master=frame0)
 canvas.get_tk_widget().grid()  
 canvas.get_tk_widget().pack(fill='y')
@@ -562,53 +942,98 @@ root.bind('<KeyPress>',press)
 root.bind('<KeyRelease>',release)
 root.bind('<ButtonPress-1>',click)
 root.bind('<ButtonPress-3>',click)
+root.bind('<ButtonPress-2>',middleclick)
 root.bind('<ButtonRelease-1>',leftrelease)
 root.bind('<ButtonRelease-3>',rightrelease)
 root.bind('<Motion>',move_tk)
 sframe=tk.Frame(root,bg='white')
-sframe.grid(row=0,column=1,rowspan=2)
+sframe.grid(row=1,column=1,rowspan=2)
+#
+font0=tk.font.Font(root,font=('serif',20))
+font0width=font0.measure('0')
+font0height=font0.metrics('linespace')
+font1=tk.font.Font(root,font=('serif',17))
+font1width=font1.measure('0')
+font1height=font1.metrics('linespace')
+combowidth=int((950-2-10-(8*font0width+2)*3-(13+2)*3)/3//font0width)
+listboxheight=int((750-2-10-4*(2+font0height)-2)//(font1height+1))
+listboxwidth=int((950-2-10-800-13-2)//font1width)
+#
 tk.Label(sframe,text='PARA List:',bg='white',font=('serif',20)).grid(row=0,column=0)
 pboxframe=tk.Frame(sframe,bg='white')
 pboxframe.grid(row=1,column=0)
-pbox=tk.Listbox(pboxframe,height=16,width=10,selectmode=tk.MULTIPLE,font=('serif',17),exportselection=0)
+pbox=tk.Listbox(pboxframe,height=listboxheight,width=listboxwidth,selectmode=tk.MULTIPLE,font=('serif',17),exportselection=0)
 paralist=[]
 for i in paralist0:
 	if i in psr0.paras: paralist.append(i)
+if 'fb0' in paralist and 'pb' in paralist: paralist.remove('pb')
 pbox.insert(0,*map(lambda x:x.upper(),paralist))
 sbar1= tk.Scrollbar(pboxframe,command=pbox.yview)
 sbar1.pack(side=tk.RIGHT,fill='y')
 pbox.pack(fill='both',anchor='w',expand='no')
 pbox.config(yscrollcommand = sbar1.set)
 tk.Label(sframe,text='Err limit:',bg='white',font=('serif',20)).grid(row=2,column=0)
-errentry=tk.Entry(sframe,width=10,font=('serif',17))
+errentry=tk.Entry(sframe,width=listboxwidth,font=('serif',17))
 errentry.grid(row=3,column=0)
 errentry.insert(0,str(err_limit))
 errentry.bind('<Return>',submit_err)
 pframe=tk.Frame(root,bg='white')
-pframe.grid(row=1,column=0)
+pframe.grid(row=2,column=0)
 tk.Label(pframe,text='Plot mode: ',bg='white',font=('serif',20)).grid(row=0,column=0)
 y1bttn=tk.Button(pframe,text='Pre-fit',command=lambda: ymode('pre'),bg='white',activebackground='#E5E35B',font=('serif',20))
 y1bttn.grid(row=0,column=1)
+y1bttn.config(width=5)
 y2bttn=tk.Button(pframe,text='Post-fit',command=lambda: ymode('post'),bg='white',activebackground='#E5E35B',font=('serif',20))
 y2bttn.grid(row=0,column=2)
+y2bttn.config(width=6)
 y3bttn=tk.Button(pframe,text='Pre&Post',command=lambda: ymode('prepost'),bg='white',activebackground='#E5E35B',font=('serif',20))
 y3bttn.grid(row=0,column=3)
+y3bttn.config(width=7)
 y4bttn=tk.Button(pframe,text='DM',command=lambda: ymode('dm'),bg='white',activebackground='#E5E35B',font=('serif',20))
 y4bttn.grid(row=0,column=4)
-y5bttn=tk.Button(pframe,text='Time',command=lambda: ymode('time'),bg='white',activebackground='#E5E35B',font=('serif',20))
-y5bttn.grid(row=0,column=5)
+y4bttn.config(width=3)
+tk.Label(pframe,width=1,text=' ',bg='white',font=('serif',20)).grid(row=0,column=5,rowspan=2)
+y5bttn=tk.Button(pframe,text='Y-Unit\nPhase',command=lambda: ymode('time'),bg='white',activebackground='#E5E35B',font=('serif',20))
+y5bttn.grid(row=0,column=6,rowspan=2)
+y5bttn.config(width=5)
 tk.Label(pframe,text='X-axis ',bg='white',font=('serif',20)).grid(row=1,column=0)
 x1bttn=tk.Button(pframe,text='MJD',command=lambda: xmode('mjd'),bg='white',activebackground='#E5E35B',font=('serif',20))
 x1bttn.grid(row=1,column=1)
+x1bttn.config(width=5)
 x2bttn=tk.Button(pframe,text='Orbit',command=lambda: xmode('orbit'),bg='white',activebackground='#E5E35B',font=('serif',20))
 x2bttn.grid(row=1,column=2)
+x2bttn.config(width=6)
 x3bttn=tk.Button(pframe,text='LST',command=lambda: xmode('lst'),bg='white',activebackground='#E5E35B',font=('serif',20))
 x3bttn.grid(row=1,column=3)
+x3bttn.config(width=7)
 x4bttn=tk.Button(pframe,text='Year',command=lambda: xmode('year'),bg='white',activebackground='#E5E35B',font=('serif',20))
 x4bttn.grid(row=1,column=4)
+x4bttn.config(width=3)
+pframe1=tk.Frame(root,bg='white')
+pframe1.grid(row=0,column=0,columnspan=2)
+tk.Label(pframe1,width=8,text='Delete:',bg='white',font=('serif',20)).grid(row=0,column=0)
+combo1=ttk.Combobox(pframe1,width=combowidth,font=('serif',20),state="readonly")
+combo1['value']=list(map(lambda x,y:str(y)+' '+x[0],jj_list[1:],np.arange(len(jj_list)-1)))[::-1]
+combo1.current(0)
+combo1.grid(row=0,column=1)
+combo1.bind("<<ComboboxSelected>>",jjcombo)
+tk.Label(pframe1,width=8,text='Select:',bg='white',font=('serif',20)).grid(row=0,column=2)
+combo2=ttk.Combobox(pframe1,width=combowidth,font=('serif',20),state="readonly")
+combo2['value']=list(map(lambda x,y:str(y)+' '+x[0],select_list[1:],np.arange(len(select_list)-1)))[::-1]
+combo2.current(0)
+combo2.grid(row=0,column=3)
+combo2.bind("<<ComboboxSelected>>",selcombo)
+tk.Label(pframe1,width=8,text='Jump:',bg='white',font=('serif',20)).grid(row=0,column=4)
+combo3=ttk.Combobox(pframe1,width=combowidth,font=('serif',20),state="readonly")
+combo3['value']=list(map(lambda x,y:str(y)+' '+x[0],jump_list[1:],np.arange(len(jump_list)-1)))[::-1]
+combo3.current(0)
+combo3.grid(row=0,column=5)
+combo3.bind("<<ComboboxSelected>>",jumpcombo)
 #
-adjust()
+setxax('mjd')
+setyax('post')
+plot()
 canvas.draw()
 #
 root.mainloop()
-
+#

@@ -202,7 +202,7 @@ for k in np.arange(nfreq):
 		phase0=info0['additional_info']['phase0']+info0['data_info']['sub_nperiod']*nsub*(i+substart)
 		if 'pulsar_info' in info0.keys():
 			psr=pr.psr(info0['pulsar_info']['psr_par'])
-			stt_time=af.cal_time(psr,phase0,telescope=info0['telescope_info']['telename'],ttest=info0['data_info']['stt_time']+sublen*nsub*(i+substart)/86400,freq=np.inf)
+			stt_time=af.cal_time(psr,te.phase(int(phase0),0),telescope=info0['telescope_info']['telename'],ttest=info0['data_info']['stt_time']+sublen*nsub*(i+substart)/86400,freq=np.inf)
 		else: stt_time=te.time(info0['data_info']['stt_date'],info0['data_info']['stt_sec']+sublen*nsub*(i+substart))
 		stt_date=stt_time.date[0]
 		stt_sec=stt_time.second[0]

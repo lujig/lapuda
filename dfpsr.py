@@ -593,7 +593,7 @@ else:	# generate the Chebyshev polynomials based on the time and frequency
 	roots=nc.chebroots(cheb_end)
 	roots=np.real(roots[np.isreal(roots)])
 	root=roots[np.argmin(np.abs(roots))]
-	stt_time_test=af.cal_time(psr,int(phase_start),ttest=file_time[0][-1]+((root+1)/2*nbin0*tsamp+file_time[0][:-1].sum()-delay+offs_sub-tsamp*nsblk/2.0)/86400,telescope=telename,freq=np.inf)
+	stt_time_test=af.cal_time(psr,te.phase(int(phase_start),0),ttest=file_time[0][-1]+((root+1)/2*nbin0*tsamp+file_time[0][:-1].sum()-delay+offs_sub-tsamp*nsblk/2.0)/86400,telescope=telename,freq=np.inf)
 	stt_sec=stt_time_test.second[0]
 	stt_date=stt_time_test.date[0]
 	info['additional_info']={'phase0':int(phase_start)}

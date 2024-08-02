@@ -8,6 +8,7 @@ __pycache__/
 
 # FAST original clock difference
 materials/clock/FAST_tmp/
+materials/clock/FAST.txt
 
 # Distribution / packaging
 .Python

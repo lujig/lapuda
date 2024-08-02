@@ -20,7 +20,7 @@ parser.add_argument('-p',dest='template',required=True,help="pulse profile templ
 parser.add_argument('--freq_align',action='store_true',default=False,dest='freq_align',help="use same frequency band to obtain the ToA")
 parser.add_argument('-T','--tscrunch',action='store_true',default=False,dest='tscrunch',help='time scrunch to one subint to obtain result')
 parser.add_argument('--fr','--frequency_range',default=0,dest='freqrange',help='calculate in the frequency range (FREQ0,FREQ1)')
-parser.add_argument('-s','--subint_range',default=0,dest='subint_range',help='calculate in the subint range (SUBINT0,SUBINT1)')
+parser.add_argument('--sr','--subint_range',default=0,dest='subint_range',help='calculate in the subint range (SUBINT0,SUBINT1)')
 parser.add_argument('--br','--phase_range',default=0,dest='phaserange',help='calculate with the data in phase range (PHASE0,PHASE1) of the template')
 parser.add_argument('-z',"--zap",dest="zap_file",default=0,help="file recording zap channels")
 parser.add_argument('-Z',action='store_true',default=False,dest="zap_template",help="zap same channels for the template file")
@@ -329,12 +329,12 @@ def poa(tpdata0,tpdata):	# phase gradient method
 	tmpnum=np.argmax(fft.irfft(f0*f.conj()))
 	d0=np.append(d0[tmpnum:],d0[:tmpnum])
 	f0=fft.rfft(d0)
-	errbinnum=np.min([int(nb/6),20])
-	sr0=np.std(f0.real[-errbinnum:])
-	si0=np.std(f0.imag[-errbinnum:])
-	sr=np.std(f.real[-errbinnum:])
-	si=np.std(f.imag[-errbinnum:])
 	df=f0/f
+	#errbinnum=np.min([int(nb/6),20])
+	#sr0=np.std(f0.real[-errbinnum:])
+	#si0=np.std(f0.imag[-errbinnum:])
+	#sr=np.std(f.real[-errbinnum:])
+	#si=np.std(f.imag[-errbinnum:])
 	#err=np.sqrt((sr**2+si**2)/np.abs(f)**2+(sr0**2+si0**2)/np.abs(f0)**2)
 	#ang=np.angle(df)
 	#fitnum=lnumber
@@ -342,7 +342,8 @@ def poa(tpdata0,tpdata):	# phase gradient method
 	#dt=popt[0]/(2*np.pi)-tmpnum/((nb-1)*2)
 	#dterr=pcov[0,0]**0.5/(2*np.pi)
 	fitnum=lnumber
-	err=np.sqrt((sr**2+si**2)/np.abs(f)**2+(sr0**2+si0**2)/np.abs(f0)**2)[1:fitnum]/np.arange(1,fitnum)
+	#err=np.sqrt((sr**2+si**2)/np.abs(f)**2+(sr0**2+si0**2)/np.abs(f0)**2)[1:fitnum]/np.arange(1,fitnum)
+	err=1/np.abs(f0)[1:fitnum]/np.arange(1,fitnum)
 	ang=np.angle(df[1:fitnum])/np.arange(1,fitnum)
 	ang0=(ang/err**2).sum()/(1/err**2).sum()
 	dt=ang0/(2*np.pi)-tmpnum/((nb-1)*2)
@@ -362,11 +363,6 @@ def coa(tpdata0,tpdata):	# sinc interpolation correlation method
 	tmpnum=np.argmax(fft.irfft(f0*f.conj()))
 	d0=np.append(d0[tmpnum:],d0[:tmpnum])
 	f0=fft.rfft(d0)
-	errbinnum=np.min([int(nb/6),20])
-	sr0=np.std(f0.real[-errbinnum:])
-	si0=np.std(f0.imag[-errbinnum:])
-	sr=np.std(f.real[-errbinnum:])
-	si=np.std(f.imag[-errbinnum:])
 	theta=np.linspace(-1,1,400)/nb
 	corr=(d0*fft.irfft(f*np.exp(1j*np.arange(nb)*theta.reshape(-1,1)*(2*np.pi)))).sum(1)
 	polyfunc=np.polyfit(theta,corr,9)
@@ -554,7 +550,7 @@ for k in np.arange(filenum):
 			if np.any(np.isnan(data)) or np.any(np.isinf(data)) or np.all(data==0):
 				discard.append([filelist[k],s+sub_s])
 				continue
-			else: reserve.append([os.path.abspath(filelist[k]),s+sub_s])
+			else: reserve.append([os.path.abspath(filelist[k]),int(s+sub_s)])
 			if not args.freqtoa:
 				if not args.dm_corr:
 					fftdata=fft.rfft(data,axis=1)
@@ -565,20 +561,20 @@ for k in np.arange(filenum):
 			if args.norm:
 				data_tmp-=data_tmp.mean(1).reshape(-1,1)
 				data_tmp/=data_tmp.std(1).reshape(-1,1)
+			if not args.freqtoa:
+				tpdata=data_tmp.mean(0)
+				center=np.arctan2((tpdata*np.sin(np.pi*2/nbin*np.arange(nbin))).sum(),(tpdata*np.cos(np.pi*2/nbin*np.arange(nbin))).sum())
+			else:
+				tpdata=data_tmp
+				center=np.arctan2((tpdata.mean(0)*np.sin(np.pi*2/nbin*np.arange(nbin))).sum(),(tpdata.mean(0)*np.cos(np.pi*2/nbin*np.arange(nbin))).sum())
 			if zbins0.size>0:
 				phase_s_tmp,phase_e_tmp=phase_s+center-center0,phase_e+center-center0
 				if phase_s_tmp>2:
 					phase_s_tmp-=1
 					phase_e_tmp-=1
 				zbins=np.sort(np.arange(nbin).reshape(1,-1).repeat(2,axis=1).reshape(-1)[int(nbin*phase_e_tmp):int(nbin*phase_s_tmp)])
-			if not args.freqtoa:
-				tpdata=data_tmp.mean(0)
-				center=np.arctan2((tpdata*np.sin(np.pi*2/nbin*np.arange(nbin))).sum(),(tpdata*np.cos(np.pi*2/nbin*np.arange(nbin))).sum())
-				tpdata[:,zbins]=tpdata[:,zbins].mean(1).reshape(-1,1)
-			else:
-				tpdata=data_tmp
-				center=np.arctan2((tpdata.mean(0)*np.sin(np.pi*2/nbin*np.arange(nbin))).sum(),(tpdata.mean(0)*np.cos(np.pi*2/nbin*np.arange(nbin))).sum())
-				tpdata[zbins]=tpdata[zbins].mean()
+				if not args.freqtoa: tpdata[:,zbins]=tpdata[:,zbins].mean(1).reshape(-1,1)
+				else: tpdata[zbins]=tpdata[zbins].mean()
 			middle_int=middle_phase.integer[s]-phase_start
 			middle_offs=middle_phase.offset[s]
 			if info0['data_info']['mode']=='template' and nsub0>1:
@@ -625,7 +621,7 @@ for k in np.arange(filenum):
 		if np.any(np.isnan(data)) or np.any(np.isinf(data)) or np.all(data==0):
 			discard.append(filelist[k])
 			continue
-		else: reserve.append([os.path.abspath(filelist[k]),sub_s,sub_e])
+		else: reserve.append([os.path.abspath(filelist[k]),int(sub_s),int(sub_e)])
 		freq_real=(np.linspace(freq_start,freq_end,nchan+1)[:-1]+channel_width/2)*psr.vchange.mean()
 		if not args.freqtoa:
 			if not args.dm_corr:
@@ -650,8 +646,18 @@ for k in np.arange(filenum):
 			data/=data.std(1).reshape(-1,1)
 		if not args.freqtoa:
 			tpdata=data.mean(0)
+			center=np.arctan2((tpdata*np.sin(np.pi*2/nbin*np.arange(nbin))).sum(),(tpdata*np.cos(np.pi*2/nbin*np.arange(nbin))).sum())
 		else:
 			tpdata=data
+			center=np.arctan2((tpdata.mean(0)*np.sin(np.pi*2/nbin*np.arange(nbin))).sum(),(tpdata.mean(0)*np.cos(np.pi*2/nbin*np.arange(nbin))).sum())
+		if zbins0.size>0:
+			phase_s_tmp,phase_e_tmp=phase_s+center-center0,phase_e+center-center0
+			if phase_s_tmp>2:
+				phase_s_tmp-=1
+				phase_e_tmp-=1
+			zbins=np.sort(np.arange(nbin).reshape(1,-1).repeat(2,axis=1).reshape(-1)[int(nbin*phase_e_tmp):int(nbin*phase_s_tmp)])
+			if not args.freqtoa: tpdata[:,zbins]=tpdata[:,zbins].mean(1).reshape(-1,1)
+			else: tpdata[zbins]=tpdata[zbins].mean()
 		if nsub0>1:
 			nk=20
 			dp_tmp,dpe_tmp,ddm_tmp,ddmerr_tmp=np.zeros([4,nk])

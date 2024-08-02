@@ -25,7 +25,7 @@ parser.add_argument('-k','--text',action='store_true',default=False,dest='text',
 parser.add_argument('-o','--file',default='',dest='file',help='output the results into a file')
 parser.add_argument('-d','--dm_center',dest='dm',default=0,type=np.float64,help="center of the fitting dispersion measure")
 parser.add_argument('-i','--dm_zone',dest='zone',default=0,type=np.float64,help="total range of the fitting dispersion measure")
-parser.add_argument('-c',action='store_true',default=False,dest='correct',help='correct the data with the best dm')
+parser.add_argument('-c',action='store_true',default=False,dest='correct',help='correct the data with the best rm')
 parser.add_argument('-n',type=np.int16,default=0,dest='compf',help='scrunch the frequency by a factor n')
 parser.add_argument("-z","--zap",dest="zap_file",default=0,help="file recording zap channels")
 args=(parser.parse_args())

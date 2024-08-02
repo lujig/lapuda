@@ -536,7 +536,7 @@ class time:
 	def local2utc(self):
 		if self.scale not in time_scales:
 			if self.scale=='FAST':
-				f=open(dirname+'/materials/clock/FAST_poly.txt')
+				f=open(dirname+'/materials/clock/FAST_new.txt')
 				cont=f.readlines()
 				f.close()
 				lseg=int(cont[0])
@@ -971,6 +971,9 @@ class times:
 		self.ve_if()
 		obstermdot=(self.earthacc.dot(self.sitepos)+self.earthvel.dot(self.sitevel))/(1-lc)
 		self.einsteinrate=iftek*(1+obstermdot+deltat_dot/(1-lc))
+	#
+	def tcbratio(self):
+		return (times(self.local.add(1)).tcb.minus(self.tcb)).mjd
 	#
 	def ephem_compute(self,ephname=ephname):
 		if hasattr(self,'tdb'):

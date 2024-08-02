@@ -335,7 +335,7 @@ class ld():
 		#
 		if weighted == 'None':
 			if scmark:
-				weight=np.zeros(len(weight))
+				weight=np.zeros(len(select_chan))
 				weight[select_chan]=1
 		elif weighted == 'weights' or weighted == 'chan_weight':
 			if weighted == 'chan_weight':
@@ -477,7 +477,9 @@ class ld():
 		import adfunc as af
 		li,ldic=af.parakey()
 		info=self.read_info()
-		info[ldic[key]][key]=value
+		if ldic[key] in info.keys():
+			info[ldic[key]][key]=value
+		else: info[ldic[key]]={key:value}
 		self.write_info(info)
 	#
 	def read_para(self,key):	# read the value of the specified key in the information of LD file

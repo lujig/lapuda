@@ -13,17 +13,16 @@ def reco(x):	# recognize the telescope name from its aliases
 			return i.split()[0]
 	raise
 #
-def poly(x,lseg,dtj,p):	# polynomial fit for the clock correction
+def poly(x,lseg,dtj,p,y0=0):	# polynomial fit for the clock correction
 	dt0j=np.array([1538314761])
 	start=0
 	y=np.zeros_like(x,dtype=np.float64)
-	y0=0
-	polyn=(np.ones(lseg,dtype=np.int8)*2).cumsum()
+	polyn=np.arange(1,lseg+1,dtype=np.int16)*2
 	for i in np.arange(lseg):
-		coeff=p[start:polyn[i]]
-		start=polyn[i]
 		xj=(x>=dtj[i])&(x<=dtj[i+1])
 		px=x[xj]
+		coeff=p[start:polyn[i]]
+		start=polyn[i]
 		if int(dtj[i]) in dt0j:
 			y0+=p[polyn[-1]+np.where(dt0j==int(dtj[i]))[0][0]]
 		y[xj]=np.polyval(coeff,px-dtj[i])*(px-dtj[i])+y0
@@ -35,17 +34,17 @@ def cal_time(psr,phase,freq=np.inf,telescope='FAST',ttest=0):
 	import time_eph as te
 	import psr_model as pm
 	if ttest==0:
-		ttest=psr.pepoch.mjd+phase*(psr.p0+1/2*phase*(psr.p0*psr.p1+1/3*phase*(psr.p2*psr.p0**2+psr.p1**2*psr.p0+1/4*phase*(psr.p3*psr.p0**3+4*psr.p2*psr.p1*psr.p0**2+psr.p1**3*psr.p0))))/86400
+		ttest=psr.pepoch.mjd+phase.phase*(psr.p0+1/2*phase.phase*(psr.p0*psr.p1+1/3*phase.phase*(psr.p2*psr.p0**2+psr.p1**2*psr.p0+1/4*phase.phase*(psr.p3*psr.p0**3+4*psr.p2*psr.p1*psr.p0**2+psr.p1**3*psr.p0))))/86400
 	dt=1
-	ttestd=int(ttest)
+	ttestd=np.int64(ttest)
 	ttests=(ttest-ttestd)*86400
 	ti=te.time(ttestd,ttests,scale=telescope)
 	p0=pm.psr_timing(psr,te.times(ti),freq)
-	while np.abs(dt)>p0.period_now*1e-7:
+	while np.all(np.abs(dt)>p0.period_intrinsic.mean()*1e-7):
 		p0=pm.psr_timing(psr,te.times(ti),freq)
-		dt=(phase-p0.phase.integer[0]-p0.phase.offset[0])*p0.period_now
+		dt=phase.minus(p0.phase).phase*p0.period_intrinsic
 		ti=ti.add(dt)
-	return te.time(ttestd,ttests,scale=telescope)
+	return ti
 #
 def parakey():
 	dirname=os.path.split(os.path.realpath(__file__))[0]

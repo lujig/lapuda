@@ -18,7 +18,9 @@ import warnings
 from scipy import ndimage
 import psutil
 #
+version='JigLu_20240530'
 parser=ap.ArgumentParser(prog='ldplot',description='Plot the ld data file.')
+parser.add_argument('-v','--version',action='version',version=version)
 parser.add_argument('filename', nargs='+', help='input ld files')
 parser.add_argument('-f',action='store_true',default=False,dest='fdomain',help='show the frequency domain image')
 parser.add_argument('-t',action='store_true',default=False,dest='tdomain',help='show the time domain image')
@@ -33,7 +35,7 @@ parser.add_argument('--tr',default='',dest='trange',help='limit the time range t
 parser.add_argument('--sr',default='',dest='srange',help='limit the time range to [sub1,sub2]')
 parser.add_argument('--br',default='',dest='prange',help='limit the phase range to [p1,p2], The full range is [0,1]')
 parser.add_argument('--binr',default='',dest='brange',help='limit the phase range to [bin1,bin2]')
-parser.add_argument('--polar',default=0,dest='polar',type=int,help='plot the specified polarization (0123 for IQUV,default=0')
+parser.add_argument('--polar',default=0,dest='polar',type=int,help='plot the specified polarization (0123 for IQUV,default=0)')
 parser.add_argument('-r','--shift', type=float, default=0, help='shift the phase [-1,1], positive towards right, negative towards left')
 #parser.add_argument('--rtail',action='store_true',default=False,dest='removetail',help='remove the last sub-integration')
 parser.add_argument('-n','--norm',action='store_true',default=False,dest='norm',help='Normalize the data')

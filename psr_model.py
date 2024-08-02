@@ -303,6 +303,10 @@ class psr_timing:
 				deriv[ind]=eval('dphased'+para)
 		return deriv
 	#
+	def cal_period_tcb(self):
+		phase1=psr_timing(self.psr,te.times(self.time.local.add(self.period_intrinsic)),self.freq).phase
+		return self.period_intrinsic/(phase1.minus(self.phase).phase)
+	#
 	def compute_phase(self):
 		coalesceFlag,coalesceFlag_p=0,0
 		deltaT=self.bbat.minus(self.psr.pepoch)
@@ -323,7 +327,7 @@ class psr_timing:
 		self.dphasedf0,self.dphasedf1,self.dphasedf2,self.dphasedf3,self.dphasedf4,self.dphasedf5=(deltat/np.arange(1,7).reshape(-1,1)).cumprod(axis=0)
 		phase3=1/2*deltat**2*(self.psr.f1+1/3*deltat*(self.psr.f2+1/4*deltat*(self.psr.f3+1/5*deltat*(self.psr.f4+1/6*deltat*self.psr.f5))))  # precision???
 		self.dphasedt=self.psr.f0+deltat*(self.psr.f1+1/2*deltat*(self.psr.f2+1/3*deltat*(self.psr.f3+1/4*deltat*(self.psr.f4+1/5*deltat*self.psr.f5))))
-		self.period_now=1/self.dphasedt
+		self.period_intrinsic=1/self.dphasedt
 		if 'mode_switch' in self.psr.paras: phase2state=self.psr.mode_switch
 		else: phase2state=0
 		if 'brake' in self.psr.paras:

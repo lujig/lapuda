@@ -916,11 +916,11 @@ def keymotion(a):
 	elif a=='u':	# press 'u' to withdraw the last zap
 		if zaplist: state0=zaplist.pop()[0]
 		else: return
-		if mem=='none': zapn[:]=False
+		if mem=='none': zapn[:]=weight0==0
 		elif mtree.nstate=='freq': zapn=mtree.fnoise<mtree.nlevel
 		elif mtree.nstate=='time': zapn=mtree.tnoise<mtree.nlevel
 		elif mtree.nstate=='dyn': zapn=mtree.ftnoise<mtree.nlevel
-		else: zapn[:]=False
+		else: zapn[:]=weight0==0
 		#if state in ['freq','time']: zapn0[:]=False
 		for i in zaplist:
 			zapn[i[1]:i[2],i[3]:i[4]]=True

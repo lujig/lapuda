@@ -18,7 +18,7 @@ class psr:
 	def copy(self):
 		return cp.deepcopy(self)
 	#
-	def modify(self,para,paraval=1e200):
+	def modify(self,para,paraval='None'):
 		if para not in self.paras:
 			self.paras.append(para)
 			if paraval>1e190:
@@ -30,7 +30,7 @@ class psr:
 				elif para=='f2': self.paras.append('p2')
 				elif para=='p3': self.paras.append('f3')
 				elif para=='f3': self.paras.append('p3')
-		if not paraval>1e190:
+		if not paraval=='None':
 			if para=='binary':
 				if self.binary:
 					paradict0=eval('paras_'+self.binary)
@@ -279,6 +279,52 @@ class psr:
 	#
 	def __repr__(self):
 		return self.__str__()
+	#
+	def output(self,paras):
+		paras=list(paras)
+		for i in paras:
+			if not hasattr(self,i): paras.remove(i)
+		if 'name' in paras: paras.remove('name')
+		string='{:12s} {:25s}'.format('PSRJ',self.name)+'\n'
+		if set(paras).intersection(paras_binary) or 'binary' in paras:
+			if 'binary' in paras: paras.remove('binary')
+			string+='{:12s} {:25s}'.format('BINARY',self.binary)+'\n'
+		for i in paras:
+			if i in para_with_err:
+				val=self.__getattribute__(i)
+				if type(val) is te.time:
+					val=val.mjd
+				if hasattr(self,i+'_err'): err=self.__getattribute__(i+'_err')
+				else: err=''
+				if type(val) is np.ndarray:
+					err=np.array(err).reshape(-1)
+					for k in np.arange(val.size):
+						if k==0: string+='{:12s} '.format(i.upper())
+						else: string+='{:12s} '.format('')
+						val_str=str(val[k])
+						err_str=str(err[k])
+						string+='{:25s} {:25s}'.format(val_str,err_str)+'\n'
+				else:
+					if i in paras_time:
+						val_str=str(val.mjd[0])
+					else:
+						val_str=str(val)
+					err_str=str(err)
+					string+='{:12s} {:25s} {:25s}'.format(i.upper(),val_str,err_str)+'\n'
+			else:
+				val=self.__getattribute__(i)
+				if type(val)==te.time:
+					val=val.mjd
+				if type(val) is np.ndarray:
+					for k in np.arange(val.size):
+						if k==0: string+='{:12s} '.format(i.upper())
+						else: string+='{:12s} '.format('')
+						val_str=str(val[k])
+						string+='{:25s} '.format(val_str)+'\n'
+				else:
+					val_str=str(val)
+					string+='{:12s} {:25s}'.format(i.upper(),val_str)+'\n'
+		print(string)
 	#
 	def tdb_par(self):	# return a TDB unit psr instance counterpart
 		tmp=self.copy()
