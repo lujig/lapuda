@@ -424,7 +424,7 @@ def fit(fit=True):	# implement the fitting process
 	se=select_list[select_list[0]][1].copy()
 	lpara=len(paras)
 	jj0=jj&se
-	if jj0.sum<=(lpara+2):
+	if jj0.sum()<=(lpara+2):
 		print('Warning: the ToAs are too few to be fitted.')
 		return
 	psrfit(paras)

@@ -38,17 +38,17 @@ dfpsr.py:
 ldcomp.py:
 	Compress the ld format file with given nchan, nsub, nbin, and save resutls in a new LD file.
 
-	ldcom.py [-f NCHAN] [-F] [-t NSUB] [-T] [-b NBIN] [-B] [-P] [-r FREQ_RANGE] [-s SUBINT_RANGE] filename
+	ldcomp.py [-f NCHAN] [-F] [-t NSUB] [-T] [-b NBIN] [-B] [-P] [-r FREQ_RANGE] [-s SUBINT_RANGE] filename
 
 ldpara.py:
 	View the information of LD format file.
 
-	ldpar.py [-c PARAMETER_NAME_LIST] filename
+	ldpara.py [-c PARAMETER_NAME_LIST] filename
 
 ldplot.py:
 	Plot the time-domain or frequency-domain image or pulse profile of a LD file.
 
-	ldplt.py [-f] [-t] [-p] [-b PHASE_RANGE] [-r FREQ_RANGE] [-s SUBINT_RANGE] filename
+	ldplot.py [-f] [-t] [-p] [-b PHASE_RANGE] [-r FREQ_RANGE] [-s SUBINT_RANGE] filename
 
 ldcal.py:
 	Obtain the calibration LD file with periodic noise fits files or calibration LD file fragments.
@@ -96,9 +96,13 @@ Including the programme design, development, testing, maintenance.
 ### Contributors
 
 Shijun Dang
+
 Jui-An Hsu
+
 Yulan Liu
+
 Jiguang Lu
+
 Zhengli Wang
 
 ## License
