@@ -482,7 +482,15 @@ def rightrelease(event):
 def middleclick(event):
 	global profwindow,profax,profcanvas,prof
 	if ind<0: return
-	profinfo=fileinfo[ind]
+	if merge_mark:
+		setj0=(filenames==uniqf[ind])
+		jj=jj_list[jj_list[0]][1].copy()
+		setj1=setj0&jj
+		mjj=jj[setj0]
+		profinfo=fileinfo[np.arange(nt)[setj1][0]]
+		mprof=np.array(fileinfo)[setj1]
+	else:
+		profinfo=fileinfo[ind]
 	profname=profinfo[0]
 	if not os.path.isfile(profname):
 		profname=os.path.join(dirname,os.path.split(profinfo[0])[1])
@@ -504,8 +512,14 @@ def middleclick(event):
 	chanstart,chanend=np.int16(np.round((np.array([freq_start[ind],freq_end[ind]])-freq_start1)/channel_width1))
 	substart=profinfo[1]
 	if len(profinfo)==3: subend=profinfo[2]
+	elif merge_mark: subend=int(mprof[-1,1])+1
 	else: subend=substart+1
-	profdata=ldfile.chan_scrunch(np.arange(chanstart,chanend),substart,subend,pol=0).reshape(-1)
+	profdata=ldfile.chan_scrunch(np.arange(chanstart,chanend),substart,subend,pol=0).reshape(subend-substart,nbin1)
+	if subend-substart>1:
+		if merge_mark:
+			profdata=profdata[mjj[substart:subend]].sum(0)
+		else: profdata=profdata.sum(0)
+	else: profdata=profdata[0]
 	if not profwindow:
 		proffig=Figure(figsize=(6,4.5),dpi=100)
 		proffig.clf()
