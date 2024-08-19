@@ -85,6 +85,14 @@ psr_timing.py:
 update_cv.py
 	Update the time-depending infomation such like the clock correction data files.
 
+### Clock Correction
+
+The clock correction files are put in the directory materials/clock, and eachfile should be named as the telescope name with the .txt format. 
+
+The clock correction file should have two columns. The first column is the UNIX timestamp and the second column is the correction to standard time in seconds. Each row in the clock correction file should have 30 characters, and each UNIX timestamp should have 10 characters.
+
+Specially, clock correction for FAST can be handled with the program update\_tdiff\_FAST.py. One can download the original FAST clock correction files on the FAST data server and put them in the directory materials/clock/FAST\_tmp. Then running the program update\_tdiff\_FAST.py will generate the fitted polynomial factors and record them in FAST\_poly.txt. Then the software will call these factors to calculate the clock correction for FAST. In addition, if the common-view clock correction files for FAST can be obtained, the update\_tdiff\_FAST1.py can also generate the fitted polynomial factors and record them in FAST\_poly.txt.
+
 ## Maintainers
 
 [@JiguangLu](mailto:lujig@nao.cas.cn)

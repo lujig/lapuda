@@ -20,7 +20,7 @@ parser.add_argument('-s','--show',nargs='?',default=False,const=True,help='show 
 args=(parser.parse_args())
 #
 dirname=os.path.split(os.path.realpath(__file__))[0]
-outfile=dirname+'/materials/clock/FAST_new.txt'
+outfile=dirname+'/materials/clock/FAST_poly.txt'
 flist=os.listdir(dirname+'/materials/clock/FAST_tmp/')
 t0,dt0=[],[]
 for i in flist.copy():

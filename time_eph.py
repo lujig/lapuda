@@ -537,7 +537,7 @@ class time:
 	def local2utc(self):
 		if self.scale not in time_scales:
 			if self.scale=='FAST':
-				f=open(dirname+'/materials/clock/FAST_new.txt')
+				f=open(dirname+'/materials/clock/FAST_poly.txt')
 				cont=f.readlines()
 				f.close()
 				lseg=int(cont[0])
