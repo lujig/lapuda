@@ -100,6 +100,7 @@ ld_file_info={
 		'weights':[list,['nchan','nsub'],float]		#  the weight of each frequency channel and each period
 	},
 	'folding_info':{
+		'extrapolation':[list,['n_extrapolation'],str],	# the list for the parameters which are extrapolated in predicting
 		'predictor':[list,['ncoeff',2],float],		# the coefficients of Chebishev polynomials to predict the pulse phase
 		'predictor_freq':[list,[5],float]			# the coefficients of Chebishev polynomials to predict the dispersion
 	},
@@ -234,6 +235,7 @@ vector={
 # time_eph.py
 time={
 	'date':[np.ndarray,['size'],float],	# integer part of the MJD date
+	'extrapolation':bool,			# whether the parameters used to convert between the time standards can be extrapolated
 	'scale':str,	# scale of the time instance, such as shown in te.time_scales
 	'second':[np.ndarray,['size'],float],	# seconds in one day
 	'size':int,	# size of the time

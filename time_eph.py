@@ -450,7 +450,7 @@ class vector:
 		return np.array([self.x,self.y,self.z]).T
 #
 class time:
-	def __init__(self,date,second=0,scale='FAST',unit=86400):
+	def __init__(self,date,second=0,scale='FAST',unit=86400,extrapolation=False):
 		date=np.array(date).reshape(-1)
 		second=np.array(second).reshape(-1)
 		if date.size==second.size: size=np.array(date).size
@@ -471,6 +471,7 @@ class time:
 			self.scale=scale
 			self.unit=unit
 			self.size=size
+			self.extrapolation=extrapolation
 	#
 	def __eq__(self,other):
 		if type(other) is not time:

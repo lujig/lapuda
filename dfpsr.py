@@ -42,6 +42,7 @@ parser.add_argument("-r","--reverse",action="store_true",default=False,help="rev
 parser.add_argument("-l","--large_mem",action="store_true",default=False,help="large RAM")
 parser.add_argument("-m","--multi",dest="multi",default=0,type=int,help="number of processes")
 parser.add_argument("-w","--overwrite",action="store_true",default=False,help="overwrite the existed output file")
+parser.add_argument("--extrapolate",action="store_true",default=False,help="extrapolate the time-standard-convertion and EOPC parameters to predict the pulse phase (100 days at most)")
 args=(parser.parse_args())
 command=['dfpsr.py']
 #
@@ -53,14 +54,13 @@ if platf=='Windows':
 	if os.path.isfile(args.filename[0]): filelist=args.filename
 	else:
 		filepath,filere=os.path.split(args.filename[0])
-		filere=filere.replace('.','\.').replace('+','\+').replace('*','(.*)')
 		if filepath=='':filepath='.'
 		files0=os.listdir(filepath)
 		filelist=[]
+		import fnmatch
 		for i in files0:
-			import re
-			ii=re.match(filere,i)
-			if ii: filelist.append(ii.string)
+			ii=fnmatch.fnmatch(filere,i)
+			if ii: filelist.append(filepath+i)
 else:
 	filelist=args.filename
 filenum=len(filelist)
@@ -177,15 +177,14 @@ if args.cal:	# check the calibration file and parameters
 		if platf=='Windows':
 			if os.path.isfile(args.cal[0]): noiselist=args.cal
 			else:
-				filepath,filere=os.path.split(args.cal[0])
-				filere=filere.replace('.','\.').replace('+','\+').replace('*','(.*)')
+				filepath,filere=os.path.split(args.filename[0])
 				if filepath=='':filepath='.'
 				files0=os.listdir(filepath)
 				noiselist=[]
+				import fnmatch
 				for i in files0:
-					import re
-					ii=re.match(filere,i)
-					if ii: noiselist.append(ii.string)
+					ii=fnmatch.fnmatch(filere,i)
+					if ii: noiselist.append(filepath+i)
 		else:
 			noiselist=args.cal
 		noisenum=len(noiselist)
@@ -580,7 +579,19 @@ else:	# generate the Chebyshev polynomials based on the time and frequency
 	chebx_test0=nc.chebpts1(args.ncoeff)
 	chebx_test=np.concatenate(([-1],chebx_test0,[1]),axis=0)
 	second_test=(chebx_test+1)/2*nbin0*tsamp+file_time[0][:-1].sum()-delay+offs_sub-tsamp*nsblk/2.0
-	time_test=te.time(file_time[0][-1]*np.ones(args.ncoeff+2),second_test,scale=telename)
+	datecheck,expolate=af.datecheck(file_time[0][-1]+second_test[-1]/86400,telename)
+	if datecheck==1 or (datecheck==3 and not args.extrapolation):
+		parser.error('The time-standard-convertion and EOPC parameters is too old, please execute update_cv.py to update them.')
+	elif datecheck==2 or (datecheck==4 and not args.extrapolation):
+		parser.error('The clock difference is too old, please update it (see README for detail).')
+	if datecheck==3 or datecheck==5:
+		print('Warning: the time-standard-convertion and EOPC parameters is too old, and the extrapolated values are used instead. Please execute update_cv.py to update them.')
+	if datecheck==4 or datecheck==5:
+		print('Warning: the clock difference is too old, and the extrapolated values are used instead. Please update it (see README for detail).')
+	if datecheck==0:
+		time_test=te.time(file_time[0][-1]*np.ones(args.ncoeff+2),second_test,scale=telename)
+	else:
+		time_test=te.time(file_time[0][-1]*np.ones(args.ncoeff+2),second_test,scale=telename,extrapolation=True)
 	times_test=te.times(time_test)
 	timing_test_end=pm.psr_timing(psr,times_test,freq1)
 	timing_test_start=pm.psr_timing(psr,times_test,freq0)

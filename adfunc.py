@@ -13,13 +13,14 @@ def reco(x):	# recognize the telescope name from its aliases
 			return i.split()[0]
 	raise
 #
-def poly(x,lseg,dtj,p,y0=0):	# polynomial fit for the clock correction
+def poly(x,lseg,dtj,p,y0=0,extrapolation=False):	# polynomial fit for the clock correction
 	dt0j=np.array([1538314761])
 	start=0
 	y=np.zeros_like(x,dtype=np.float64)
 	polyn=np.arange(1,lseg+1,dtype=np.int16)*2
 	for i in np.arange(lseg):
-		xj=(x>=dtj[i])&(x<=dtj[i+1])
+		if i==(lseg-1) and extrapolation: xj=(x>=dtj[i])
+		else: xj=(x>=dtj[i])&(x<dtj[i+1])
 		px=x[xj]
 		coeff=p[start:polyn[i]]
 		start=polyn[i]
@@ -29,12 +30,33 @@ def poly(x,lseg,dtj,p,y0=0):	# polynomial fit for the clock correction
 		y0=np.polyval(coeff,dtj[i+1]-dtj[i])*(dtj[i+1]-dtj[i])+y0
 	return y+p[-1]
 #
+def datecheck(mjd,telename):
+	import time_eph as te
+	unix=te.time(mjd,0,scale='utc').local2unix().mjd
+	if telename=='FAST':
+		f=open(dirname+'/materials/clock/FAST_new.txt')
+		cont=f.readlines()
+		f.close()
+		dtj=np.float64(cont[1].split())
+		clockj=unix<=dtj[-1]
+	else:
+		f=open(dirname+'/materials/clock/'+self.scale+'.txt')
+		t0=np.int64(f.read(10))
+		t1=np.int64(f.read(30)[20:])
+		flen=f.seek(0,2)/30
+		localunix=self.local2unix()
+		main,resi=np.divmod(localunix.date-t0,t1-t0)
+		nr0=main
+		clockj=(np.min(nr0)>=0)&(np.max(nr0)<=(flen-2))
+	
+
+#
 def cal_time(psr,phase,freq=np.inf,telescope='FAST',ttest=0):
 	import psr_read as pr
 	import time_eph as te
 	import psr_model as pm
 	if ttest==0:
-		ttest=psr.pepoch.mjd+phase.phase*(psr.p0+1/2*phase.phase*(psr.p0*psr.p1+1/3*phase.phase*(psr.p2*psr.p0**2+psr.p1**2*psr.p0+1/4*phase.phase*(psr.p3*psr.p0**3+4*psr.p2*psr.p1*psr.p0**2+psr.p1**3*psr.p0))))/86400
+		ttest=psr.pepoch.mjd+phase.phase*(psr.p0+1/2*phase.phase* (psr.p0*psr.p1+1/3*phase.phase*(psr.p2*psr.p0**2+psr.p1**2*psr.p0+1/4*phase.phase*(psr.p3*psr.p0**3+4*psr.p2*psr.p1*psr.p0**2+psr.p1**3*psr.p0))))/86400
 	dt=1
 	ttestd=np.int64(ttest)
 	ttests=(ttest-ttestd)*86400
