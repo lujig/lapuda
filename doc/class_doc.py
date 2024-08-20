@@ -330,6 +330,7 @@ times={
 	'einsteinrate':[np.ndarray,['size'],float],	# the derivative of TCB to TT
 	'ephem':str,		# ephemeris file name
 	'ephver':int,		# ephemeris version, 2 for TEMPO, 5 for TEMPO2
+	'extrapolation':bool,	# whether the parameters used to calculate UT1 and polar motion can be extrapolated
 	'local':te.time,	# local time
 	'lst':[np.ndarray,['size'],float],	# local sidereal time
 	'nut':[np.ndarray,['net'],float],	# the nutation of the Earth and its derivative
@@ -546,6 +547,8 @@ functions_variables_ad_func={
 		[float]),
 	'cal_time()':(dict(psr=pr.psr,phase=te.phase,freq=np.float64,telescope=str,ttest=np.float64),		# calculate the corresponding time with a specified pulse phase
 		[te.time]),
+	'datecheck()':(dict(mjd=float,telename=str),	# check whether the MJD time is in the time range of time-standard convertion and EOPC parameters
+		[int,[list,['n_extrapolation'],str]]),
 	'dic2json()':(dict(dic=dict),	# transform a 1-level information dictionary to a 2-level information dictionary
 		[str]),
 	'dmdet()':(dict(fftdata=[np.ndarray,['nchan','nbin'],complex],dmconst=[np.ndarray,['nbin'],float],dm0=float,dmw=float,polynum=int,prec=float),	# determine the best DM with the specified precision

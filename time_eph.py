@@ -507,11 +507,11 @@ class time:
 			dt=dt.reshape(-1)[0]
 			if type(dt)==time:
 				if self.unit==dt.unit and dt.scale=='delta_t':
-					return time(self.date+dt.date,self.second+dt.second,scale=scale,unit=self.unit)
+					return time(self.date+dt.date,self.second+dt.second,scale=scale,unit=self.unit,extrapolation=self.extrapolation)
 			else:
-				return time(self.date,self.second+dt,scale=scale,unit=self.unit)
+				return time(self.date,self.second+dt,scale=scale,unit=self.unit,extrapolation=self.extrapolation)
 		elif self.size==dt.size:
-			return time(self.date,self.second+dt,scale=scale,unit=self.unit)
+			return time(self.date,self.second+dt,scale=scale,unit=self.unit,extrapolation=self.extrapolation)
 	#
 	def update(self):
 		datemain,dateresi=np.divmod(self.date,1)
@@ -524,7 +524,7 @@ class time:
 			unit=1
 			date=np.int64((self.date-40587)*86400+self.second)
 			second=self.second%unit
-			return time(date,second,'unix',unit)			
+			return time(date,second,'unix',unit,extrapolation=self.extrapolation)			
 	#
 	def unix2local(self,scale):
 		if self.scale=='unix':
@@ -532,7 +532,7 @@ class time:
 			date,second=np.divmod(self.date,86400)
 			date+=40587
 			second=np.float64(second)+self.second
-			return time(date,second,scale,unit)			
+			return time(date,second,scale,unit,extrapolation=self.extrapolation)			
 	#
 	def local2utc(self):
 		if self.scale not in time_scales:
@@ -544,7 +544,7 @@ class time:
 				dtj=np.float64(cont[1].split())
 				p=np.float64(cont[2].split())
 				localunix=self.local2unix().mjd
-				dt=af.poly(localunix,lseg,dtj,p)
+				dt=af.poly(localunix,lseg,dtj,p,extrapolation=self.extrapolation)
 				return dt
 			else:
 				f=open(dirname+'/materials/clock/'+self.scale+'.txt')
@@ -554,10 +554,11 @@ class time:
 				localunix=self.local2unix()
 				main,resi=np.divmod(localunix.date-t0,t1-t0)
 				nr0=main
-				if np.min(nr0)<0:
-					raise Exception('The input time is earlier than the start time of the clock difference, please change the input time.')
-				elif np.max(nr0)>(flen-2):
-					raise Exception('The input time is latter than the end time of the clock difference, please update the clock difference file or change the input time.')
+				if not self.extrapolation:
+					if np.min(nr0)<0:
+						raise Exception('The input time is earlier than the start time of the clock difference, please change the input time.')
+					elif np.max(nr0)>(flen-2):
+						raise Exception('The input time is latter than the end time of the clock difference, please update the clock difference file or change the input time.')
 				resi=resi+localunix.second
 				set_nr=list(set(nr0))
 				set_len=len(set_nr)
@@ -570,15 +571,25 @@ class time:
 					interplist.extend(f.read(60).split())
 				t,dt=np.float64(interplist).reshape(-1,2).T
 				order=np.argsort(t)
-				gpssec=np.interp(localunix.mjd,t[order],dt[order])
+				if not self.extrapolation:
+					gpssec=np.interp(localunix.mjd,t[order],dt[order])
+				else:
+					ta,dta=t[order],dt[order]
+					gpssec=np.zeros(localunix.size,dtype=np.float64)
+					jj=(localunix.mjd>=ta[0])&(localunix.mjd<=ta[-1])
+					gpssec[jj]=np.interp(localunix.mjd[jj],ta,dta)
+					jj1=(ta[-1]-ta)<3e7
+					jja=np.logical_not(jj)
+					gpssec[jja]=np.polyval(np.polyfit(ta[jj1],dta[jj1],3),localunix.mjd[jja])					
 				f.close()
 				f=np.loadtxt(dirname+'/materials/'+'gps2utc.txt')
 				t,dt=f[:,0:2].T
-				if np.min(self.mjd)<np.min(t):
-					raise Exception('The input time is earlier than the start time of the GPS difference, please change the input time.')
-				elif np.max(self.mjd)>np.max(t):
-					raise Exception('The input time is latter than the end time of the GPS difference, please update the GPS difference file or change the input time.')
-				utcsec=np.interp(gpssec/86400+self.mjd,t,dt)*1e-9
+				if not self.extrapolation:
+					if np.min(self.mjd)<np.min(t):
+						raise Exception('The input time is earlier than the start time of the GPS difference, please change the input time.')
+					elif np.max(self.mjd)>np.max(t):
+						raise Exception('The input time is latter than the end time of the GPS difference, please update the GPS difference file or change the input time.')
+				utcsec=np.interp(gpssec/86400+self.mjd,t,dt,right=dt[-1])*1e-9
 			return utcsec+gpssec
 	#
 	def utc2tai(self):
@@ -602,55 +613,53 @@ class time:
 	def tai2ut1(self):
 		if self.scale=='tai':
 			mjd0,taimjd0,deltat=np.loadtxt(dirname+'/materials/'+'tai2ut1.txt').T
-			if np.min(self.mjd)<np.min(taimjd0)+1:
-				raise Exception('The input time is earlier than the start time of the TAI-UT1, please change the input time.')
-			elif np.max(self.mjd)>np.max(taimjd0)-1:
-				raise Exception('The input time is latter than the end time of the TAI-UT1, please update the TAI-UT1 difference file or change the input time.')
-			jj=(taimjd0>(self.mjd.min()-1))&(taimjd0<self.mjd.max()+1)
-			if len(taimjd0[jj])>0:
-				taimjd0,deltat=taimjd0[jj],deltat[jj]
-			deltat=np.interp(self.mjd,taimjd0,deltat)
+			if not self.extrapolation:
+				if np.min(self.mjd)<np.min(taimjd0)+1:
+					raise Exception('The input time is earlier than the start time of the TAI-UT1, please change the input time.')
+				elif np.max(self.mjd)>np.max(taimjd0)-1:
+					raise Exception('The input time is latter than the end time of the TAI-UT1, please update the TAI-UT1 difference file or change the input time.')
+				deltat=np.interp(self.mjd,taimjd0,deltat)
+			else:
+				deltat=np.zeros(self.size,dtype=np.float64)
+				jj=(self.mjd>=taimjd0[0])&(self.mjd<=taimjd0[-1])
+				deltat[jj]=np.interp(self.mjd[jj],taimjd0,deltat)
+				jj1=(taimjd0[-1]-taimjd0)<3e7
+				jja=np.logical_not(jj)
+				deltat[jja]=np.polyval(np.polyfit(taimjd0[jj1],deltat[jj1],3),self.mjd[jja])					
 			return deltat
 	#
 	def utc2tt(self):
 		if self.scale=='utc':
 			mjd0,deltat=np.loadtxt(dirname+'/materials/'+'tai2tt.txt')[:,[0,2]].T
-			if np.min(self.mjd)<np.min(mjd0):
-				raise Exception('The input time is earlier than the start time of the TAI-TT(BIPM), please change the input time.')
-			if np.max(self.mjd)>np.max(mjd0):
-				print('Warning: The input time is latter than the end time of the TAI-TT(BIPM), please update the TAI-TT(BIPM) difference file or change the input time.')
-				jj=self.mjd<=np.max(mjd0)
-				dt=np.ones_like(self.mjd)*deltat[-1]
-				dt[jj]=np.interp(self.mjd[jj],mjd0,deltat)
-				ttmjd=self.utc2tai()+32.184+dt*1e-6
-			else:
-				ttmjd=self.utc2tai()+32.184+np.interp(self.mjd,mjd0,deltat)*1e-6
+			if not self.extrapolation:
+				if np.min(self.mjd)<np.min(mjd0):
+					raise Exception('The input time is earlier than the start time of the TAI-TT(BIPM), please change the input time.')
+				if np.max(self.mjd)>np.max(mjd0):
+					raise Exception('The input time is latter than the end time of the TAI-TT(BIPM), please update the TAI-TT(BIPM) difference file or change the input time.')
+			ttmjd=self.utc2tai()+32.184+np.interp(self.mjd,mjd0,deltat,right=deltat[-1])*1e-6
 			return ttmjd
 	#
 	def tai2tt(self):
 		if self.scale=='tai':
 			utc=self.mjd # using tai instead of utc
 			mjd0,deltat=np.loadtxt(dirname+'/materials/'+'tai2tt.txt')[:,[0,2]].T
-			if np.min(self.mjd)<np.min(mjd0):
-				raise Exception('The input time is earlier than the start time of the TAI-TT(BIPM), please change the input time.')
-			if np.max(self.mjd)>np.max(mjd0):
-				print('Warning: The input time is latter than the end time of the TAI-TT(BIPM), please update the TAI-TT(BIPM) difference file or change the input time.')
-				jj=self.mjd<=np.max(mjd0)
-				dt=np.ones_like(self.mjd)*deltat[-1]
-				dt[jj]=np.interp(self.mjd[jj],mjd0,deltat)
-				tt_tai=32.184+dt*1e-6
-			else:
-				tt_tai=32.184+np.interp(utc,mjd0,deltat)*1e-6
+			if not self.extrapolation:
+				if np.min(self.mjd)<np.min(mjd0):
+					raise Exception('The input time is earlier than the start time of the TAI-TT(BIPM), please change the input time.')
+				if np.max(self.mjd)>np.max(mjd0):
+					raise Exception('The input time is latter than the end time of the TAI-TT(BIPM), please update the TAI-TT(BIPM) difference file or change the input time.')
+			tt_tai=32.184+np.interp(utc,mjd0,deltat,right=deltat[-1])*1e-6
 			return tt_tai
 	#
 	def tt2tai(self):
 		if self.scale=='tt':
 			mjd0,deltat=np.loadtxt(dirname+'/materials/'+'tai2tt.txt')[:,[0,2]].T
-			if np.min(self.mjd)<np.min(mjd0):
-				raise Exception('The input time is earlier than the start time of the TAI-TT(BIPM), please change the input time.')
-			elif np.max(self.mjd)>np.max(mjd0):
-				raise Exception('The input time is latter than the end time of the TAI-TT(BIPM), please update the TAI-TT(BIPM) difference file or change the input time.')
-			tt_tai=32.184+np.interp(self.mjd,mjd0,deltat)*1e-6
+			if not self.extrapolation:
+				if np.min(self.mjd)<np.min(mjd0):
+					raise Exception('The input time is earlier than the start time of the TAI-TT(BIPM), please change the input time.')
+				elif np.max(self.mjd)>np.max(mjd0):
+					raise Exception('The input time is latter than the end time of the TAI-TT(BIPM), please update the TAI-TT(BIPM) difference file or change the input time.')
+			tt_tai=32.184+np.interp(self.mjd,mjd0,deltat,right=deltat[-1])*1e-6
 			return -tt_tai
 	#
 	def tdb2tcb(self):
@@ -720,7 +729,6 @@ class phase():
 			self.scale=scale
 			self.phase=self.integer+self.offset
 			self.size=size
-
 	#
 	def __str__(self):
 		if self.size>6:
@@ -801,6 +809,7 @@ class times:
 			self.ut1=self.tai.ut1()
 			self.tt=self.utc.tt()
 		self.size=time0.size
+		self.extrapolation=time0.extrapolation
 		self.ephver=ephver
 		self.ephem=ephem
 		self.ephem_compute(ephname=ephem+'.1950.2050')
@@ -966,8 +975,8 @@ class times:
 		obsterm=self.earthvel.dot(self.sitepos)/(1-lc)
 		correction=obsterm+tdb0+deltat/(1-lc)
 		correction1=(correction-tdb0)*iftek+km1*(self.tt.mjd-mjd0)*86400
-		self.tdb=time(self.tt.date,self.tt.second+correction,scale='tdb')
-		self.tcb=time(self.tt.date,self.tt.second+correction1,scale='tcb')
+		self.tdb=time(self.tt.date,self.tt.second+correction,scale='tdb',extrapolation=self.extrapolation)
+		self.tcb=time(self.tt.date,self.tt.second+correction1,scale='tcb',extrapolation=self.extrapolation)
 		deltat_dot=-self.deltat_if()[1]
 		self.ve_if()
 		obstermdot=(self.earthacc.dot(self.sitepos)+self.earthvel.dot(self.sitevel))/(1-lc)
@@ -1043,13 +1052,35 @@ class times:
 		tai0,dut10=np.loadtxt(dirname+'/materials/'+'tai2ut1.txt')[:,1:3].T
 		tai0=np.round(tai0%1*86400)
 		dut1dot0=(dut10[1:]-dut10[:-1])/86400
-		xp=np.interp(self.utc.mjd,utc0,xp0)*(np.pi/(180*60*60))
-		yp=np.interp(self.utc.mjd,utc0,yp0)*(np.pi/(180*60*60))
-		dut1dot=np.interp(self.utc.mjd,utc0[:-1],dut1dot0)
-		ut1_jd=time(self.ut1.date+2400000.5,self.ut1.second,scale='ut1jd')
+		dut1dot=np.interp(self.utc.mjd,tai0[:-1],dut1dot0,right=dut1dot0[-1])
+		if not self.extrapolation:
+			if np.min(self.utc.mjd)<np.min(utc0)+1:
+				raise Exception('The input time is earlier than the start time of the EOPC, please change the input time.')
+			elif np.max(self.utc.mjd)>np.max(utc0)-1:
+				raise Exception('The input time is latter than the end time of the EOPC, please update the EOPC difference file or change the input time.')
+			xp=np.interp(self.utc.mjd,utc0,xp0)*(np.pi/(180*60*60))
+			yp=np.interp(self.utc.mjd,utc0,yp0)*(np.pi/(180*60*60))
+		else:
+			dtex=int(np.ceil(np.max(self.utc.mjd)-np.max(utc0)))
+			xp1,yp1=xp0[-(5000):],yp0[-(5000):]
+			xpred0,ypred0=np.zeros([2,4000,1001])
+			for i in np.arange(4000):
+				xpred0[i,:]=xp1[i:(i+1001)]
+				ypred0[i,:]=yp1[i:(i+1001)]
+			factorx=np.linalg.lstsq(xpred0[:,:-1],xpred0[:,-1])[0]
+			factory=np.linalg.lstsq(ypred0[:,:-1],ypred0[:,-1])[0]
+			utca=np.append(utc0,utc0[-1]+np.arange(1,dtex+1))
+			xpa=np.append(xp0,np.zeros(dtex))
+			ypa=np.append(yp0,np.zeros(dtex))
+			for i in np.arange(dtex):
+				xpa[i-dtex]=(factorx*xpa[i-dtex-1000:i-dtex]).sum()
+				ypa[i-dtex]=(factory*ypa[i-dtex-1000:i-dtex]).sum()
+			xp=np.interp(self.utc.mjd,utca,xpa)*(np.pi/(180*60*60))
+			yp=np.interp(self.utc.mjd,utca,ypa)*(np.pi/(180*60*60))
+		ut1_jd=time(self.ut1.date+2400000.5,self.ut1.second,scale='ut1jd',extrapolation=self.extrapolation)
 		ut1_jd1=ut1_jd.date
 		ut1_jd2=ut1_jd.second/86400
-		tt_jd=time(self.tt.date+2400000.5,self.tt.second,scale='ttjd')
+		tt_jd=time(self.tt.date+2400000.5,self.tt.second,scale='ttjd',extrapolation=self.extrapolation)
 		tt_jd1=tt_jd.date
 		tt_jd2=tt_jd.second/86400
 		trs0=np.array([x,y,z])

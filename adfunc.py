@@ -32,24 +32,80 @@ def poly(x,lseg,dtj,p,y0=0,extrapolation=False):	# polynomial fit for the clock 
 #
 def datecheck(mjd,telename):
 	import time_eph as te
-	unix=te.time(mjd,0,scale='utc').local2unix().mjd
+	unix=te.time(mjd,0,scale=telename).local2unix().mjd
+	dirname=os.path.split(os.path.realpath(__file__))[0]
+	timej=0
+	expolate=[]
+	dtlim=100
 	if telename=='FAST':
-		f=open(dirname+'/materials/clock/FAST_new.txt')
+		f=open(dirname+'/materials/clock/FAST_poly.txt')
 		cont=f.readlines()
 		f.close()
 		dtj=np.float64(cont[1].split())
-		clockj=unix<=dtj[-1]
+		dtclock=(unix-dtj[-1])/86400
 	else:
-		f=open(dirname+'/materials/clock/'+self.scale+'.txt')
+		f=open(dirname+'/materials/clock/'+telename+'.txt')
 		t0=np.int64(f.read(10))
 		t1=np.int64(f.read(30)[20:])
 		flen=f.seek(0,2)/30
-		localunix=self.local2unix()
+		localunix=te.time(mjd,0,scale=telename).local2unix()
 		main,resi=np.divmod(localunix.date-t0,t1-t0)
 		nr0=main
-		clockj=(np.min(nr0)>=0)&(np.max(nr0)<=(flen-2))
-	
-
+		dtclock=(nr0-flen+2)*(t1-t0)/86400
+		f=np.loadtxt(dirname+'/materials/'+'gps2utc.txt')
+		t=f[:,0]
+		dtgps=mjd-np.max(t)
+		if 0<dtgps<=dtlim:
+			timej=1
+			expolate.append('gps2utc')
+		elif dtgps>dtlim:
+			timej=2
+			expolate.append('gps2utc')
+	if 0<dtclock<=dtlim:
+		clockj=1
+		expolate.append('clock correction')
+	elif dtclock>dtlim:
+		clockj=2
+		if timej==2: expolate.append('clock correction')
+		else: expolate=['clock correction']
+	else: clockj=0
+	mjd0,taimjd0,deltat=np.loadtxt(dirname+'/materials/'+'tai2ut1.txt').T
+	dtut1=mjd-np.max(taimjd0)+1
+	if 0<dtut1<=dtlim:
+		if not ((timej==2)|(clockj==2)):
+			timej=1
+			expolate.append('tai2ut1')
+	elif dtut1>dtlim:
+		if timej==2 or clockj==2:  expolate.append('tai2ut1')
+		else: expolate=['tai2ut1']
+		timej=2
+	mjd0,deltat=np.loadtxt(dirname+'/materials/'+'tai2tt.txt')[:,[0,2]].T
+	dttt=mjd-np.max(mjd0)
+	if 0<dttt<=dtlim:
+		if not ((timej==2)|(clockj==2)):
+			timej=1
+			expolate.append('tai2tt')
+	elif dttt>dtlim:
+		if timej==2 or clockj==2:  expolate.append('tai2tt')
+		else: expolate=['tai2tt']
+		timej=2
+	utc0,xp0,yp0=np.loadtxt(dirname+'/materials/'+'eopc.txt')[:,4:7].T	
+	dteopc=mjd-np.max(utc0)+1
+	if 0<dteopc<=dtlim:
+		if not ((timej==2)|(clockj==2)):
+			timej=1
+			expolate.append('eopc')
+	elif dteopc>dtlim:
+		if timej==2 or clockj==2:  expolate.append('eopc')
+		else: expolate=['eopc']
+		timej=2
+	if clockj==2: dc=1
+	elif timej==2: dc=2
+	elif clockj==1 and timej==1: dc=5
+	elif clockj==1: dc=3
+	elif timej==1: dc=4
+	else: dc=0
+	return dc,expolate
 #
 def cal_time(psr,phase,freq=np.inf,telescope='FAST',ttest=0):
 	import psr_read as pr

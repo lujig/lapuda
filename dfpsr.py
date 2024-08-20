@@ -581,13 +581,13 @@ else:	# generate the Chebyshev polynomials based on the time and frequency
 	second_test=(chebx_test+1)/2*nbin0*tsamp+file_time[0][:-1].sum()-delay+offs_sub-tsamp*nsblk/2.0
 	datecheck,expolate=af.datecheck(file_time[0][-1]+second_test[-1]/86400,telename)
 	if datecheck==1 or (datecheck==3 and not args.extrapolation):
-		parser.error('The time-standard-convertion and EOPC parameters is too old, please execute update_cv.py to update them.')
+		parser.error('The clock correction file is too old, please update it (see README for detail).')
 	elif datecheck==2 or (datecheck==4 and not args.extrapolation):
-		parser.error('The clock difference is too old, please update it (see README for detail).')
+		parser.error('The time-standard-convertion and EOPC file is too old, please execute update_cv.py to update them.')
 	if datecheck==3 or datecheck==5:
-		print('Warning: the time-standard-convertion and EOPC parameters is too old, and the extrapolated values are used instead. Please execute update_cv.py to update them.')
-	if datecheck==4 or datecheck==5:
 		print('Warning: the clock difference is too old, and the extrapolated values are used instead. Please update it (see README for detail).')
+	if datecheck==4 or datecheck==5:
+		print('Warning: the time-standard-convertion and EOPC parameters is too old, and the extrapolated values are used instead. Please execute update_cv.py to update them.')
 	if datecheck==0:
 		time_test=te.time(file_time[0][-1]*np.ones(args.ncoeff+2),second_test,scale=telename)
 	else:
@@ -621,6 +621,7 @@ else:	# generate the Chebyshev polynomials based on the time and frequency
 	coeff=nc.chebfit(chebx_test,nc.chebfit(cheby,phase_tmp,1).T,args.ncoeff-1)
 	info['folding_info']={'predictor':coeff.tolist()}
 	info['folding_info']['predictor_freq']=coeff_freq.tolist()
+	info['folding_info']['extrapolation']=expolate
 #
 info['data_info']['stt_sec']=stt_sec
 info['data_info']['stt_date']=int(stt_date)
