@@ -425,7 +425,7 @@ for i in np.arange(nfile):
 		mean = np.mean(sec)
 		std = np.std(sec)
 		ax.imshow(sec, aspect='auto', extent=[-1.0*Nyquist_time,Nyquist_time, 0, Nyquist_freq], vmin=mean-1.0*std, vmax = mean+3.0*std, origin='lower', cmap = 'viridis')
-		ylabel,xlabel,suffix='Delay ($\mu$s)','Fringe Frequency (mHz)','_secondary'
+		ylabel,xlabel,suffix='Delay ($\\mu$s)','Fringe Frequency (mHz)','_secondary'
 	elif args.polarization:
 		data=d.profile(select_chan=np.arange(filer[2],filer[3]),start_period=filer[6],end_period=filer[7],weighted=wmark).reshape(-1,npol)
 		base_nbin = int(nbin/10)
@@ -452,7 +452,7 @@ for i in np.arange(nfile):
 		ax1.errorbar(phasex[jj],-ppa[jj], yerr=ppae[jj]/np.pi*180, fmt='.')
 		ax1.set_xticks([])
 		ax.legend()
-		ylabel,xlabel,suffix='Intensity (arbi.) ; PPA ($\degree$)','Pulse Phase','_polarization'
+		ylabel,xlabel,suffix='Intensity (arbi.) ; PPA ($\\degree$)','Pulse Phase','_polarization'
 		ax1.tick_params(axis='x',labelsize=fonts/1.5)
 		ax1.tick_params(axis='y',labelsize=fonts/1.5)
 		ax1.set_title(filelist[i],fontsize=fonts/1.5)

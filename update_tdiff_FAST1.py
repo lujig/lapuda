@@ -93,7 +93,7 @@ else:
 	if dtj[-1]-t0[0]<2e7: raise
 	start=dtj[-1]-2e7
 #
-if args.rewrite or dtj[-1]-t0[-1]>0:
+if args.rewrite or dtj[-1]-t0[-1]<0:
 	ldtj=(dtj<start).sum()
 	dtj=dtj[:(ldtj+1)]
 	p=np.append(p[:(ldtj*2)],p[(lseg*2):])
@@ -111,7 +111,6 @@ if args.rewrite or dtj[-1]-t0[-1]>0:
 	f.write('\n')
 	for i in p: f.write(str(i)+' ')
 	f.close()
-#
 else:
 	print('The difference file between FAST clock and standard is already the newest.')
 #
@@ -120,9 +119,9 @@ if args.show:
 	ax=fig.add_axes([0.13,0.14,0.82,0.81])
 	if args.show==True:
 		t1=np.linspace(dtj[0],dtj[-1],100000)
-		dt2=af.poly(t1,lseg,dtj,p)
+		dt2=af.poly(t1,lseg,dtj,p,extrapolation=True)
 		ax.plot(te.time(t1,np.zeros_like(t1),scale='unix',unit=1).unix2local('FAST').mjd,dt2*1e6)
-		ax.set_ylabel('Clock Diff. ($\mathrm{\mu}$s)',fontsize=20)
+		ax.set_ylabel('Clock Diff. ($\\mathrm{\\mu}$s)',fontsize=20)
 	else:
 		dt2=af.poly(t0,lseg,dtj,p)
 		ax.plot(te.time(t0,np.zeros_like(t0),scale='unix',unit=1).unix2local('FAST').mjd,dt2*1e9+dt0)

@@ -221,7 +221,10 @@ def dmdet(fftdata,dmconst,dm0,dmw,polynum,prec=0):	# determine the best DM with 
 				if dmerr<prec or error1>error: return dmmax,dmerr
 				else: return dmdet(fftdata,dmconst,dmmax,dmerr*20,polynum,prec=prec)
 			else: return dmmax,dmerr,dm,value,fitvalue
-	return 0,0
+	elif prec==0:
+		return 0,0,dm,value,fitvalue
+	else:
+		return 0,0
 #
 def baseline0(data):	# determine the baseline of the data (old version)
 	nbin=data.size

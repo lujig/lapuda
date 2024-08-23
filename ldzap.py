@@ -320,6 +320,8 @@ class tree:
 		return self.profile
 #
 # read data
+if not os.path.isfile(args.filename):
+	parser.error('The input file is unexist.')
 d=ld.ld(args.filename)
 info=d.read_info()
 #
@@ -375,7 +377,10 @@ def noiselevel(data):
 	return level[np.argsort(ind)].reshape(nx,ny)
 #
 if args.redo:
-	weight0=np.ones([nchan,nsub])*np.max(info['data_info']['chan_weight'])
+	if 'chan_weight_raw' in info['additional_info'].keys():
+		weight0=np.reshape(info['additional_info']['chan_weight_raw'],(-1,1))*np.ones([1,nsub])
+	else:
+		weight0=np.reshape(info['data_info']['chan_weight'],(-1,1))*np.ones([1,nsub])
 	weight0[:,-1]*=(info['data_info']['sub_nperiod_last']/info['data_info']['sub_nperiod'])
 else:
 	if 'weights' in info['data_info'].keys(): weight0=np.array(info['data_info']['weights'])
@@ -945,8 +950,13 @@ def keymotion(a):
 		if zapn.sum()==0: return
 		np.savetxt(args.filename[:-3]+'_zap.txt',zapn,fmt='%i')
 		print('Saved the zapping matrix in the %s' % (args.filename[:-3]+'_zap.txt'))
-		chanweight=(info['data_info']['chan_weight']*(np.logical_not(zapn)==0).mean(1)).tolist()
+		if args.redo:
+			chanweight=(info['additional_info']['chan_weight_raw']*(np.logical_not(zapn)).mean(1)).tolist()
+		else:
+			chanweight=(info['data_info']['chan_weight']*(np.logical_not(zapn)).mean(1)).tolist()
 		weights=(weight0*np.logical_not(zapn)).tolist()
+		if 'chan_weight_raw' not in info['additional_info'].keys():
+			info['additional_info']['chan_weight_raw']=info['data_info']['chan_weight']
 		info['data_info']['chan_weight']=chanweight
 		info['data_info']['weights']=weights
 		if args.output:
@@ -964,8 +974,13 @@ def keymotion(a):
 			print('Re-wrote the data weight in file %s.' % (args.filename))
 	elif a=='w':
 		root.destroy()
-		chanweight=(info['data_info']['chan_weight']*(np.logical_not(zapn)==0).mean(1)).tolist()
+		if args.redo:
+			chanweight=(info['additional_info']['chan_weight_raw']*(np.logical_not(zapn)).mean(1)).tolist()
+		else:
+			chanweight=(info['data_info']['chan_weight']*(np.logical_not(zapn)).mean(1)).tolist()
 		weights=(weight0*np.logical_not(zapn)).tolist()
+		if 'chan_weight_raw' not in info['additional_info'].keys():
+			info['additional_info']['chan_weight_raw']=info['data_info']['chan_weight']
 		info['data_info']['chan_weight']=chanweight
 		info['data_info']['weights']=weights
 		d.write_info(info)

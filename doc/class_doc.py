@@ -63,7 +63,8 @@ ld={
 ld_file_info={
 	'additional_info':{
 		'best_dm':[list,[2],float],		# the best DM value and its error determined with the program lddm.py
-		'krange':[list,[2],float],		#  
+		'chan_weight_raw':[list,['nchan'],float],	# the weight of each frequency channel for the raw data
+		'krange':[list,[2],float],		# the available scale factors for multi-component in template mode file
 		'phase0':int,				# the integer cycles for pulsar rotating from the PEPOCH0 to the observation time
 		'rm':[list,[2],float],			# the RM value and its error determined with the program ldrm.py
 		'spec':[list,['nchan_origin'],float]		# the spectra of the data

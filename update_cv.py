@@ -151,7 +151,7 @@ def update_tai2tt():
 def show_tai2tt(ax):
 	mjd0,deltat=np.loadtxt(dirname+'/materials/'+'tai2tt.txt')[:,[0,2]].T
 	ax.plot(mjd0,deltat)
-	return 'MJD','TT-TAI-32.184s ($\mu$s)'
+	return 'MJD','TT-TAI-32.184s ($\\mu$s)'
 #
 def update_gps2utc():
 	# gps2utc

@@ -355,6 +355,10 @@ for filei in filelist:
 		if 'additional_info' in info.keys(): info['additional_info']['spec']=list(spec)
 		else: info['additional_info']={'spec':list(spec)}
 	#
+	if nchan_new!=nchan:
+		if 'chan_weight_raw' in info['additional_info'].keys():
+			info['additional_info'].pop('chan_weight_raw')
+	#
 	if nsub_new!=nsub:	# adjust the information which describe the weight in each sub-integration
 		info['data_info']['sub_nperiod']=sub_nperiod[0]
 		info['data_info']['sub_nperiod_last']=sub_nperiod[-1]

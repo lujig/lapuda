@@ -290,7 +290,7 @@ for psr_name in psrlist:
 			#
 			if not args.text:
 				ax.plot([dm0+dmmax,dm0+dmmax],[y0,y1],'k:')
-				ax.text(dm0+ddm,y0*0.95+y1*0.05,'DM$_0$='+str(dm0)+'\nBest DM='+str(np.round(dmmax+dm0,3))+'$\pm$'+str(np.round(dmerr,3)),horizontalalignment='center',verticalalignment='bottom',fontsize=25)
+				ax.text(dm0+ddm,y0*0.95+y1*0.05,'DM$_0$='+str(dm0)+'\nBest DM='+str(np.round(dmmax+dm0,3))+'$\\pm$'+str(np.round(dmerr,3)),horizontalalignment='center',verticalalignment='bottom',fontsize=25)
 				fftdata0=fft.rfft(data0,axis=1)
 				tmp=np.shape(fftdata)[-1]
 				frac=1/(frequency*psr.vchange)**2*pm.dm_const/period*dmmax
