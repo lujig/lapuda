@@ -1730,9 +1730,9 @@ class psr_timing:
 			a0=afac*a0aligned
 			b0=0.0
 			omdot=xomdot+xk
-		if t0:
+		if t0.mjd[0]:
 			tt0=self.bbat.minus(t0).mjd*86400
-		elif t0asc:
+		elif t0asc.mjd[0]:
 			tt0=self.bbat.minus(t0asc).mjd*86400
 		else:
 			raise Exception('No T0 or T0ASC in pulsar paras.')

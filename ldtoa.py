@@ -218,6 +218,39 @@ def dmcor(data,freq,rchan,period,dm0,output=1):	# correct the DM for multi-frequ
 	else:
 		return ddm,ddmerr
 #
+def cald1(paras):
+	def tmp(para0,para1):
+		x0,a0,sigma0=para0
+		x1,a1,sigma1=para1
+		sigma0/=2
+		sigma1/=2
+		res=np.sqrt(2*np.pi)*a0*a1*(sigma0**2+sigma1**2-(x0-x1)**2)/np.sqrt(1/sigma0**2+1/sigma1**2)/(sigma0**2+sigma1**2)**2*np.exp(-(x0-x1)**2/2/(sigma0**2+sigma1**2))
+		return res
+	res1=0
+	for i in paras:
+		for j in paras:
+			res1+=tmp(i,j)
+	return res1
+#
+def cald2(y0,y1):
+	def tmp(i0,i1,dn):
+		if dn==0: return np.pi/3*i0*i1
+		else:
+			if dn%2==1: cdx=-1
+			elif dn%2==0: cdx=1
+			else: raise
+			dx=dn*np.pi
+			res=2*np.pi*i0*i1*cdx/dx**2
+			return res
+	res1=0
+	nbin=len(y0)
+	for n0 in np.arange(len(y0)):
+		for n1 in np.arange(len(y1)):
+			dn=np.abs(n0-n1)
+			dn=min(dn,nbin-dn)
+			res1+=tmp(y0[n0],y1[n1],dn)
+	return res1*np.pi*nbin
+#
 if args.zap_file and args.zap_template:
 	rchan=np.array(list(set(range(chanstart0,chanend0))-set(list(zchan))))-chanstart0
 else:
@@ -252,12 +285,14 @@ if info0['data_info']['mode']!='template':	# processing the template
 		if zbins0.size<nbin0/10: tmp=tmp-af.baseline(tmp)
 		else: tmp=tmp-tmp[zbins0].mean()
 		if zbins0.size>0: tpdata0[:,zbins0]=tpdata0[:,zbins0].mean(1).reshape(-1,1)
+		der2=cald2(tpdata0.mean(0),tpdata0.mean(0))
 	else:
 		tpdata0=data_tmp.sum(0)
 		center0=np.arctan2((tpdata0*np.sin(np.pi*2/nbin0*np.arange(nbin0))).sum(),(tpdata0*np.cos(np.pi*2/nbin0*np.arange(nbin0))).sum())
 		if zbins0.size<nbin0/10: tmp=tpdata0-af.baseline(tpdata0)
 		else: tmp=tpdata0-tpdata0[zbins0].mean()
 		if zbins0.size>0: tpdata0[zbins0]=tpdata0[zbins0].mean()
+		der2=cald2(tpdata0,tpdata0)
 else:
 	if not args.freqtoa:
 		data0=d0.chan_scrunch()[:,:,0]
@@ -267,6 +302,11 @@ else:
 			if zbins0.size<nbin0/10: tmp=tpdata0-af.baseline(tpdata0)
 			else: tmp=tpdata0-tpdata0[zbins0].mean()
 			if zbins0.size>0: tpdata0[zbins0]=tpdata0[zbins0].mean()
+			if 'template_info' in info0.keys():
+				#if 'peak_paras' in info0['template_info'].keys(): der2=cald1(info0['template_info']['peak_paras'])
+				#else: 
+				der2=cald2(tpdata0,tpdata0)
+			else: der2=cald2(tpdata0,tpdata0)
 		else:
 			if d0.read_shape()[0]>1:
 				parser.error("The multi-component freq-domain template cannot be adopted for non-freq-domain ToA determination.")
@@ -276,6 +316,7 @@ else:
 			if zbins0.size<nbin0/10: tmp=tmp-af.baseline(tmp)
 			else: tmp=tmp-tmp[zbins0].mean()
 			if zbins0.size>0: tpdata0[:,zbins0]=tpdata0[:,zbins0].mean(1).reshape(-1,1)
+			der2=cald2(tpdata0[0],tpdata0[0])
 	else:
 		data0=d0.read_data()[:,:,:,0]
 		if len(data0)==1: parser.error("The freq-domain ToA cannot be obtained for template with only one frequency channel.")
@@ -286,6 +327,7 @@ else:
 			if zbins0.size<nbin0/10: tmp=tmp-af.baseline(tmp)
 			else: tmp=tmp-tmp[zbins0].mean()
 			if zbins0.size>0: tpdata0[:,zbins0]=tpdata0[:,zbins0].mean(1).reshape(-1,1)
+			der2=cald2(tpdata0.mean(0),tpdata0.mean(0))
 		else:
 			tpdata0=data0*np.asarray(info0['data_info']['chan_weight']).reshape(-1,1,1)
 			tmp=tpdata0[:,0].sum(0)
@@ -293,6 +335,7 @@ else:
 			if zbins0.size<nbin0/10: tmp=tmp-af.baseline(tmp)
 			else: tmp=tmp-tmp[zbins0].mean()
 			if zbins0.size>0: tpdata0[:,:,zbins0]=tpdata0[:,:,zbins0].mean(2).reshape(nchan0,-1,1)
+			der2=cald2(tpdata0.mean(0)[0],tpdata0.mean(0)[0])
 #
 ew=tmp.sum()/tmp.max()
 #
@@ -305,7 +348,7 @@ else:
 	lnumber=int(round(nbin0/ew/2))
 	lnumber=max(3,lnumber)
 #
-algorithms=['pgs','corr']
+algorithms=['pgs','corr','fit','pgs1']
 if args.algorithm in algorithms:
 	command.append('-m '+args.algorithm)
 else:
@@ -316,7 +359,7 @@ command=' '.join(command)
 def lin(x,k):
 	return k*x
 #
-def poa(tpdata0,tpdata):	# phase gradient method
+def poa1(tpdata0,tpdata):	# phase gradient method
 	nb=int(min(nbin0,nbin)//2+1)
 	tpdata-=tpdata.mean()
 	tpdata/=tpdata.max()
@@ -330,24 +373,37 @@ def poa(tpdata0,tpdata):	# phase gradient method
 	d0=np.append(d0[tmpnum:],d0[:tmpnum])
 	f0=fft.rfft(d0)
 	df=f0/f
-	#errbinnum=np.min([int(nb/6),20])
-	#sr0=np.std(f0.real[-errbinnum:])
-	#si0=np.std(f0.imag[-errbinnum:])
-	#sr=np.std(f.real[-errbinnum:])
-	#si=np.std(f.imag[-errbinnum:])
-	#err=np.sqrt((sr**2+si**2)/np.abs(f)**2+(sr0**2+si0**2)/np.abs(f0)**2)
-	#ang=np.angle(df)
-	#fitnum=lnumber
-	#popt,pcov=so.curve_fit(lin,np.arange(1,fitnum),ang[1:fitnum],p0=[0.0],sigma=err[1:fitnum])
-	#dt=popt[0]/(2*np.pi)-tmpnum/((nb-1)*2)
-	#dterr=pcov[0,0]**0.5/(2*np.pi)
 	fitnum=lnumber
-	#err=np.sqrt((sr**2+si**2)/np.abs(f)**2+(sr0**2+si0**2)/np.abs(f0)**2)[1:fitnum]/np.arange(1,fitnum)
 	err=1/np.abs(f0)[1:fitnum]/np.arange(1,fitnum)
 	ang=np.angle(df[1:fitnum])/np.arange(1,fitnum)
 	ang0=(ang/err**2).sum()/(1/err**2).sum()
 	dt=ang0/(2*np.pi)-tmpnum/((nb-1)*2)
 	dterr=np.sqrt(((ang-ang0)**2/err**2).sum()/(1/err**2).sum())/(2*np.pi)
+	return [dt,dterr]
+#
+def poa(tpdata0,tpdata):	# phase gradient method
+	nb=int(min(nbin0,nbin)//2+1)
+	fitnum=lnumber
+	f0=fft.rfft(tpdata0)[:nb]
+	d0=fft.irfft(f0)
+	da=d0/len(tpdata0)*len(d0)
+	f=fft.rfft(tpdata)[:nb]
+	d=fft.irfft(f)
+	tmpnum=np.argmax(fft.irfft(f0*f.conj()))
+	d0=np.append(d0[tmpnum:],d0[:tmpnum])
+	f0=fft.rfft(d0)
+	df=f0[1:fitnum]/f[1:fitnum]
+	err=1/np.abs(f0[1:fitnum])/np.arange(1,fitnum)
+	ang=np.angle(df)/np.arange(1,fitnum)
+	ang0=(ang/err**2).sum()/(1/err**2).sum()
+	dt=ang0/(2*np.pi)-tmpnum/((nb-1)*2)
+	d1=fft.irfft(fft.rfft(d)*np.exp(dt*1j*np.arange(nb)*(2*np.pi)))
+	k=((da*d1).mean()-da.mean()*d1.mean())/((d1**2).mean()-d1.mean()**2)
+	res0=da-d1*k
+	if lnumber*4>nb: res=res0[np.argsort(res0)][:-8].std()
+	else: res=fft.rfft(res0)[(lnumber*4):].std()/np.sqrt(nb*2-2)
+	#res=res0.std()
+	dterr=res*np.sqrt(2/der2)
 	return [dt,dterr]
 #
 def coa(tpdata0,tpdata):	# sinc interpolation correlation method
@@ -430,6 +486,8 @@ discard=[]
 reserve=[]
 if args.algorithm=='pgs':
 	tfunc=poa
+elif args.algorithm=='pgs1':
+	tfunc=poa1
 elif args.algorithm=='corr':
 	tfunc=coa
 elif args.algorithm=='fit':

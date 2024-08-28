@@ -128,7 +128,8 @@ ld_file_info={
 		'psr_par':[list,['number_of_lines'],str]		# the parameters of pulsar
 	},
 	'template_info':{
-		'peak_paras':[list,['number_of_peaks',2 or 3],str]		# peak parameters for fitting the pulse profile template
+		'peak_paras':[list,['number_of_peaks',2 or 3],str],		# peak parameters for fitting the pulse profile template
+		'der2':float			# the second order derivative of the self-correlation function of the template at zero
 	},
 	'toa_info':{
 		'method':str				# the method to obtain ToA

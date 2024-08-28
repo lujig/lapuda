@@ -62,9 +62,10 @@ dterr=toae/period
 dt[dt>0.5]-=1
 fit_list=[[dt,dterr,freq,dm,dmerr,psr,psrt,jj_list[jj_list[0]][1]&select_list[select_list[0]][1]]]
 action_list=[-1]
+uintsize=int(np.array([-1]).astype(np.uint32)[0]/2)
 #
 cur_x,cur_y,cur_x0,cur_y0=0,0,0,0
-key_on,mouse_on,rect='',False,0
+key_on,mouse_on='',False
 #
 fig=Figure(figsize=(8,6),dpi=100)
 fig.clf()
@@ -170,7 +171,7 @@ def psrfit(paras):	# fit the ToAs with pulsar parameters
 	fit_list.append([fit(popt)+dt-jump,dterr,freq,dm,dmerr,psr1,psrt2,jj0])
 #
 def plot():	# plot the figure with options
-	global ax1,xax,yax,points,lines,xaxis,yaxis,yerr,point0
+	global ax1,xax,yax,points,lines,xaxis,yaxis,yerr,point0,rect
 	zoom_mark=False
 	if merge_mark: 
 		res,dterr,freq,dm,dmerr,jj,se,psr,psrt=copy.deepcopy(mfit)
@@ -218,7 +219,7 @@ def plot():	# plot the figure with options
 		xlim=xaxis[jlim][0]*1.05-xaxis[jlim][-1]*0.05,-xaxis[jlim][0]*0.05+xaxis[jlim][-1]*1.05	
 	#
 	if dtunit=='time':
-		yunit=' ($\mu$s)'
+		yunit=' ($\\mu$s)'
 	elif dtunit=='phase':
 		yunit=''
 	if yax=='prepost':
@@ -282,6 +283,8 @@ def plot():	# plot the figure with options
 	ax1.set_ylim(ylim)
 	point0,=ax1.plot(-10000,10000,'o',c='#00FF00',zorder=-1)
 	fig.text(x2-0.05,y3-0.05,mark_text,fontsize=25,family='serif',color='green',va='top',ha='right')
+	rect=mp.Rectangle((0,0),0,0,ec='k',fill=False,linestyle='--')
+	ax1.add_patch(rect)
 	canvas.draw()
 #
 def restart():	# restart
@@ -299,15 +302,13 @@ def restart():	# restart
 	combo2.current(0)
 	combo3['value']=[combo3['value'][-1]]
 	combo3.current(0)
-	errentry.delete(0,np.int(np.uint32(-1)/2))
-	errentry.insert(0,str(1))
 	dtunit='phase'
 	setxax('mjd')
 	setyax('post')
 	merge_mark,zoom_mark=False,False
 	action_list=[-1]
 	err_limit=1.0
-	errentry.delete(0,np.int(np.uint32(-1)/2))
+	errentry.delete(0,uintsize)
 	errentry.insert(0,str(err_limit))
 	frame0.focus()
 	plot()
@@ -456,15 +457,16 @@ def click(event):	# handle the click event
 	mouse_on=True
 	cur_x0=kx*(xlim1-xlim2)+xlim1
 	cur_y0=ky*(ylim1-ylim2)+ylim1
-	rect=mp.Rectangle((cur_x0,cur_y0),0,0,ec='k',fill=False,linestyle='--')
-	ax1.add_patch(rect)
+	rect.set_xy((cur_x0,cur_y0))
 	canvas.draw()
 #
 def leftrelease(event):
 	global mouse_on,cur_x0,cur_y0
 	if not mouse_on: return
 	mouse_on=False
-	ax1.patches.clear()
+	rect.set_height(0)
+	rect.set_width(0)
+	rect.set_xy((0,0))
 	cur_x0,cur_x1=np.sort([cur_x0,cur_x])
 	cur_y0,cur_y1=np.sort([cur_y0,cur_y])
 	if key_on in ['Control_L','z']: zoom(cur_x0,cur_x1,cur_y0,cur_y1)
@@ -477,7 +479,9 @@ def rightrelease(event):
 	cur_x0,cur_x1=np.sort([cur_x0,cur_x])
 	cur_y0,cur_y1=np.sort([cur_y0,cur_y])
 	delete(cur_x0,cur_x1,cur_y0,cur_y1)
-	ax1.patches.clear()
+	rect.set_height(0)
+	rect.set_width(0)
+	rect.set_xy((0,0))
 #
 def middleclick(event):
 	global profwindow,profax,profcanvas,prof
@@ -666,7 +670,7 @@ def undo():
 	elif action[0]=='submit_err':
 		tmp=err_limit
 		tmp1=jj_list.pop()
-		errentry.delete(0,np.int(np.uint32(-1)/2))
+		errentry.delete(0,uintsize)
 		errentry.insert(0,str(action[1][0]))
 		combo1['value']=list(map(lambda x,y:str(y)+' '+x[0],jj_list[1:],np.arange(len(jj_list)-1)))[::-1]
 		combo1.current(len(jj_list)-1-action[1][1]%len(jj_list))
@@ -723,7 +727,7 @@ def redo():
 		else: plot()
 	elif action[0]=='submit_err':
 		jj_list.append(action[1][1])
-		errentry.delete(0,np.int(np.uint32(-1)/2))
+		errentry.delete(0,uintsize)
 		errentry.insert(0,str(action[1][0]))
 		combo1['value']=list(map(lambda x,y:str(y)+' '+x[0],jj_list[1:],np.arange(len(jj_list)-1)))[::-1]
 		combo1.current(0)
@@ -866,8 +870,8 @@ def submit_err(event):	# screen the large noise ToAs
 		tk.messagebox.showwarning('Error!','The inputing error limit is invalid!')
 		return
 	jj=jj_list[jj_list[0]][1]&(dterr<err_limit0)
-	if np.any(jj_list[jj_list[0]]!=jj): jj_list.append(['Error_limit',jj])
-	errentry.delete(0,np.int(np.uint32(-1)/2))
+	if np.any(jj_list[jj_list[0]][1]!=jj): jj_list.append(['Error_limit',jj])
+	errentry.delete(0,uintsize)
 	errentry.insert(0,str(err_limit0))
 	combo1['value']=list(map(lambda x,y:str(y)+' '+x[0],jj_list[1:],np.arange(len(jj_list)-1)))[::-1]
 	combo1.current(0)

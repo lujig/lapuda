@@ -80,7 +80,7 @@ nsub_new=[]
 psrname=''
 dm=0
 def ld_check(fname,filetype='Ld file',notfirst=True):
-	global freq_s,freq_e,psrname,dm,freq_s_tmp,freq_e_tmp,nchan0
+	global freq_s,freq_e,psrname,dm,freq_s_tmp,freq_e_tmp,nchan0,psr
 	if not os.path.isfile(fname):
 		parser.error(filetype+' name '+fname+' '+'is invalid.')
 	try:
@@ -703,9 +703,8 @@ if args.peakfit:
 	root.bind('<Motion>',move)
 	canvas.draw()
 	root.mainloop()
-	#
 #
-info={'data_info':{'mode':'template','nchan':int(nchan_res),'chan_weight':list(np.ones(nchan_res)),'nbin':int(args.nbin),'npol':1,'pol_type':'I','compressed':True,'freq_start':freq_s,'freq_end':freq_e,'length':1},'pulsar_info':{'psr_name':psrname},'history_info':{'file_time':[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())],'history':[command]}}
+info={'data_info':{'mode':'template','nchan':int(nchan_res),'chan_weight':list(np.ones(nchan_res)),'nbin':int(args.nbin),'npol':1,'pol_type':'I','compressed':True,'freq_start':freq_s,'freq_end':freq_e,'length':1,'period':psr.p0,'sublen':psr.p0,'sub_nperiod_last':1},'pulsar_info':{'psr_name':psrname},'history_info':{'file_time':[time.strftime('%Y-%m-%dT%H:%M:%S',time.gmtime())],'history':[command]}}
 #
 if args.peakfit:
 	if not savemark:sys.exit()
@@ -713,9 +712,10 @@ if args.peakfit:
 		print('The produced template is zero on every phase bin, and it will not be saved.')
 		sys.exit()
 	info['template_info']={'peak_paras':paras.tolist()}
-	prof=[fprof]
+	prof=np.array([[fprof]])
 else:
 	if np.sum(prof**2)==0: parser.error('Unexpected error. The produced profile is zero on every phase bin.')
+	prof=prof.reshape(nchan_res,-1,args.nbin)
 #
 do=ld.ld(name+'.ld')
 if args.component:
@@ -725,6 +725,9 @@ if args.component:
 else:
 	do.write_shape([nchan_res,1,args.nbin,1])
 	info['data_info']['nsub']=1
+#
+prof-=prof[:,0,:].min(1).reshape(-1,1,1)
+prof/=prof[:,0,:].max(1).reshape(-1,1,1)
 for i in np.arange(nchan_res):
 	do.write_chan(prof[i],i)
 #

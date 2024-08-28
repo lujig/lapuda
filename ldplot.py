@@ -107,7 +107,7 @@ for fname in filelist0:
 		continue
 	d=ld.ld(fname)
 	info=d.read_info()
-	if info['data_info']['mode'] not in ['single','subint']:
+	if info['data_info']['mode'] not in ['single','subint','template']:
 		print(fname+' is not a showable file.')
 		continue
 	#
@@ -257,7 +257,9 @@ else:
 		widthmg=int(sw*0.1)
 		heightmg=int(sh*0.1)
 fonts=min(height/row/20,22)
-root.geometry(str(int(width+labelsize))+'x'+str(int(height+labelsize))+'+'+str(widthmg)+'+'+str(heightmg))				
+root.geometry(str(int(width+labelsize))+'x'+str(int(height+labelsize))+'+'+str(widthmg)+'+'+str(heightmg))
+if nfile>1: root.title('Multiple Figure')
+else: root.title(filelist[0])
 figures=[]
 for i in np.arange(nout): figures.append(Figure(figsize=((width+labelsize)/dpi,(height+labelsize)/dpi),dpi=dpi))
 #
@@ -455,12 +457,12 @@ for i in np.arange(nfile):
 		ylabel,xlabel,suffix='Intensity (arbi.) ; PPA ($\\degree$)','Pulse Phase','_polarization'
 		ax1.tick_params(axis='x',labelsize=fonts/1.5)
 		ax1.tick_params(axis='y',labelsize=fonts/1.5)
-		ax1.set_title(filelist[i],fontsize=fonts/1.5)
+		if nfile>1: ax1.set_title(filelist[i],fontsize=fonts/1.5)
 		ax.tick_params(axis='x',labelsize=fonts/1.5)
 		ax.tick_params(axis='y',labelsize=fonts/1.5)
 	if not args.polarization:
 		if irow!=row-1: ax.set_xticks([])
-		ax.set_title(filelist[i],fontsize=fonts)
+		if nfile>1: ax.set_title(filelist[i],fontsize=fonts)
 		ax.tick_params(axis='x',labelsize=fonts)
 		ax.tick_params(axis='y',labelsize=fonts)
 #

@@ -459,19 +459,18 @@ class time:
 		if type(date[0])==str:
 			date0,second0=np.zeros_like(date,dtype=np.int64),np.zeros_like(date,dtype=np.float64)
 			for i in range(size):
-				tmp=date[i].split('\.')
+				tmp=date[i].split('\\.')
 				data0[i],second0[i]=np.int64(tmp[0]),np.float64('0.'+tmp[1])
 			date,second=date0,second0
 		datemain,dateresi=np.divmod(date,1)
 		secondmain,secondresi=np.divmod(second+dateresi*unit,unit)
-		if size==np.array(second).size:
-			self.date=np.reshape(np.int64(datemain)+np.int64(secondmain),-1)
-			self.second=np.reshape(np.float64(secondresi),-1)
-			self.mjd=date+second/unit
-			self.scale=scale
-			self.unit=unit
-			self.size=size
-			self.extrapolation=extrapolation
+		self.date=np.reshape(np.int64(datemain)+np.int64(secondmain),-1)
+		self.second=np.reshape(np.float64(secondresi),-1)
+		self.mjd=date+second/unit
+		self.scale=scale
+		self.unit=unit
+		self.size=size
+		self.extrapolation=extrapolation
 	#
 	def __eq__(self,other):
 		if type(other) is not time:
@@ -718,7 +717,7 @@ class phase():
 		if type(integer[0])==str:
 			integer0,offset0=np.zeros_like(integer,dtype=np.int64),np.zeros_like(offset,dtype=np.float64)
 			for i in range(size):
-				tmp=integer[i].split('\.')
+				tmp=integer[i].split('\\.')
 				integer0[i],offset0[i]=np.int64(tmp[0]),np.float64('0.'+tmp[1])
 			integer,offset=integer0,offset0
 		integer_main,integer_resi=np.divmod(integer,1)
