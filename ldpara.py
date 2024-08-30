@@ -3,15 +3,20 @@ import numpy as np
 import argparse as ap
 import os,time,ld,sys
 import adfunc as af
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.ldpara_text()
 version='JigLu_20200930'
-parser=ap.ArgumentParser(prog='ldpara',description='Show the parameters of ld file.',epilog='Ver '+version)
-parser.add_argument('-v','--version',action='version',version=version)
-parser.add_argument("filename",nargs='+',help="input ld file")
-parser.add_argument('-c',dest='paras',default=0,help="parameter name list, include nsub, nchan, nbin, npol, stt_time, file_time, psr_name, period, nperiod, dm, freq, bw and length")
-parser.add_argument('-g',dest='group',default=0,help="parameter group name, e.g. additional_info, calibration_info, data_info, folding_info, history_info, original_data_info, telescope_info, template_info, pulsar_info")
-parser.add_argument('-H',dest='list',action="store_true",default=False,help="list the inquirable parameter names for the specified file/files.")
-parser.add_argument('-a',dest='all',action="store_true",default=False,help="print all inquirable parameters for the specified file/files.")
+parser=ap.ArgumentParser(prog='ldpara',description=text.help,epilog='Ver '+version,add_help=False,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument("filename",nargs='+',help=text.help_filename)
+parser.add_argument('-c',dest='paras',default=0,help=text.help_c)
+parser.add_argument('-g',dest='group',default=0,help=text.help_g)
+parser.add_argument('-H',dest='list',action="store_true",default=False,help=text.help_H)
+parser.add_argument('-a',dest='all',action="store_true",default=False,help=text.help_a)
 #
 args=(parser.parse_args())
 filelist=args.filename
@@ -53,11 +58,11 @@ def sout(info,plist,check=False):
 			else:
 				print(pname,np.array(para))
 		else:
-			sys.stdout.write('Parameter '+pname+' can not be found.'+'\n')
+			print(text.info_np % pname)
 #
 for ldfile in filelist:
 	if not os.path.isfile(ldfile):
-		parser.error('Valid file names are required.')
+		parser.error(text.error_nf)
 	sys.stdout.write(ldfile+'\n')
 	d=ld.ld(ldfile)
 	info=d.read_info()
@@ -74,7 +79,7 @@ for ldfile in filelist:
 		li=cd.ld_file_info
 		glist=args.group.split(',')
 		gdif=list(set(glist).difference(set(li.keys())))
-		if gdif: print('The parameter group name '+', '.join(gdif)+' can not be recognized.')
+		if gdif: print(text.info_ng % ', '.join(gdif))
 		ginter=list(set(glist).intersection(set(li.keys())))
 		pall=paral(info)
 		for gname in ginter:

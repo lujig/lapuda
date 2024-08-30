@@ -1,0 +1,9 @@
+ldpara	help	Show the parameters of ld file.
+ldpara	help_filename	input ld file
+ldpara	help_c	parameter name list, include nsub, nchan, nbin, npol, stt_time, file_time, psr_name, period, nperiod, dm, freq, bw and length
+ldpara	help_H	list the inquirable parameter names for the specified file/files
+ldpara	help_a	print all inquirable parameters for the specified file/files
+ldpara	help_g	parameter group name, e.g. additional_info, calibration_info, data_info, folding_info, history_info, original_data_info, telescope_info, template_info, pulsar_info
+ldpara	info_np	Parameter %s can not be found.
+ldpara	error_nf	Valid file names are required.
+ldpara	info_ng	The parameter group name %s can not be recognized.

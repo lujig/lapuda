@@ -1,0 +1,11 @@
+ldpara	help	展示LD文件的参数信息。
+ldpara	help_filename	输入LD格式文件名或文件名列表
+ldpara	help_h	显示本帮助信息并退出
+ldpara	help_v	显示程序版本并退出
+ldpara	help_c	待展示参数列表，包括nsub，nchan，nbin，npol，stt_time，file_time，psr_name，period，nperiod，dm，freq，bw和length等
+ldpara	help_H	列出指定文件的可展示参数
+ldpara	help_a	输出指定文件的所有可展示参数
+ldpara	help_g	待展示参数组名称，需要包含在additional_info，calibration_info，data_info，folding_info，history_info，original_data_info，telescope_info，template_info，pulsar_info中
+ldpara	info_np	参数%s无法获取。
+ldpara	error_nf	需要有效的文件名称。
+ldpara	info_ng	参数组名称%s无法识别。
