@@ -10,18 +10,23 @@ from matplotlib.figure import Figure
 import matplotlib.patches as mp
 import ld,os,copy,sys
 wn.filterwarnings('ignore')
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.output_text('ldtimi')
 version='JigLu_20220633'
-parser=ap.ArgumentParser(prog='ldtim',description='Get the timing solution the ToA.',epilog='Ver '+version)
-parser.add_argument('-v','--version',action='version',version=version)
-parser.add_argument("filename",help="input ToA file with ld or txt format")
-parser.add_argument('-p','--par',dest='par',help="input par file")
-parser.add_argument('--tr',dest='trange',help="limit the time range")
+parser=ap.ArgumentParser(prog='ldtimi',description=text.help,epilog='Ver '+version,add_help=False,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument("filename",help=text.help_filename)
+parser.add_argument('-p','--par',dest='par',help=text.help_p)
+parser.add_argument('--tr',dest='trange',help=text.help_tr)
 #
 args=(parser.parse_args())
 #
 if not os.path.isfile(args.filename):
-	parser.error('ToA file name is invalid.')
+	parser.error(text.error_nfn)
 d=ld.ld(args.filename)
 dirname,_=os.path.split(os.path.abspath(args.filename))
 #
@@ -34,7 +39,7 @@ else:
 #
 if args.trange:
 	time_start0,time_end0=np.float64(args.trange.split(','))
-	if time_end0<=time_start0: parser.error("Starting time larger than ending time.")
+	if time_end0<=time_start0: parser.error(text.error_slte)
 	mjdtime=data[:,0]+data[:,1]/86400
 	jj_list=[-1,['Time limit',(mjdtime>time_start0)&(mjdtime<time_end0)]]
 else:
@@ -426,7 +431,7 @@ def fit(fit=True):	# implement the fitting process
 	lpara=len(paras)
 	jj0=jj&se
 	if jj0.sum()<=(lpara+2):
-		print('Warning: the ToAs are too few to be fitted.')
+		print(text.warning_ftoa)
 		return
 	psrfit(paras)
 	if merge_mark:
@@ -440,7 +445,7 @@ def fit(fit=True):	# implement the fitting process
 		res+=jump
 	rese=res[jj]/dterr[jj]
 	phasestd=np.sqrt((rese**2).sum()/(1/dterr[jj]**2).sum())*period
-	print('RMS of the fit residuals (s):',phasestd,', chi-square/d.o.f.:',(rese**2).sum()/len(rese-1-len(paras)),'\n')
+	print(text.info_rms,phasestd,', chi-square/d.o.f.:',(rese**2).sum()/len(rese-1-len(paras)),'\n')
 	plot()
 	if action_list[0]!=-1:
 		action_list=action_list[:int(action_list[0]+1)]
@@ -499,13 +504,13 @@ def middleclick(event):
 	if not os.path.isfile(profname):
 		profname=os.path.join(dirname,os.path.split(profinfo[0])[1])
 		if os.path.isfile(profname):
-			print('Warning: the pulse data file is not found, and use the file with same name in the directory of ToA file instead.')
+			print(text.warning_ndfti)
 		else:
 			profname=os.path.split(profinfo[0])[1]
 			if os.path.isfile(profname):
-				print('Warning: the pulse data file is not found, and use the file with same name in this instead.')
+				print(text.warning_ndfni)
 			else:
-				print('The corresponding file does not exist.')
+				print(text.info_ndf)
 				return
 	ldfile=ld.ld(profname)
 	finfo=ldfile.read_info()
@@ -775,7 +780,7 @@ def keymotion(a):
 	elif a=='p':	# print present selected pulsar parameters
 		psr=fit_list[-1][-3]
 		paras=np.array(paralist)[list(pbox.curselection())]
-		print('Pulsar parameters:')
+		print(text.info_pp)
 		psr.output(paras)
 	elif a=='q':	# quit
 		root.destroy()
@@ -791,36 +796,14 @@ def keymotion(a):
 			np.savetxt(resfile,tmp,fmt=['%i', '%5.11f', '%.16f', '%.16f', '%i'])
 			#psr.writepar(resfile[:-4]+'.par')
 	elif a=='h':
-		sys.stdout.write("\nldzap interactive commands\n\n")
-		sys.stdout.write("Mouse:\n")
-		sys.stdout.write("  Left-click and drag to select or unselect (with the key 'v' or left Shift holded on) ToAs in a rectangle region. \n")
-		sys.stdout.write("      Left-click on a single ToA to select or unselect (with the key 'v' or left Shift holded on) it. \n")
-		sys.stdout.write("      Hold on the key 'z' or left-Ctrl and left-drag to select a rectangle region to zoom in. \n")
-		sys.stdout.write("  Right-click and drag to delete or undelete (with the key 'v' or left Shift holded on) ToAs in a rectangle region.\n")
-		sys.stdout.write("      Right-click on a single ToA to delete or undelete (with the key 'v' or left Shift holded on) it.\n")
-		sys.stdout.write("  Middle-click on a single ToA to check the corresponding pulse profile of it.\n\n")
-		sys.stdout.write("      Left-click on the figure or press ESC to close the figure.\n\n")
-		sys.stdout.write("Keyboard:\n")
-		sys.stdout.write("  h    Show this help\n")
-		sys.stdout.write("  u    Undo last delete command\n")
-		sys.stdout.write("  y    Redo last undo command\n")
-		sys.stdout.write("  r    Reset zoom to the initial region\n")
-		sys.stdout.write("  e    Reset selection\n")
-		sys.stdout.write("  b    Restart the fitting\n")
-		sys.stdout.write("  m    Merge the neighboring ToAs\n")
-		sys.stdout.write("  a/d  Add/substract one period for the selected ToAs or the ToAs on the right side of the cursor\n")
-		sys.stdout.write("  f    Fit the ToAs displayed currently\n")
-		sys.stdout.write("  p    Print the selected parameters\n")
-		sys.stdout.write("  s    Save parfile to a specified file\n")
-		sys.stdout.write("  x    Save the fit residuals to a specified file\n")
-		sys.stdout.write("  q    Exit program\n\n")
+		print(text.info_help.replace('\\n','\n'))
 	return
 #
 def xmode(mode):	# choose the x-axis mode
 	global xax,select_list
 	if mode==xax: return
 	if mode=='orbit' and 'binary' not in psr0.paras:
-		print('Warning: this pulsar is not a binary, and the X-Axis cannot be Orbit phase.')
+		print(text.warning_nb)
 		return
 	setxax(mode)
 	select_list=select_list[0:2]
@@ -867,7 +850,7 @@ def submit_err(event):	# screen the large noise ToAs
 	try:
 		err_limit0=np.float64(err)
 	except:
-		tk.messagebox.showwarning('Error!','The inputing error limit is invalid!')
+		tk.messagebox.showwarning('Error!',text.tk_niel)
 		return
 	jj=jj_list[jj_list[0]][1]&(dterr<err_limit0)
 	if np.any(jj_list[jj_list[0]][1]!=jj): jj_list.append(['Error_limit',jj])

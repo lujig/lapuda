@@ -2,20 +2,25 @@
 import urllib.request as ur
 import time_eph as rd
 import numpy as np
-import os,time,re
+import os,time,re,sys
 import argparse as ap
 import matplotlib.pyplot as plt
 plt.rcParams['font.family']='Serif'
 import ssl
 ssl._create_default_https_context=ssl._create_unverified_context
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.output_text('update_cv')
 version='JigLu_20220317'
 #
-parser=ap.ArgumentParser(prog='update_tdiff',description='Updating the time difference { (1) gps2utc, (2) leap, (3) polarmotion, (4) tai2ut1, (5) tai2tt }.',epilog='Ver '+version)
-parser.add_argument('-v','--version', action='version', version=version)
-parser.add_argument('--verbose', action="store_true",default=False,help="print detailed information")
-parser.add_argument('-u','--update',dest='update',default='',help='update the specified time difference.')
-parser.add_argument('-s','--show',dest='show',default='',help='show the specified time difference, contain { (6) leaptxt, (7) utc2ut1 }.')
+parser=ap.ArgumentParser(prog='update_tdiff',description=text.help,epilog='Ver '+version,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument('--verbose', action="store_true",default=False,help=text.help_verbose)
+parser.add_argument('-u','--update',dest='update',default='',help=text.help_u)
+parser.add_argument('-s','--show',dest='show',default='',help=text.help_s)
 args=(parser.parse_args())
 #
 dirname=os.path.split(os.path.realpath(__file__))[0]
@@ -187,7 +192,7 @@ if args.update:
 	elif args.update in tlist:
 		update_select=args.update
 	else:
-		parser.error("The selected clock difference to be updated cannot be recognized.")
+		parser.error(text.error_nuc)
 else:
 	update_select=''
 #
@@ -200,7 +205,7 @@ if args.show:
 	elif args.show in tlist:
 		show_select=args.show
 	else:
-		parser.error("The selected clock difference to be shown cannot be recognized.")
+		parser.error(text.error_nsc)
 else:
 	show_select=''
 #

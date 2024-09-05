@@ -12,23 +12,28 @@ import adfunc as af
 import time
 import matplotlib.pyplot as plt
 plt.rcParams['font.family']='Serif'
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.output_text('lddm')
 version='JigLu_20180515'
-parser=ap.ArgumentParser(prog='lddm',description='Calculate the best DM value. Press \'s\' in figure window to save figure.',epilog='Ver '+version)
-parser.add_argument('-v','--version',action='version',version=version)
-parser.add_argument("filename",nargs='+',help="input ld file")
-parser.add_argument('--fr','--frequency_range',default=0,dest='frequency',help='limit the frequency rangeFREQ0,FREQ1')
-parser.add_argument('--sr','--subint_range',default=0,dest='subint',help='limit the subint range SUBINT0,SUBINT1')
-parser.add_argument('-n',action='store_true',default=False,dest='norm',help='normalized the data at each channel before optimization')
-parser.add_argument('-k','--text',action='store_true',default=False,dest='text',help='only print the result in text-form instead of plot')
-parser.add_argument('-o','--file',default='',dest='file',help='output the results into a file')
-parser.add_argument('-m',action='store_true',default=False,dest='modify',help='add a parameter best_dm in the info of ld file')
-parser.add_argument('-c',action='store_true',default=False,dest='correct',help='correct the data with the best dm')
-parser.add_argument('-d','--dm_center',dest='dm',default=0,type=np.float64,help="center of the fitting dispersion measure")
-parser.add_argument('-i','--dm_zone',dest='zone',default=0,type=np.float64,help="total range of the fitting dispersion measure")
-parser.add_argument('--degree','--polynomial_order',default=0,dest='n',type=int,help='fit the dm-maxima curve with Nth order polynomial')
-parser.add_argument("-z","--zap",dest="zap_file",default=0,help="file recording zap channels")
-parser.add_argument('-p','--precision',default=0,dest='prec',type=np.float64,help='fitting precision of the dm')
+parser=ap.ArgumentParser(prog='lddm',description=text.help,epilog='Ver '+version,add_help=False,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument("filename",nargs='+',help=text.help_filename)
+parser.add_argument('--fr','--frequency_range',default=0,dest='frequency',help=text.help_fr)
+parser.add_argument('--sr','--subint_range',default=0,dest='subint',help=text.help_sr)
+parser.add_argument('-n',action='store_true',default=False,dest='norm',help=text.help_n)
+parser.add_argument('-k','--text',action='store_true',default=False,dest='text',help=text.help_k)
+parser.add_argument('-o','--file',default='',dest='file',help=text.help_o)
+parser.add_argument('-m',action='store_true',default=False,dest='modify',help=text.help_m)
+parser.add_argument('-c',action='store_true',default=False,dest='correct',help=text.help_c)
+parser.add_argument('-d','--dm_center',dest='dm',default=0,type=np.float64,help=text.help_d)
+parser.add_argument('-i','--dm_zone',dest='zone',default=0,type=np.float64,help=text.help_i)
+parser.add_argument('--degree','--polynomial_order',default=0,dest='n',type=int,help=text.help_degree)
+parser.add_argument("-z","--zap",dest="zap_file",default=0,help=text.help_z)
+parser.add_argument('-p','--precision',default=0,dest='prec',type=np.float64,help=text.help_p)
 args=(parser.parse_args())
 wn.filterwarnings('ignore')
 command=['lddm.py']
@@ -38,7 +43,7 @@ errorfile=[]
 filedict={}
 for i in filelist:	# check the files
 	if not os.path.isfile(i):
-		parser.error(i+' is unexist.')
+		parser.error(text.error_fue % i)
 	else:
 		try:
 			filei=ld.ld(i)
@@ -49,7 +54,7 @@ for i in filelist:	# check the files
 		except:
 			errorfile.append(i)
 if errorfile:
-	print('Warning: '+', '.join(errorfile)+' is/are not valid ld file')
+	print(text.warning_ilf % ', '.join(errorfile))
 psrlist=list(filedict.keys())
 #
 if args.file:
@@ -58,7 +63,7 @@ if args.file:
 if args.zap_file:
 	command.append('-z')
 	if not os.path.isfile(args.zap_file):
-		parser.error('The zap channel file is invalid.')
+		parser.error(text.error_zfi)
 	zchan0=np.loadtxt(args.zap_file,dtype=np.int32)
 else:
 	zchan0=np.array([])
@@ -82,19 +87,19 @@ if args.modify:
 if args.correct:
 	command.append('-c')
 if args.modify and args.correct:
-	parser.error('At most one of flags -m and -c is required.')
+	parser.error(text.error_mfc)
 command=' '.join(command)
 #
 if not args.text:
 	if args.prec:
-		parser.error('The precision of the visualized result cannot be reset.')
+		parser.error(text.error_pvn)
 	if len(psrlist)>0:
 		if len(psrlist)>1 or len(filedict[psrlist[0]])>1:
-			parser.error('The visualized results cannot be manifested for multi-files.')
+			parser.error(text.error_vnm)
 #
 for psr_name in psrlist:
 	first=True
-	print('Analyse for '+psr_name,':')
+	print(text.info_ana % psr_name)
 	for filename,psr_par in filedict[psr_name]:
 		psr_para=pr.psr(psr_par,warning=first)
 		first=False
@@ -105,7 +110,7 @@ for psr_name in psrlist:
 		nsub=info['data_info']['nsub']
 		if len(zchan0):
 			if np.max(zchan0)>=nchan or np.min(zchan0)<0:
-				parser.error('The zapped channel number is overrange.')
+				parser.error(text.error_zno)
 		dm0=info['data_info']['dm']
 		period=info['data_info']['period']
 		if args.dm:
@@ -125,17 +130,17 @@ for psr_name in psrlist:
 		if args.frequency:
 			freqtmp=np.float64(args.frequency.split(','))
 			if len(freqtmp)!=2:
-				parser.error('A valid frequency range should be given.')
+				parser.error(text.error_nfr)
 			freq_start,freq_end=freqtmp
 			chanstart,chanend=np.int16(np.round((np.array([freq_start,freq_end])-freq_start0)/channel_width))
 			if chanstart>chanend:
-				parser.error("Starting frequency larger than ending frequency.")
+				parser.error(text.error_sfl)
 			elif chanstart<0 or chanend>nchan:
-				parser.error("Input frequency is overrange.")
+				parser.error(text.error_ifo)
 			freq_start,freq_end=np.array([chanstart,chanend])*channel_width+freq_start0
 			chan=np.arange(chanstart,chanend)
 			if len(chan)<2:
-				parser.error('Input bandwidth is too narrow.')
+				parser.error(text.error_ibn)
 			freq=frequency[chan]
 		else:
 			freq=frequency
@@ -147,9 +152,9 @@ for psr_name in psrlist:
 			if subint[1]<0:
 				subint[1]=subint[1]+nsub
 			if len(subint)!=2:
-				parser.error('A valid subint range should be given.')
+				parser.error(text.error_nsr)
 			if subint[0]>subint[1]:
-				parser.error("Starting subint is larger than ending subint.")
+				parser.error(text.error_ssl)
 			subint_start=max(int(subint[0]),0)
 			subint_end=min(int(subint[1]+1),nsub)
 		else:
@@ -307,7 +312,7 @@ for psr_name in psrlist:
 				print(psr_para.name+'  '+filename+' DM_0='+str(dm0)+', Best DM='+str(np.round(dmmax+dm0,ndigit))+'+-'+str(np.round(dmerr,ndigit)))
 		else:
 			if not args.text: ax.text(dm0+ddm,y0*0.95+y1*0.05,'The best DM cannot be found',horizontalalignment='center',verticalalignment='bottom',fontsize=25)
-			else: print('The best DM of file '+filename+' for pulsar '+psr_para.name+' cannot be found.')
+			else: print(text.info_bdm % (filename,psr_para.name))
 		#
 		if not args.text:
 			ax2.set_ylim(freq_start0,freq_end0)
@@ -316,11 +321,11 @@ for psr_name in psrlist:
 			ax1.set_xlim(0,1)
 			#
 			def save_fig():
-				figname=input("Please input figure name:")
+				figname=input(text.input_fn)
 				if figname.split('.')[-1] not in ['ps','eps','png','pdf','pgf']:
 					figname+='.pdf'
 				fig.savefig(figname)
-				sys.stdout.write('Figure file '+figname+' has been saved.')
+				print(text.info_save % figname)
 			#
 			try:
 				import gtk

@@ -1,3 +1,278 @@
+# ddpsr.py
+ddpsr	help	对PSRFITS数据进行消色散。
+ddpsr	help_filename	文件名或文件名列表
+ddpsr	help_h	显示该帮助信息并退出
+ddpsr	help_v	显示程序版本并退出
+ddpsr	help_verbose	输出处理过程信息
+ddpsr	help_a	偏振定标文件名列表
+ddpsr	help_cal_period	偏振定标文件的数据周期
+ddpsr	help_subi	使用子积分为单位处理定标文件
+ddpsr	help_cal_para	使用定标文件的时间范围限制
+ddpsr	help_trend	拟合定标参数的演化规律
+ddpsr	help_o	输出文件名
+ddpsr	help_fr	输出频率范围，单位MHz，以逗号分隔
+ddpsr	help_d	脉冲星色散量
+ddpsr	help_n	脉冲星名
+ddpsr	help_e	脉冲星星历表文件名
+ddpsr	help_z	频域干扰通道数记录文件
+ddpsr	help_r	反转频带
+ddpsr	help_m	处理线程数
+ddpsr	help_w	输出时覆盖已有同名文件
+ddpsr	info_ana	提示：正在分析处理参数……
+ddpsr	info_pnf	提示：正在处理噪声数据……
+ddpsr	info_con	提示：正在构造输出文件……
+ddpsr	info_ddd	提示：正在进行消色散……
+ddpsr	warning_crset	Warning: 计算演化定标参数所使用文件的时间许可范围不能大于计算单值定标参数所使用文件的时间许可范围，因此在处理时将使后者等于前者。
+ddpsr	warning_nds	Warning: 计算中使用的噪声数据时间过短，因此可能无法获得精度较高的定标参数。
+ddpsr	warning_cpne	Warning: 由于只有一个定标文件，因此无法计算定标参数的演化。
+ddpsr	warning_1sne	Warning: 由于定标文件中只有一组定标参数，因此无法计算定标参数的演化。
+ddpsr	warning_orne	Warning: 使用有效定标参数段无法插值获得观测区间的定标参数，因此使用最接近观测数据时间的定标参数组进行定标。
+ddpsr	error_fdp	文件%s具有不同的参数：%s.
+ddpsr	error_nfn	文件名%s无效。
+ddpsr	error_nff	文件%s无效。
+ddpsr	error_dnc	数据文件不连续。
+ddpsr	error_cpi	定标文件时间限制范围参数无效。
+ddpsr	error_cfni	定标文件名无效。
+ddpsr	error_lfnc	用于定标的LD文件不是定标参数文件。
+ddpsr	error_lcdt	LD定标参数文件和观测数据不是来自同一个望远镜。
+ddpsr	error_lcdc	LD定标参数文件和观测数据的频率通道数不同。
+ddpsr	error_npg	噪声周期未给出。
+ddpsr	error_sflte	起始频率大于截止频率。
+ddpsr	error_oif	输入频率超限。
+ddpsr	error_nfm	-n与-e最多只能指定其中之一
+ddpsr	error_ndm	当指定脉冲星名或星历表时，不能再单独指定色散量。
+ddpsr	error_npn	脉冲星名无效。
+ddpsr	error_dmp	需要给出色散量。
+ddpsr	error_zfi	频域干扰通道数记录文件名无效。
+ddpsr	error_zno	频域干扰通道数超限。
+ddpsr	error_pnl	线程数过大（超过20线程）！
+ddpsr	error_nds	定标数据长度过短。
+ddpsr	error_cfto	定标文件时间仅在观测数据一侧，无法使用定标文件估计观测数据时定标参数演化特征。
+ddpsr	error_cfta	定标文件超出许可时间范围。
+ddpsr	error_ftoe	观测数据时间超出定标文件可预测范围。
+ddpsr	error_ncs	在观测数据时间附近未找到有效的定标参数段。
+ddpsr	error_cfu	定标文件格式无法识别。
+ddpsr	info_pros	提示：正在处理第%s个PSRFITS文件...
+ddpsr	info_pft	提示：处理第%s个PSRFITS文件共使用了%s秒。
+# dfpsr.py
+dfpsr	help	消色散并折叠PSRFITS格式数据。
+dfpsr	help_filename	输入PSRFITS格式文件名或文件名列表
+dfpsr	help_h	显示该帮助信息并退出
+dfpsr	help_v	显示程序版本并退出
+dfpsr	help_verbose	输出处理过程信息
+dfpsr	help_a	偏振定标文件名或文件名列表
+dfpsr	help_cal_period	偏振定标文件的噪声数据周期（单位：秒，FAST常用噪声周期：0.100663296，0.201326592，1.00663296，2.01326592）
+dfpsr	help_subi	使用子积分为单位处理定标文件（假定定标文件的周期是子积分的整数倍）
+dfpsr	help_cal_para	设定有效定标文件的时间范围
+dfpsr	help_trend	假定定标参数存在线性演化并拟合
+dfpsr	help_o	输出文件名
+dfpsr	help_fr	指定输出数据频率范围，单位MHz，以逗号分隔
+dfpsr	help_d	脉冲星色散量
+dfpsr	help_p	脉冲星周期
+dfpsr	help_n	脉冲星名
+dfpsr	help_e	脉冲星星历表文件名
+dfpsr	help_c	计算脉冲相位时使用的切比雪夫多项式阶数
+dfpsr	help_b	每周期的相位点数
+dfpsr	help_s	子积分时间长度（秒）
+dfpsr	help_nsub	总的子积分数
+dfpsr	help_sub_nperiod	每个子积分的周期数
+dfpsr	help_z	频域干扰通道数记录文件
+dfpsr	help_r	反转频带
+dfpsr	help_l	大内存下使用可提升数据处理速度
+dfpsr	help_m	处理线程数
+dfpsr	help_w	输出时覆盖已有同名文件
+dfpsr	help_extrapolate	预测脉冲相位时对时间标准转换参数与EOPC参数进行外插计算（上限100天）
+dfpsr	info_ana	提示：正在分析处理参数……
+dfpsr	info_pnf	提示：正在处理噪声数据……
+dfpsr	info_con	提示：正在构造输出文件……
+dfpsr	info_ddd	提示：正在进行折叠与消色散……
+dfpsr	info_pros	提示：正在处理第%s个PSRFITS文件...
+dfpsr	info_pft	提示：处理第%s个PSRFITS文件共使用了%s秒。
+dfpsr	warning_crset	Warning: 计算演化定标参数所使用文件的时间许可范围不能大于计算单值定标参数所使用文件的时间许可范围，因此在处理时将使后者等于前者。
+dfpsr	warning_nds	Warning: 计算中使用的噪声数据时间过短，因此可能无法获得精度较高的定标参数。
+dfpsr	warning_cpne	Warning: 由于只有一个定标文件，因此无法计算定标参数的演化。
+dfpsr	warning_1sne	Warning: 由于定标文件中只有一组定标参数，因此无法计算定标参数的演化。
+dfpsr	warning_orne	Warning: 使用有效定标参数段无法插值获得观测区间的定标参数，因此使用最接近观测数据时间的定标参数组进行定标。
+dfpsr	warning_dts	Warning: 子积分时长过短，因此输出文件为单脉冲模式
+dfpsr	warning_oldcd	Warning: 钟差文件过于老旧，因此使用外插值代替，请及时更新（README中有详细更新方法）。
+dfpsr	warning_oldtc	Warning: 时间标准转换与EOPC参数过期，因此使用外插值代替，请运行update_cv.py以进行更新。
+dfpsr	error_fdp	文件%s具有不同的参数：%s.
+dfpsr	error_nfn	文件名%s无效。
+dfpsr	error_nff	文件%s无效。
+dfpsr	error_dnc	数据文件不连续。
+dfpsr	error_cpi	定标文件时间限制范围参数无效。
+dfpsr	error_cfni	定标文件名无效。
+dfpsr	error_lfnc	用于定标的LD文件不是定标参数文件。
+dfpsr	error_lcdt	LD定标参数文件和观测数据不是来自同一个望远镜。
+dfpsr	error_lcdc	LD定标参数文件和观测数据的频率通道数不同。
+dfpsr	error_npg	噪声周期未给出。
+dfpsr	error_sflte	起始频率大于截止频率。
+dfpsr	error_oif	输入频率超限。
+dfpsr	error_nfm	-n与-e最多只能指定其中之一。
+dfpsr	error_pne	在使用脉冲星名或脉冲星星历表时，不能同时指定脉冲周期。
+dfpsr	error_npn	脉冲星名无效。
+dfpsr	error_ppp	需要给出脉冲星信息。
+dfpsr	error_bdp	色散与脉冲周期都需要给出。
+dfpsr	error_sfm	--sublen，--nsub与--sub_nperiod最多只能指定其中一项。
+dfpsr	error_dts	子积分时间过短。
+dfpsr	error_sin	子积分数不能为负数。
+dfpsr	error_pnn	一个子积分内的脉冲数不能为负数。
+dfpsr	error_pbnl	每个周期内的相位点数过多。
+dfpsr	error_zfi	频域干扰通道数记录文件名无效。
+dfpsr	error_zno	频域干扰通道数超限。
+dfpsr	error_mfns	在Windows下不支持多线程处理！
+dfpsr	error_pnl	线程数过大（超过20线程）！
+dfpsr	error_nds	定标数据长度过短。
+dfpsr	error_cfto	定标文件时间仅在观测数据一侧，无法使用定标文件估计观测数据时定标参数演化特征。
+dfpsr	error_cfta	定标文件超出许可时间范围。
+dfpsr	error_ftoe	观测数据时间超出定标文件可预测范围。
+dfpsr	error_ncs	在观测数据时间附近未找到有效的定标参数段。
+dfpsr	error_cfu	定标文件格式无法识别。
+dfpsr	error_ccfo	钟差文件过于老旧，请进行更新（README中有详细更新方法）。
+dfpsr	error_tceo	时间标准转换与EOPC参数过期，请运行update_cv.py以进行更新。
+# ld.py
+ld	error_ndd	数据维度数错误。
+ld	error_nf	LD文件无效。
+ld	error_nshape	数据形状应该为4个整数。
+ld	error_nds	数据大小与文件不符。
+ld	error_lcn	输入频率通道数大于数据总频率通道数。
+ld	error_lpn	输入偏振通道数大于数据总频率通道数。
+ld	error_opn	输入偏振通道数超限。
+ld	error_ocn	输入频率通道数超限。
+ld	error_nsn	输入子积分范围不正确。
+ld	error_nbn	输入相位点范围不正确。
+ld	error_ldm	数据大小超过可用内存。
+ld	error_lpn	输入周期数超过数据周期总数.
+ld	error_obn	输入相位点数超限。
+ld	error_ncw	数据中不包含频率通道权重信息。
+ld	error_nw	数据中不包含数据权重信息。
+ld	error_nwi	请给出正确的加权方式。
+ld	error_ni	数据信息格式不正确。
+ld	error_np	参数名错误。
+# ldaz.py
+ldaz	help	分析LD文件中的频域干扰。
+ldaz	help_filename	输入LD格式文件名或文件名列表
+ldaz	help_h	显示本帮助信息并退出
+ldaz	help_v	显示程序版本并退出
+ldaz	help_verbose	输出处理过程信息
+ldaz	help_j	使用定标参数判断有干扰频率通道的标准
+ldaz	help_p	对定标参数进行切比雪夫多项式拟合的阶数
+ldaz	help_cr	指定频率通道范围：起始通道数,结束通道数
+ldaz	help_m	修改LD文件中相应参数
+ldaz	help_c	修改LD文件数据
+ldaz	info_ana	提示：正在分析参数...
+ldaz	error_nld	文件%s不是LD格式。
+ldaz	error_nvn	文件%s不存在。
+ldaz	error_nvld	LD文件%s无效。
+ldaz	error_npd	文件%不是脉冲星数据文件。
+ldaz	error_dcn	多个LD文件的通道数不一致。
+ldaz	error_ncn	起始通道数大于结束通道数。
+ldaz	error_ocr	输入频率通道范围超限。
+# ldcal.py
+ldcal	help	处理PSRFITS格式的噪声定标数据以获得定标参数，或者将多个LD定标参数文件合并为一个。
+ldcal	help_h	显示本帮助信息并退出
+ldcal	help_v	显示程序版本并退出
+ldcal	help_verbose	输出处理过程信息
+ldcal	help_filename	文件名或文件名列表
+ldcal	help_cal_period	偏振定标文件的噪声数据周期（单位：秒，FAST常用噪声周期：0.100663296，0.201326592，1.00663296，2.01326592）
+ldcal	help_o	输出文件名
+ldcal	help_r	反转频带
+ldcal	help_trend	假定定标参数存在线性演化并拟合
+ldcal	help_s	使用子积分为单位处理定标文件（假定定标文件的周期是子积分的整数倍）
+ldcal	help_w	输出时覆盖已有同名文件
+ldcal	info_ana	提示：正在分析处理参数……
+ldcal	info_con	提示：正在构造输出文件……
+ldcal	info_pros	提示：正在处理噪声数据……
+ldcal	warning_br	Warning: LD格式数据的频带将不会反转，参数-r将被忽略。
+ldcal	warning_is	Warning: 参数-s将被忽略。
+ldcal	error_dp	%s格式文件具有不同参数：%s。
+ldcal	error_ifn	%s格式文件名%s无效。
+ldcal	error_if	%s格式文件%s无效。
+ldcal	error_nc	%s格式文件%s不是定标文件。
+ldcal	error_ns	%s格式文件%s不是分段的定标文件。
+ldcal	error_nce	无法利用单个定标文件获得定标参数演化信息。
+# ldcomp.py
+ldcomp	help	压缩LD数据文件。
+ldcomp	help_h	显示本帮助信息并退出
+ldcomp	help_v	显示程序版本并退出
+ldcomp	help_filename	输入待压缩文件名或文件名列表
+ldcomp	help_d	修改文件色散量
+ldcomp	help_nchan	将文件频率通道数压缩成NCHAN_NEW个
+ldcomp	help_F	将文件频率通道数压缩为1
+ldcomp	help_nsub	将文件子积分数压缩成NSUB_NEW个
+ldcomp	help_T	将文件子积分数压缩为1
+ldcomp	help_b	将每周期相位点数压缩成NBIN_NEW个
+ldcomp	help_B	将每周期压缩为1点
+ldcomp	help_P	只保留斯托克斯参数I
+ldcomp	help_fr	限制输出文件的频率范围
+ldcomp	help_z	频域干扰通道数记录文件
+ldcomp	help_w	压缩时使用二维权重参数加权后的数据
+ldcomp	help_o	输出文件名（仅适用于单个输入文件）
+ldcomp	help_e	输出扩展后缀，输出文件名将被设置为INPUT_EXT.ld
+ldcomp	warning_ifw	Warning: 文件%s中的数据不具有二维权重信息，因此参数-w被忽略。
+ldcomp	warning_sofn	Warning: 文件%s的对应输出文件名被记为%s.ld。
+ldcomp	warning_fn	Warning: 文件%s无效，因此将不会被压缩。
+ldcomp	warning_snf	Warning: 文件{1}的子脉冲数无法压缩为{0}，其子脉冲数将被设置为{2}。
+ldcomp	error_ue	文件%s不存在。
+ldcomp	error_ofn	只有输入单个文件时才能指定输出文件名。
+ldcomp	error_ofne	不能同时指定输出文件名与输出文件名后缀。
+ldcomp	error_ofno	输入文件名已存在，请提供新的名称。
+ldcomp	error_1fr	至少选择-f，-F，-t，-T，-b与-B其中一个选项。
+ldcomp	error_mff	-f与-F只能指定其中之一。
+ldcomp	error_mft	-t与-T只能指定其中之一。
+ldcomp	error_mfb	-b与-B只能指定其中之一。
+ldcomp	error_joke	开什么玩笑？你想把数据压缩成一个点？
+ldcomp	error_cnl	输入频率通道数大于某些数据的频率通道数。
+ldcomp	error_snl	输入子积分数在于某些数据的子积分数。
+ldcomp	error_bnl	输入每周期相位点数大于某些数据的每周期相位点数。
+ldcomp	error_nzf	频域干扰通道数记录文件无效。
+ldcomp	error_zno	频域干扰通道数超限。
+ldcomp	error_sfl	起始频率大于截止频率。
+ldcomp	error_ifo	输入频率超限。
+# ldconv.py
+ldconv	help	将LD格式文件转换为其它格式。
+ldconv	help_h	显示本帮助信息并退出
+ldconv	help_v	显示程序版本并退出
+ldconv	help_filename	待转换LD文件
+ldconv	help_m	数据转换输出的格式，如: ld->dat, ToA->tim
+ldconv	help_o	输出文件名
+ldconv	error_nfn	输入文件名无效。
+ldconv	error_nof	输出文件格式未能识别。
+# lddm.py
+lddm	help	计算数据的最佳DM值。在图像窗口下按's'可以保存图片。
+lddm	help_h	显示本帮助信息并退出
+lddm	help_v	显示程序版本并退出
+lddm	help_filename	输入LD格式文件名或文件名列表
+lddm	help_fr	限制修正所用数据的频率范围
+lddm	help_sr	限制修正所用数据的子积分范围
+lddm	help_n	分析时将数据的每个周期进行归一化
+lddm	help_k	仅输出修正结果，不以图像展示
+lddm	help_o	将修正后的数据输出到指定文件
+lddm	help_m	在输入数据中增加拟合结果参数
+lddm	help_c	使用拟合得到的最佳结果对数据进行修正
+lddm	help_d	拟合色散量时使用的中心色散量值
+lddm	help_i	拟合色散量时使用的色散量值范围宽度
+lddm	help_degree	使用N阶多项式拟合色散量值曲线
+lddm	help_z	频域干扰通道数记录文件
+lddm	help_p	指定修正色散量的最大误差
+lddm	error_fue	文件%s不存在。
+lddm	error_zfi	频域干扰通道数记录文件无效。
+lddm	error_mfc	-m与-c只能指定其中之一。
+lddm	error_pvn	进行可视化时不能指定误差精度。
+lddm	error_vnm	对于多文件处理时不能进行可视化。
+lddm	error_zno	频域干扰通道数超限。
+lddm	error_nfr	频率范围无效。
+lddm	error_sfl	起始频率大于截止频率。
+lddm	error_ifo	输入频率超限。
+lddm	error_ibn	输入带宽过窄。
+lddm	error_nsr	子积分范围无效。
+lddm	error_ssl	起始子积分数大于截止子积分数。
+lddm	info_bdm	提示：未能获得文件%s（脉冲星%s）对应的最佳色散量。
+lddm	info_ana	提示：正在分析%s：
+lddm	info_save	提示：已保存为图像文件%s。
+lddm	warning_ilf	Warning: 文件%s不是有效的LD文件。
+lddm	input_fn	请输入图像文件名：
+# ldpara.py
 ldpara	help	展示LD文件的参数信息。
 ldpara	help_filename	输入LD格式文件名或文件名列表
 ldpara	help_h	显示本帮助信息并退出
@@ -6,6 +281,372 @@ ldpara	help_c	待展示参数列表，包括nsub，nchan，nbin，npol，stt_tim
 ldpara	help_H	列出指定文件的可展示参数
 ldpara	help_a	输出指定文件的所有可展示参数
 ldpara	help_g	待展示参数组名称，需要包含在additional_info，calibration_info，data_info，folding_info，history_info，original_data_info，telescope_info，template_info，pulsar_info中
-ldpara	info_np	参数%s无法获取。
+ldpara	info_np	提示：参数%s无法获取。
 ldpara	error_nf	需要有效的文件名称。
-ldpara	info_ng	参数组名称%s无法识别。
+ldpara	info_ng	提示：参数组名称%s无法识别。
+# ldplot.py
+ldplot	help	绘制LD数据的对应图像。
+ldplot	help_h	显示本帮助信息并退出
+ldplot	help_v	显示程序版本并退出
+ldplot	help_filename	输入LD格式文件名或文件名列表
+ldplot	help_f	绘制频域图像
+ldplot	help_t	绘制时域图像
+ldplot	help_p	绘制脉冲轮廓图像
+ldplot	help_d	绘制动态谱图像
+ldplot	help_sec	绘制动态谱的二次谱图像
+ldplot	help_l	绘制带有偏振参数的脉冲轮廓图像
+ldplot	help_N	将图像分为(x,y)个子图或者输入总子图数由程序自动选择子图排列方式
+ldplot	help_fr	限制频率范围为(f1,f2) MHz
+ldplot	help_cr	限制频率通道范围为(chan1,chan2)
+ldplot	help_tr	限制时间范围为(t1,t2)秒
+ldplot	help_sr	限制子积分范围为(sub1,sub2)
+ldplot	help_br	限制脉冲相位范围为(p1,p2)，总相位范围为(0,1)
+ldplot	help_binr	限制脉冲相位点范围为(bin1,bin2)
+ldplot	help_polar	绘制指定的斯托克斯参数（4个斯托克斯参数IQUV分别为0123，默认选择0）
+ldplot	help_r	绘制时将脉冲相位旋转一定相位（取值在-1到1之间），正数代表右移，负数代表左移
+ldplot	help_n	展示时将每个周期的数据进行归一化
+ldplot	help_s	按指定文件名保存图像，可指定为PNG，EPS和PDF
+ldplot	warning_psi	Warning: 绘制偏振信息时不需指定偏振通道数。
+ldplot	info_nfn	提示：LD格式文件%s不存在。
+ldplot	info_fns	提示：%s中的数据无法绘制。
+ldplot	info_ffn	提示：输入频率超过文件%s的频率范围，因此该文件将不被绘制。
+ldplot	info_ffo	提示：输入频率超过文件%s的频率范围，因此在绘制该文件时只保留与输入频率范围重合的数据。
+ldplot	info_frfn	提示：输入频率范围对文件%s过窄，因此该文件将不被绘制。
+ldplot	info_tfn	提示：输入时间超过文件%s的时间范围，因此该文件将不被绘制。
+ldplot	info_tfo	提示：输入时间超过文件%s的时间范围，因此在绘制该文件时只保留与输入时间范围重合的数据。
+ldplot	info_trfs	提示：输入时间范围对文件%s过短，因此该文件将不被绘制。
+ldplot	info_prfn	提示：输入相位范围对文件%s过窄，因此该文件将不被绘制。
+ldplot	info_bfn	提示：输入相位点对文件%s超限，因此该文件将不被绘制。
+ldplot	info_bfo	提示：输入相位点对文件%s超限，因此在绘制该文件时只保留与输入相位点范围重合的数据。
+ldplot	info_pfo	提示：输入偏振通道数对文件%s超限，因此该文件将不被绘制。
+ldplot	info_fnp	提示：文件%s的偏振通道数不支持绘制偏振信息，因此该文件将不被绘制。
+ldplot	info_fnss	提示：文件%s的子积分数与频率通道数不支持绘制二次谱信息，因此该文件将不被绘制。
+ldplot	info_fn	提示：一共将绘制%s个图像。
+ldplot	info_pros	提示：正在处理数据……
+ldplot	info_abo	提示：程序中止。
+ldplot	info_mps	提示：可绘制子图数小于指定的子图排布方式中的子图数，因此将自动调整子图排布。
+ldplot	error_mff	--cr与--fr至多指定其中之一。
+ldplot	error_mft	--sr与--tr至多指定其中之一。
+ldplot	error_mfp	--br，--binr与-r至多指定其中之一。
+ldplot	error_scl	起始频率通道数大于截止频率通道数。
+ldplot	error_ico	输入频率通道数超限。
+ldplot	error_sfl	起始频率大于截止频率。
+ldplot	error_ifo	输入频率超限。
+ldplot	error_ssl	起始子积分数大于截止子积分数。
+ldplot	error_iso	输入子积分数超限。
+ldplot	error_stl	起始时间大于截止时间。
+ldplot	error_ito	输入时间超限。
+ldplot	error_ibo	输入每周期相位点数超限。
+ldplot	error_ipro	输入相位范围超限。
+ldplot	error_spee	起始相位不能等于截止相位。
+ldplot	error_ipo	输入偏振超限。
+ldplot	error_mfs	-f，-t，-p，-d，-l与--sec至多指定其中之一。
+ldplot	error_lfs	-f，-t，-p，-d，-l与--sec至少需要指定其中之一。
+ldplot	error_mpl	一张图上不能绘制太多的子图。
+ldplot	error_noe	输出图像文件名已存在，请指定其它文件名。
+# ldrm.py
+ldrm	help	计算数据的最佳RM值。在图像窗口下按's'可以保存图片。
+ldrm	help_h	显示本帮助信息并退出
+ldrm	help_v	显示程序版本并退出
+ldrm	help_filename	输入LD格式文件名或文件名列表
+ldrm	help_fr	限制修正所用数据的频率范围
+ldrm	help_r	拟合用初始RM值（默认为0）
+ldrm	help_br	无脉冲辐射的相位范围PHASE0,PHASE1或相位宽度
+ldrm	help_sr	限制修正所用数据的子积分范围
+ldrm	help_k	仅输出修正结果，不以图像展示
+ldrm	help_o	将拟合获得的数据输出到指定文件
+ldrm	help_d	拟合色散量时使用的中心色散量值
+ldrm	help_i	拟合色散量时使用的色散量值范围
+ldrm	help_c	使用拟合得到的最佳结果对数据进行修正
+ldrm	help_n	拟合RM时在频域按指定比率先进行数据合并
+ldrm	help_z	频域干扰通道数记录文件
+ldrm	error_fue	文件%s不存在。
+ldrm	error_npc	文件%s中的数据是无偏振的或未定标的。
+ldrm	error_scn	文件%s的频率通道数过少，无法计算拟合RM。
+ldrm	error_zfi	频域干扰通道数记录文件无效。
+ldrm	error_vnm	对于多文件处理时不能进行可视化。
+ldrm	error_zno	频域干扰通道数超限。
+ldrm	error_nfr	频率范围无效。
+ldrm	error_sfl	起始频率大于截止频率。
+ldrm	error_ifo	输入频率超限。
+ldrm	error_ibn	输入带宽过窄。
+ldrm	error_nsr	子积分范围无效。
+ldrm	error_ssl	起始子积分数大于截止子积分数。
+ldrm	error_npr	相位范围/宽度无效。
+ldrm	error_sftl	指定合并比率参数太大。
+ldrm	info_ana	提示：正在分析%s：
+ldrm	info_save	提示：已保存为图像文件%s。
+ldrm	warning_ilf	Warning: 文件%s不是有效的LD文件。
+ldrm	input_fn	请输入图像文件名：
+# ldslc.py
+ldslc	help	将LD格式文件进行切片。
+ldslc	help_h	显示本帮助信息并退出
+ldslc	help_v	显示程序版本并退出
+ldslc	help_filename	待切片LD格式文件名或文件名列表
+ldslc	help_cr	限制频率通道范围为(chan1,chan2)
+ldslc	help_fr	限制频率范围为(f1,f2) MHz
+ldslc	help_sr	限制子积分范围为(sub1,sub2)
+ldslc	help_tr	限制时间范围为(t1,t2)秒
+ldslc	help_pr	选择一个或多个斯托克斯参数（4个斯托克斯参数IQUV分别为0123）
+ldslc	help_nt	在时域切成NT片
+ldslc	help_nf	在频域切成NF片
+ldslc	help_lt	在时域切片时每片长度（秒）
+ldslc	help_lf	在频域切片时每片带宽（MHz）
+ldslc	help_ns	在时域切片时每片子积分数目
+ldslc	help_nc	在频域切片时每片频率通道数
+ldslc	help_o	输出文件名
+ldslc	warning_tnl	Warning: 时域切片数需要小于原始子积分数。
+ldslc	warning_tps	Warning: 每片时间跨度需要大于子积分长度。
+ldslc	warning_tpl	Warning: 每片时间跨度需要小于数据长度。
+ldslc	warning_snl	Warning: 每片子积分数需要小于原始子积分数。
+ldslc	warning_fnl	Warning: 频域切片数需要小于原始频率通道数。
+ldslc	warning_bps	Warning: 每片带宽需要大于频率通道宽度。
+ldslc	warning_bpl	Warning: 每片带宽需要小于数据带宽。
+ldslc	warning_cnl	Warning: 每片频率通道数需要小于原始频率通道数。
+ldslc	error_nfn	LD文件名无效。
+ldslc	error_ndf	数据类型不支持切片。
+ldslc	error_nfrs	至少指定一个数据范围参数或数据切片参数。
+ldslc	error_mff	--cr与--fr至多指定其中之一。
+ldslc	error_mft	--sr与--tr至多指定其中之一。
+ldslc	error_mfst	--nt，--lt与--ns至多指定其中之一。
+ldslc	error_mfsf	--nf，--lf与--nc至多指定其中之一。
+ldslc	error_sfl	起始频率大于截止频率。
+ldslc	error_ifo	输入频率超限。
+ldslc	error_scl	起始频率通道数大于截止频率通道数。
+ldslc	error_ico	输入频率通道数超限。
+ldslc	error_stl	起始时间大于截止时间。
+ldslc	error_ito	输入时间超限。
+ldslc	error_ssl	起始子积分数大于截止子积分数。
+ldslc	error_iso	输入子积分数超限。
+ldslc	error_ipo	输入偏振通道数超限。
+ldslc	error_tnn	时域切片数不能为负数。
+ldslc	error_tsn	每片时间跨度不能为负数。
+ldslc	error_snn	每片子积分数不能为负数。
+ldslc	error_fnn	频域切片数不能为负数。
+ldslc	error_bwn	每片带宽不能为负数。
+ldslc	error_cnn	每片频率通道数不能为负数。
+ldslc	error_nfe	输出文件名已存在，请指定其它文件名。
+ldslc	error_onfe	其中一个输出文件名已存在，请指定其它文件名。
+# ldtem.py
+ldtem	help	利用多个脉冲星数据生成脉冲轮廓模板。
+ldtem	help_h	显示本帮助信息并退出
+ldtem	help_v	显示程序版本并退出
+ldtem	help_filename	输入LD格式文件名或文件名列表
+ldtem	help_T	以文件代替子积分为单位进行轮廓处理
+ldtem	help_fr	仅计算某些频率范围
+ldtem	help_sr	仅计算某些子积分范围
+ldtem	help_z	频域干扰通道数记录文件
+ldtem	help_o	输出文件名
+ldtem	help_d	程序在进行脉冲轮廓对齐前不进行消色散处理
+ldtem	help_l	在傅立叶频域进行线性拟合所用的点数
+ldtem	help_b	输出标准脉冲轮廓的点数
+ldtem	help_a	不丢弃低信噪比的数据
+ldtem	help_r	仅保留标准轮廓的低频特征
+ldtem	help_c	假定标准轮廓存在两种成分
+ldtem	help_freqtem	生成二维频域测时模板
+ldtem	help_p	使用多峰拟合生成脉冲轮廓模板
+ldtem	error_zfi	频域干扰通道数记录文件无效。
+ldtem	error_zno	频域干扰通道数超限。
+ldtem	error_snl	起始子积分数大于截止子积分数。
+ldtem	error_iso	输入子积分数超限。
+ldtem	error_sfl	起始频率大于截止频率。
+ldtem	error_one	输出文件名已存在，请指定其它文件名。
+ldtem	error_nfn	LD文件名%s无效。
+ldtem	error_nf	LD文件%s无效。
+ldtem	error_dft	文件%s中记录的脉冲星与其它数据不同。
+ldtem	error_dfr	输入数据的频率范围不同。
+ldtem	error_ifo	输入频率超限。
+ldtem	error_dfp	数据频率参数不同，因此不能构造二维频域测时模板。
+ldtem	error_mcnr	多成分模式不支持构造低频特征模板。
+ldtem	error_mcnp	多成分板式不支持多峰拟合。
+ldtem	error_mfnp	二维频域测时模板模式不支持多峰拟合。
+ldtem	error_nfi	用于线性拟合的傅立叶频域点数无效。
+ldtem	error_ue	未知错误，生成的脉冲轮廓模板在所有相位点上均为零。
+ldtem	info_fanpa	提示：无法自动添加新的峰，请手动添加。
+ldtem	info_pnl	提示：峰数目过多，拟合程序已停止。
+ldtem	info_fpf	提示：新增峰%s后拟合失败。
+ldtem	info_zeb	提示：生成的脉冲轮廓模板在所有相位点上均为零，因此它将不会被保存。
+ldtem	info_help	\nldtem交互命令\n\n黑色实线：待拟合脉冲轮廓\n黄色点线：拟合的多个峰\n红色虚线：拟合产生的多峰曲线\n绿色点虚线：一个新增的待拟合峰\n蓝色实线：拟合残差\n\n鼠标：\n  左键点选一个峰的中心位置，再次点击确定峰宽度，再次点击确定峰高度。\n键盘：\n  h  展示此帮助信息\n  f  利用新增绿色点虚线峰拟合脉冲轮廓\n  r  重新点选绿色点虚线峰\n  q  退出多峰拟合并保存脉冲轮廓模板\n  b  退出多峰拟合，不保存\n\n
+# ldtim.py
+ldtim	help	拟合ToA获得最佳的脉冲星星历参数。
+ldtim	help_filename	输入LD格式或TXT格式ToA文件
+ldtim	help_h	显示本帮助信息并退出
+ldtim	help_v	显示程序版本并退出
+ldtim	help_p	输入星历表文件
+ldtim	help_fit	待拟合参数
+ldtim	help_i	绘图模式：只保留拟合后数据（post），同时显示拟合前与拟合后数据（prepost），绘制色散变化（dm）
+ldtim	help_time	纵轴绘制时间残差而不是相位残差
+ldtim	help_s	将拟合后的脉冲星参数与残差存入文件
+ldtim	help_x	绘图的X轴：MJD日期（mjd），轨道相位（orbit），本地恒星时（lst），一年中的日期（year）
+ldtim	help_m	将同一次观测的不同脉冲到达时间合并
+ldtim	help_e	拟合所用数据的误差上限
+ldtim	help_c	计算所用的拟合残差的上限
+ldtim	help_z	ToA的零点
+ldtim	help_d	只拟合指定日期范围内的ToA，参数格式为"DATE0,DATE1"
+ldtim	info_save	提示：拟合参数与残差分别被存入文件%s与%s中。
+ldtim	error_ntfn	ToA文件名无效。
+ldtim	error_ndr	指定日期范围无效。
+ldtim	error_nsfn	保存文件名不能多于2个。
+ldtim	error_pfe	指定的保存脉冲星参数的文件已存在，请指定其它文件名。
+ldtim	error_rfe	指定的保存脉冲星测时残差的文件已存在，请指定其它文件名。
+# ldtimi.py
+ldtimi	help	交互式拟合ToA获得最佳的脉冲星星历参数。
+ldtimi	help_filename	输入LD格式或TXT格式ToA文件
+ldtimi	help_h	显示本帮助信息并退出
+ldtimi	help_v	显示程序版本并退出
+ldtimi	help_p	脉冲星星历文件
+ldtimi	help_tr	待拟合时间段
+ldtimi	warning_ftoa	Warning: ToA数目过少，无法进行拟合。
+ldtimi	warning_ndfti	Warning: 脉冲数据文件未找到，使用ToA文件所在文件夹下的同名文件代替。
+ldtimi	warning_ndfni	Warning: 脉冲数据文件未找到，使用此文件夹下的同名文件代替。
+ldtimi	warning_nb	Warning: 脉冲星星历不包含双星参数，因此X轴不能设为轨道相位。
+ldtimi	error_nfn	ToA文件名无效。
+ldtimi	error_slte	起始时间晚于截止时间。
+ldtimi	tk_niel	输入误差上限值无效！
+ldtimi	info_rms	提示：拟合残差的RMS（秒）：
+ldtimi	info_ndf	提示：相应文件不存在。
+ldtimi	info_pp	脉冲星参数：
+ldtimi	info_help	\nldtimi交互命令\n\n鼠标：\n  左键拖拽一个矩形区域，用于选择或反选（选择区域时按住v键或左侧Shift键进行反选）区域内的ToA；单击某一ToA可进行单点选择或反选。\n    --拖拽一个矩形区域时，如按住z键或左侧Ctrl键可对所选区域进行放大。\n  右键拖拽一个矩形区域，删除或取消删除（选择区域时按住v键或左侧Shift键进行取消删除）区域中的ToA；单击某一ToA可进行单点删除或取消删除。\n  中键单击某一ToA可查看对应脉冲轮廓图，左键单击图像或按ESC键关闭图像。\n\n键盘：\n  h    展示帮助信息\n  u    撤消上一步操作（不包括选点与缩放）\n  y    重做上一步撤销的操作\n  r    从放大后区域返回初始区域\n  e    重置选点\n  b    重新进行拟合\n  m    将邻近脉冲到达时间合并/取消合并\n  a/d  对选中的点或鼠标右侧区域的脉冲到达时间增加/扣减1个脉冲周期\n  f    拟合所选脉冲到达时间，同时在命令行中输出拟合残差标准差\n  p    在命令行中输出当前选中的脉冲星参数值\n  s    将当前拟合的脉冲星测时模型保存到指定文件\n  x    将当前脉冲星测时残差保存到指定文件\n  q    退出程序\n\n
+# ldtoa.py
+ldtoa	help	利用脉冲轮廓模板获得多个脉冲星数据对应的ToA。
+ldtoa	help_h	显示本帮助信息并退出
+ldtoa	help_v	显示程序版本并退出
+ldtoa	help_filename	输入LD格式文件名或文件名列表
+ldtoa	help_p	轮廓模板文件名
+ldtoa	help_freq_align	仅使用与轮廓模板相同的频率范围的数据
+ldtoa	help_T	生成每个文件对应的ToA而不是每个子脉冲的
+ldtoa	help_fr	计算使用的频率范围
+ldtoa	help_sr	计算使用的子积分范围
+ldtoa	help_br	使用模板的对应相位范围进行脉冲到达时间测量
+ldtoa	help_z	频域干扰通道数记录文件
+ldtoa	help_Z	与轮廓模板去掉相同的频率通道
+ldtoa	help_o	输出文件名
+ldtoa	help_d	程序不对观测数据进行重新消色散
+ldtoa	help_l	在傅立叶频域进行线性拟合所用的点数
+ldtoa	help_n	在每个周期进行归一化
+ldtoa	help_freqtem	使用二维频域模板进行脉冲到达时间测量
+ldtoa	help_a	进行比对计算的方法（默认：PGS）
+ldtoa	info_disf	提示：在计算ToA时未使用文件%s。
+ldtoa	info_diss0	提示：在计算ToA时未使用下列数据：%s。
+ldtoa	info_diss1	文件{1}的第{0}个子积分
+ldtoa	error_ifn	模板文件名无效。
+ldtoa	error_zfi	频域干扰通道数记录文件名无效。
+ldtoa	error_zno	频域干扰通道数超限。
+ldtoa	error_snl	起始子积分数大于截止子积分数。
+ldtoa	error_iso	输入子积分数超限。
+ldtoa	error_ftnd	使用二维频域模板测时时无需改正色散。
+ldtoa	error_sfl	起始频率大于截止频率。
+ldtoa	error_pri	指定相位范围无效。
+ldtoa	error_prs	指定相位范围过小。
+ldtoa	error_nfn	LD文件名%s无效。
+ldtoa	error_nf	LD文件%s无效。
+ldtoa	error_dft	文件%s中记录的脉冲星与模板文件不同。
+ldtoa	error_dnst	数据来自不同的望远镜。
+ldtoa	error_dcn	数据频率通道数与模板不同，因此无法使用模板的权重对数据进行消干扰。
+ldtoa	error_dbt	模板与数据频带不同，不能进行比较。
+ldtoa	error_dfr	数据与模板有着不同的频率范围，因此无法使用相同的频域干扰通道数进行消干扰。
+ldtoa	error_bno	数据与模板频带无重合部分。
+ldtoa	error_ifo	输入频率超限。
+ldtoa	error_dfp	由于数据与模板的频率通道记录方式不同，因此无法获得二维频域测时结果。
+ldtoa	error_one	输出文件名已存在，请指定其它名称。
+ldtoa	error_mcnf	多成分频二维频域脉冲轮廓模板不能用于非二维频域测时。
+ldtoa	error_ft1f	使用单频模板无法进行二维频域测时。
+ldtoa	error_nfi	用于线性拟合的傅立叶频域点数无效。
+ldtoa	error_tmr	指定测时方法无法识别。
+# ldzap.py
+ldzap	help	消除LD格式文件中的干扰。
+ldzap	help_filename	待去除干扰的文件名
+ldzap	help_h	显示本帮助信息并退出
+ldzap	help_v	显示程序版本并退出
+ldzap	help_z	按输入文件中的信息提前消除某些干扰
+ldzap	help_n	将数据在每个通道上进行归一化
+ldzap	help_a	使用平均值代替标准差作为辐射信息进行显示
+ldzap	help_r	不使用数据中记录的权重信息（使用原始权重）进行消干扰
+ldzap	help_p	强制在动态谱模式下一定要绘制平均脉冲轮廓（速度较慢）
+ldzap	help_o	指定输出文件名
+ldzap	warning_longt	Warning：在动态谱模式下绘制平均脉冲轮廓需要花费较长时间。
+ldzap	info_mulmode	提示：自动消干扰程序不能同时在两种模式中使用。
+ldzap	info_save	提示：消干扰矩阵已保存在%s_zap.txt文件中。
+ldzap	info_saved	提示：创建新LD格式文件%s用以保存数据。
+ldzap	info_savew	提示：数据权重已写入%s文件中。
+ldzap	info_help	\nldzap交互式命令\n\n鼠标：\n  左键       选中一个范围的起点，继续左键选择终点则放大起点与终点之间区域，或右键选择终点则消除起点与终点之间的区域\n  右键       消除鼠标所在位置对应数据通道\n  中键       在右下面板中绘制鼠标所在位置对应数据通道的脉冲轮廓\n\n键盘：\n  h          展示帮助信息\n  f          切换到频域模式\n  t          切换到时域模式\n  d          切换到动态谱模式\n  c          在频域模式下将辐射信息在频谱与定标参数间进行切换\n  u          撤消上一步消除操作\n  r          返回上一步放大区间\n  z          消除明显噪声或放宽噪声判据等级（最高5级）\n  x          降低噪声判据等级\n  o          在动态谱模式中切换显示数据为脉冲区或无脉冲区\n  s          按指定文件名保存消除噪声后的数据或修改原始数据中的权重，退出程序\n  w          修改原始数据中的权重，退出程序\n  q          退出程序
+# psr_model.py
+psr_model	warning_h4s	Warning: 由于在星历表中同时存在H4与STIG参数，所以STIG参数被忽略。
+psr_model	warning_nmp	Strong Warning: 脉冲星质量在星历表中未给出，因此在计算时采用1.4倍太阳质量作为脉冲星质量。
+psr_model	error_np	脉冲星星历表中存在一个或多个无效参数。
+psr_model	error_nb	脉冲星%s星历表中存在一个或多个双星参数，但在星历表中未指定双星模型。
+psr_model	error_nm	参数%s不属于%s模型。
+psr_model	error_nt0	在脉冲星星历表中没有T0或T0ASC参数。
+psr_model	error_nde	既不能使用DD类模型，也不能使用ELL1类模型。
+# psr_read.py
+psr_read	error_nbp0	%s模型没有参数%s。
+psr_read	error_nbp1	参数%s是双星参数，但脉冲星%s星历表中未指定双星模型。
+psr_read	error_nmp	参数%s不可以被修改。
+psr_read	error_nrp	参数%s无法识别。
+psr_read	error_nrmbp	参数%s是%s模型的必要参数，因此无法移除。
+psr_read	error_nrmp	参数%s不能被移除。
+psr_read	error_nrmpp	参数PEPOCH在星历表中存在频率导数参数时无法被移除。
+psr_read	error_npn	星历表中不含脉冲星名。
+psr_read	error_npu	星历表中应指明参数计量单位制（UNITS）为TDB或TCB。
+psr_read	error_wfra	RA的格式不正确。
+psr_read	error_wfdec	DEC的格式不正确。
+psr_read	error_npp	星历表中未给出脉冲星位置。
+psr_read	error_npp0	星历表中未给出脉冲星周期。
+psr_read	error_pnp	星历表中含有参数%s，但不含参数%s。
+psr_read	error_npe	星历表中未给出PEPOCH参数。
+psr_read	error_nbpb	星历表中未给出双星轨道周期。
+psr_read	error_nt0om0	在双星模型%s未给出参数T0与OM，请使用ELL1类双星模型。
+psr_read	error_nt0om1	在双星模型%s未给出参数T0与OM。
+psr_read	error_ntasc0	在ELL1类双星模型中未给出参数TASC，请使用其它双星模型。
+psr_read	error_ntasc1	在ELL1类双星模型中未给出参数TASC。
+psr_read	error_nt0	星历表中未给出T0或T0ASC参数。
+psr_read	warning_ndmep	Warning: 星历表中不含DMEPOCH参数，因此使用PEPOCH代替。
+psr_read	warning_nposep	Warning: 星历表中不含POSEPOCH参数，因此使用PEPOCH代替。
+psr_read	warning_nnbp	Strong Warning: 参数%s对于%s模型是必要的。
+psr_read	warning_npv	Warning: 星历表中未指定参数版本。
+psr_read	warning_nev	Warning: 星历表中未指定星历版本。
+psr_read	warning_spnp	Strong Warning: 星历表中含有参数%s，但不含参数%s。
+psr_read	warning_ne	Warning: 参数%s的误差未给出。
+psr_read	warning_ndm	Strong Warning: 星历表中未给出DM参数，因此将DM设为0！
+psr_read	warning_nbpma	Waring: 星历表中未给出参数%s，或许可以使用%s模型。
+psr_read	warning_nbpui	Waring: 参数%s对于%s模型是较为重要的，针对目前参数组建议采用%s模型。
+psr_read	warning_nps	Warning: 星历表中的参数%s没有读取。
+# time_eph.py
+time_eph	error_ete	待计算时间早于行星历表的起始时间，请调整待计算时间或行星历表。
+time_eph	error_lte	待计算时间晚于行星历表的结束时间，请调整待计算时间或行星历表。
+time_eph	error_ntn	无法识别望远镜名称。
+time_eph	error_etc	待计算时间早于望远镜钟差的起始时间，请调整待计算时间。
+time_eph	error_ltc	待计算时间晚于望远镜钟差的结束时间，请调整待计算时间或更新望远镜钟差文件。
+time_eph	error_etg	待计算时间早于GPS钟差的起始时间，请调整待计算时间。
+time_eph	error_ltg	待计算时间晚于GPS钟差的结束时间，请调整待计算时间或更新GPS钟差文件。
+time_eph	error_etu	待计算时间早于TAI-UT1的起始时间，请调整待计算时间。
+time_eph	error_ltu	待计算时间晚于TAI-UT1的结束时间，请调整待计算时间或更新TAI-UT1文件。
+time_eph	error_ett	待计算时间早于TAI-TT(BIPM)的起始时间，请调整待计算时间。
+time_eph	error_ltt	待计算时间晚于TAI-TT(BIPM)的结束时间，请调整待计算时间或更新TAI-TT(BIPM)文件。
+time_eph	error_eto	待计算时间早于EOPC的起始时间，请调整待计算时间。
+time_eph	error_lto	待计算时间晚于EOPC的结束时间，请调整待计算时间或更新EOPC文件。
+# update_cv
+update_cv	help	更新时间标准转换参数与EOPC参数 { (1) gps2utc, (2) leap, (3) polarmotion, (4) tai2ut1, (5) tai2tt }。
+update_cv	help_h	显示本帮助信息并退出
+update_cv	help_v	显示程序版本并退出
+update_cv	help_verbose	输出处理过程信息
+update_cv	help_u	更新指定的时间标准转换参数或EOPC参数
+update_cv	help_s	展示指定的时间标准转换参数或EOPC参数，包括 { (6) leaptxt, (7) utc2ut1 }。
+update_cv	error_nuc	指定的待更新时间标准转换参数或EOPC参数无法识别。
+update_cv	error_nsc	指定的待展示时间标准转换参数或EOPC参数无法识别。
+# update_tdiff_FAST
+update_tdiff_FAST	help	利用FAST-GPS钟差文件更新FAST望远镜的钟差信息。
+update_tdiff_FAST	help_h	显示本帮助信息并退出
+update_tdiff_FAST	help_v	显示程序版本并退出
+update_tdiff_FAST	help_verbose	输出处理过程信息
+update_tdiff_FAST	help_w	更新整个钟差文件
+update_tdiff_FAST	help_s	展示处理后的钟差信息
+update_tdiff_FAST	info_ed	提示：目前的钟差信息中已包含了全部的FAST-GPS钟差文件内容。
+# update_tdiff_FAST1
+update_tdiff_FAST1	help	利用卫星共视钟差文件更新FAST望远镜的钟差信息。
+update_tdiff_FAST1	help_h	显示本帮助信息并退出
+update_tdiff_FAST1	help_v	显示程序版本并退出
+update_tdiff_FAST1	help_verbose	输出处理过程信息
+update_tdiff_FAST1	help_w	更新整个钟差文件
+update_tdiff_FAST1	help_s	展示处理后的钟差信息
+update_tdiff_FAST1	info_ed	提示：目前程序中的钟差信息已是最新的。

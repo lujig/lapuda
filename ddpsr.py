@@ -14,32 +14,37 @@ import psr_read as pr
 import time_eph as te
 import psr_model as pm
 import subprocess as sp
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.output_text('ddpsr')
 version='JigLu_20221212'
 #
-parser=ap.ArgumentParser(prog='ddpsr',description='Dedisperse and Fold the psrfits data.',epilog='Ver '+version)
-parser.add_argument('-v','--version', action='version', version=version)
-parser.add_argument('--verbose', action="store_true",default=False,help="print detailed information")
-parser.add_argument("filename",nargs='+',help="name of file or filelist")
-parser.add_argument("-a","--cal",dest="cal",nargs='+',help="name of calibration file or calibration filelist")
-parser.add_argument("--cal_period",dest="cal_period",default=0,type=np.float64,help="period of the calibration fits file (s)")
-parser.add_argument("--subi",action="store_true",default=False,help="take one subint as the calibration unit")
-parser.add_argument("--cal_para",dest='cal_para',default='',help="the time range of the calibration file")
-parser.add_argument("--trend",action="store_true",default=False,help="fit the calibration parameter evolution")
-parser.add_argument("-o","--output",dest="output",default="psr",help="output file name")
-parser.add_argument("--fr",dest='freqrange',default=0,help="output frequency range (MHz) in form start_freq,end_freq")
-parser.add_argument('-d','--dm',dest='dm',default=0,type=np.float64,help="dispersion measure")
-parser.add_argument('-n','--pulsar_name',default=0,dest='psr_name',help='input pulsar name')
-parser.add_argument('-e','--pulsar_ephemeris',default=0,dest='par_file',help='input pulsar parameter file')
-parser.add_argument("-z","--zap",dest="zap_file",default=0,help="file recording zap channels")
-parser.add_argument("-r","--reverse",action="store_true",default=False,help="reverse the band")
-parser.add_argument("-m","--multi",dest="multi",default=0,type=int,help="number of processes")
-parser.add_argument("-w","--overwrite",action="store_true",default=False,help="overwrite the existed output file")
+parser=ap.ArgumentParser(prog='ddpsr',description=text.help,epilog='Ver '+version,add_help=False,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument('--verbose', action="store_true",default=False,help=text.help_verbose)
+parser.add_argument("filename",nargs='+',help=text.help_filename)
+parser.add_argument("-a","--cal",dest="cal",nargs='+',help=text.help_a)
+parser.add_argument("--cal_period",dest="cal_period",default=0,type=np.float64,help=text.help_cal_period)
+parser.add_argument("--subi",action="store_true",default=False,help=text.help_subi)
+parser.add_argument("--cal_para",dest='cal_para',default='',help=text.help_cal_para)
+parser.add_argument("--trend",action="store_true",default=False,help=text.help_trend)
+parser.add_argument("-o","--output",dest="output",default="psr",help=text.help_o)
+parser.add_argument("--fr",dest='freqrange',default=0,help=text.help_fr)
+parser.add_argument('-d','--dm',dest='dm',default=-1,type=np.float64,help=text.help_d)
+parser.add_argument('-n','--pulsar_name',default=0,dest='psr_name',help=text.help_n)
+parser.add_argument('-e','--pulsar_ephemeris',default=0,dest='par_file',help=text.help_e)
+parser.add_argument("-z","--zap",dest="zap_file",default=0,help=text.help_z)
+parser.add_argument("-r","--reverse",action="store_true",default=False,help=text.help_r)
+parser.add_argument("-m","--multi",dest="multi",default=0,type=int,help=text.help_m)
+parser.add_argument("-w","--overwrite",action="store_true",default=False,help=text.help_w)
 args=(parser.parse_args())
 command=['ddpsr.py']
 #
 if args.verbose:
-	sys.stdout.write('Analyzing the arguments...\n')
+	print(text.info_ana)
 filelist=args.filename
 filenum=len(filelist)
 file_t0=[]
@@ -47,16 +52,16 @@ file_time=[]
 file_len=[]
 #
 def file_error(para,filetype):
-	parser.error("Fits "+filetype+" have different parameters: "+para+".")
+	parser.error(text.error_fdp % (filetype,para))
 #
 telename,pol_type,npol,nchan,freq,bandwidth,tsamp,nsblk,bw_sign,stt_imjd,stt_smjd,stt_offs,nsub,offs_sub='','',0,0,0,0.0,0.0,0,True,0,0,0.0,0,0.0
 def file_check(fname,notfirst=True,filetype='data'):	# check the file consistency
 	if not os.path.isfile(fname):
-		parser.error('Fits '+filetype+' name is invalid.')
+		parser.error(text.error_nfn % filetype)
 	try:
 		f=ps.open(fname,mmap=True)
 	except:
-		parser.error('Fits '+filetype+' is invalid.')
+		parser.error(text.error_nff % filetype)
 	head=f['PRIMARY'].header
 	subint=f['SUBINT']
 	subint_header=subint.header
@@ -110,7 +115,7 @@ sorts=np.argsort(file_t0)
 file_len,file_t0,filelist,file_time=file_len[sorts],np.sort(file_t0),filelist[sorts],file_time[sorts]
 if len(file_len)>1:	# check the file continuity
 	if np.max(np.abs((file_len*nsblk*tsamp/86400.0+file_t0)[:-1]-file_t0[1:]))>(tsamp/86400.0):
-		parser.error("Data files are not continuous.")
+		parser.error(text.error_dnc)
 #
 if args.cal:	# check the calibration file and parameters
 	command.append('-a ')
@@ -118,15 +123,15 @@ if args.cal:	# check the calibration file and parameters
 		cal_para=args.cal_para.split(',')
 		if len(cal_para)==1:
 			try: tmp=np.float64(cal_para[0])
-			except: parser.error("The calculation parameter is invalid.")
+			except: parser.error(text.error_cpi)
 			cal_trend_eff=tmp
 			cal_seg_eff=tmp
 		elif len(cal_para)==2:
 			try: cal_trend_eff,cal_seg_eff=np.float64(cal_para)
-			except: parser.error("The calculation parameter is invalid.")
+			except: parser.error(text.error_cpi)
 			if cal_seg_eff>cal_trend_eff:
-				sys.stdout.write('Warning: The allowed time range of calibration file for single value need to be not more than that for trend fitting, and the former has been forced to be equal to the latter.\n')
-		else: parser.error("The calculation parameter is invalid.")
+				print(text.warning_crset)
+		else: parser.error(text.error_cpi)
 		command.append('--cal_para '+args.cal_para)
 	else:
 		cal_trend_eff=1.5
@@ -135,22 +140,22 @@ if args.cal:	# check the calibration file and parameters
 		if args.cal[0][-3:]=='.ld':
 			noise_mark='ld'
 			if not os.path.isfile(args.cal[0]):
-				parser.error('Calibration file name is invalid.')
+				parser.error(text.error_cfni)
 			noise=ld.ld(args.cal[0])
 			noise_info=noise.read_info()
 			if noise_info['data_info']['mode']!='cal':
-				parser.error("LD file is not caliration file.")
+				parser.error(text.error_lfnc)
 			elif telename!=noise_info['telescope_info']['telename']:
-				parser.error("LD calibration file has different telescope name.")
+				parser.error(text.error_lcdt)
 			elif nchan!=noise_info['data_info']['nchan']:
-				parser.error("LD calibration file has different channel number.")
+				parser.error(text.error_lcdc)
 		else:
 			noise_mark='fits'
 	else:
 		noise_mark='fits'
 	if noise_mark=='fits':
 		if not args.cal_period:
-			parser.error("Noise period is not given.")
+			parser.error(text.error_npg)
 		noiselist=args.cal
 		noisenum=len(noiselist)
 		noise_t0,noise_len=[],[]
@@ -172,9 +177,9 @@ if args.freqrange:
 	freq_start,freq_end=np.float64(args.freqrange.split(','))
 	chanstart,chanend=np.int16(np.round((np.array([freq_start,freq_end])-freq)/channel_width+0.5*nchan+0.5))
 	if chanstart>chanend:
-		parser.error("Starting frequency larger than ending frequency.")
+		parser.error(text.error_sflte)
 	elif chanstart<0 or chanend>nchan:
-		parser.error("Input frequency is overrange.")
+		parser.error(text.error_oif)
 else:
 	chanstart,chanend=0,nchan
 nchan_new=chanend-chanstart
@@ -185,17 +190,17 @@ freq_start,freq_end=(np.array([chanstart,chanend])-0.5*nchan-0.5)*channel_width+
 info={'data_info':{'freq_start':freq_start,'freq_end':freq_end,'nchan':1,'stt_time':stt_time,'npol':int(npol),'freq_align':freq_end-channel_width},'original_data_info':{'nbin_origin':int(nbin),'freq_start_origin':freq-bandwidth*0.5-channel_width*0.5,'freq_end_origin':freq+bandwidth*0.5-channel_width*0.5,'tsamp_origin':tsamp,'stt_time_origin':stt_time,'nchan_origin':int(nchan)},'telescope_info':{'telename':telename}}
 #
 if args.psr_name and args.par_file:	# check the conflict of dispersion flags
-	parser.error('At most one of flags -n and -p is required.')
+	parser.error(text.error_nfm)
 elif args.psr_name or args.par_file:
 	if args.dm:
-		parser.error('With pulsar name or ephemeris, DM value is needless.')
+		parser.error(text.error_ndm)
 	elif args.psr_name:
 		command.append('-n '+args.psr_name)
 		psr_name=args.psr_name
 		psr=pr.psr(psr_name)
 		psr_par=sp.getoutput('psrcat -e '+psr_name).split('\n')
 		if len(psr_par)<3:
-			parser.error('A valid pulsar name is required.')
+			parser.error(text.error_npn)
 		for i in range(len(psr_par)): psr_par[i]=psr_par[i]+'\n'
 	else:
 		command.append('-e')
@@ -219,7 +224,7 @@ elif args.psr_name or args.par_file:
 			pepoch=True
 else:
 	if not args.dm:
-		parser.error('DM should be provided.')
+		parser.error(text.error_dmp)
 	dm=args.dm
 	command.append(' -d '+str(args.dm))
 #
@@ -229,10 +234,10 @@ info['data_info']['dm']=dm
 if args.zap_file:
 	command.append('-z')
 	if not os.path.isfile(args.zap_file):
-		parser.error('The zap channel file is invalid.')
+		parser.error(text.error_zfi)
 	zchan=np.loadtxt(args.zap_file,dtype=int)
 	if np.max(zchan)>=nchan or np.min(zchan)<0:
-		parser.error('The zapped channel number is overrange.')
+		parser.error(text.error_zno)
 	weight=np.ones(nchan,dtype=np.float64)
 	weight[zchan]=0
 	info['data_info']['chan_weight']=(weight[chanstart:chanend]*1.5).tolist()
@@ -251,14 +256,13 @@ if os.path.isfile(name+'.ld'):
 			name0=name+'_'+str(tmp)
 			tmp+=1
 		name=name0
-		#parser.error('The name of output file already existed. Please provide a new name.')
 #
 if args.reverse:
 	command.append('-r')
 #
 if args.multi:
 	if args.multi>20:
-		parser.error('The processes number is too large!')
+		parser.error(text.error_pnl)
 	command.append('-m '+str(args.multi))
 #
 command=' '.join(command)
@@ -324,13 +328,13 @@ def deal_seg(n1,n2,multi=0):	# processing the noise data segments
 		noise_off=noise_data[2:(noisen_center-1)].sum(0)/noise_cum[2:(noisen_center-1)].sum().reshape(-1,1)
 		noise_on=noise_data[(noisen_center+2):-2].sum(0)/noise_cum[(noisen_center+2):-2].sum().reshape(-1,1)-noise_off
 	elif noisen>=2:
-		if not args.subi: sys.stdout.write('Warning: The noise data used in calulation is too short to get accurate calibration parameters.\n')
+		if not args.subi: print(text.warning_nds)
 		if noisen==2: tmp=0
 		else: tmp=1
 		noise_off=noise_data[:noisen_center].sum(0)/noise_cum[:noisen_center].sum().reshape(-1,1)
 		noise_on=noise_data[(noisen_center+tmp):].sum(0)/noise_cum[(noisen_center+tmp):].sum().reshape(-1,1)-noise_off
 	else:
-		parser.error('The noise data used in calulation is too short.')
+		parser.error(text.error_nds)
 	noise_a12,noise_a22=noise_on[:2]
 	noise_dphi=np.arctan2(noise_on[3],noise_on[2])
 	noise_cos,noise_sin=np.cos(noise_dphi),np.sin(noise_dphi)
@@ -338,7 +342,7 @@ def deal_seg(n1,n2,multi=0):	# processing the noise data segments
 #
 if noise_mark=='fits':	# the calibration data can be original fits data of noise or processed parameters in ld file
 	if args.verbose:
-		sys.stdout.write('Processing the noise file...\n')
+		print(text.info_pnf)
 	if args.subi:
 		noisen=np.int64(args.cal_period//(tsamp*nsblk))
 	else:
@@ -349,10 +353,10 @@ if noise_mark=='fits':	# the calibration data can be original fits data of noise
 	cumlen_noise=noise_t0-noise_t0[0]
 	if args.trend:
 		if (file_t0[-1]+1/1440.)<noise_t0[0] or (file_t0[0]-1/1440.)>noise_t0[-1]:
-			parser.error('The calibration file time is out of the interpolating range.')
+			parser.error(text.error_cfto)
 		if args.cal_para:
 			if (file_t0[0]-noise_t0[0])>cal_trend_eff/24. or (noise_t0[-1]-file_t0[-1])>cal_trend_eff:
-				parser.error('The calibration file time is out of the interpolating range.')
+				parser.error(text.error_cfto)
 		noise_time0=noise_t0[0]
 		if file_nseg>1:
 			noise_time=np.zeros(file_nseg)
@@ -380,17 +384,17 @@ if noise_mark=='fits':	# the calibration data can be original fits data of noise
 				cal_mode='trend'
 				file_nseg=noisenum
 			else:
-				sys.stdout.write('Warning: Only one file is used to do the calibration and the calibration parameters are adopted without regard to the evolution.')
+				print(text.warning_cpne)
 				if args.cal_para:
 					if (file_t0[0]-noise_t0[0])>cal_seg_eff/24. or (noise_t0[-1]-file_t0[-1])>cal_seg_eff:
-						parser.error('The calibration file time is out of the allowed range.')
+						parser.error(text.error_cfta)
 				noise_data=deal_seg(0)
 				cal_mode='single'
 		noise_data=np.polyfit(noise_time,noise_data.reshape(file_nseg,-1),1).reshape(2,4,nchan)
 	else:
 		if args.cal_para:
 			if (file_t0[0]-noise_t0[0])>cal_seg_eff/24. or (noise_t0[-1]-file_t0[-1])>cal_seg_eff:
-				parser.error('The calibration file time is out of the allowed range.')
+				parser.error(text.error_cfta)
 		noise_data=np.zeros([file_nseg,4,nchan])
 		for i in np.arange(file_nseg):
 			noise_data[i]=deal_seg(jumps[i],jumps[i+1],multi=args.multi)
@@ -401,7 +405,7 @@ elif noise_mark=='ld':
 		noise_time0=noise_info['data_info']['stt_time']
 		noise_time=noise_info['calibration_info']['seg_time']
 		if file_t0[0]<((1.25*noise_time[0]-0.25*noise_time[-1])+noise_time0) or file_t0[-1]>((1.25*noise_time[-1]-0.25*noise_time[0])+noise_time0):
-			parser.error('The file time is out of the extrapolating range.')
+			parser.error(text.error_ftoe)
 		noise_data=noise.read_data().reshape(nchan,2,4).transpose(1,2,0)
 		cal_mode='trend'
 	elif noise_info['calibration_info']['cal_mode']=='seg':
@@ -414,15 +418,15 @@ elif noise_mark=='ld':
 		nseg=len(noise_time_index)
 		nseg_1=len(noise_time_index_1)
 		if not nseg_1:
-			parser.error('No valid calibration segment closed to the observation data.')
+			parser.error(text.error_ncs)
 		elif nseg<=1:
 			if args.trend:
-				sys.stdout.write('Warning: The calibration file has only one segment and the calibration parameters are adopted without regard to the evolution.\n')
+				print(text.warning_1sne)
 			noise_data=noise.read_period(noise_time_index_1[0]).reshape(nchan,4).T
 			cal_mode='single'
 		elif args.trend:
 			if file_t0[-1]<(noise_time[noise_time_index[0]]+noise_time0) or file_t0[0]>(noise_time[noise_time_index[-1]]+noise_time0):
-				sys.stdout.write('Warning: The file time of effective calibration segments are out of the interpolating range and the calibration parameters are adopted without regard to the evolution.')
+				print(text.warning_orne)
 				noise_data=np.zeros([nseg_1,4,nchan])
 				for i in np.arange(nseg_1):
 					noise_data[i]=noise.read_period(noise_time_index_1[i]).reshape(nchan,4).T
@@ -441,7 +445,7 @@ elif noise_mark=='ld':
 				noise_data[i]=noise.read_period(noise_time_index_1[i]).reshape(nchan,4).T
 			noise_data=noise_data.mean(0)
 	else:
-		parser.error('The calibration file mode is unknown.')
+		parser.error(text.error_cfu)
 if args.cal:
 	info['calibration_info']={'cal_mode':cal_mode}
 	info['calibration_info']['cal']=noise_data.reshape(-1,npol,nchan).tolist()
@@ -454,7 +458,7 @@ if args.cal:
 		noise_sin=noise_sin*noise_a1a2
 #
 if args.verbose:
-	sys.stdout.write('Constructing the output file...\n')
+	print(text.info_con)
 #
 nbin_old=nbin
 freq0=freq_start+channel_width*0.5
@@ -506,13 +510,13 @@ def write_data(n,cumsub,fsub,data,lock=0):
 	if args.multi: lock.release()
 #
 if args.verbose:
-	sys.stdout.write('Dedispersing and folding the data...\n')
+	print(text.info_ddd)
 #
 def dealdata(filelist,n,lock=0):	# analyze the phase bin of the data
 	global noise_a12,noise_a22,noise_cos,noise_sin
 	if args.verbose:
 		if args.multi: lock.acquire()
-		sys.stdout.write('Processing the '+str(n+1)+'th fits file...\n')
+		print(text.info_pros %s str(n+1))
 		if args.multi: lock.release()
 		timemark=time.time()
 	tpsub=0
@@ -560,7 +564,7 @@ def dealdata(filelist,n,lock=0):	# analyze the phase bin of the data
 	gc.collect()
 	if args.verbose:
 		if args.multi: lock.acquire()
-		sys.stdout.write('Processing the '+str(n+1)+'th fits file takes '+str(time.time()-timemark)+' second.\n')
+		print(text.info_pft % (str(n+1),str(time.time()-timemark)))
 		if args.multi: lock.release()
 #
 if args.multi:

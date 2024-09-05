@@ -9,14 +9,19 @@ import scipy.optimize as so
 import adfunc as af
 import fnmatch as fm
 plt.rcParams['font.family']='Serif'
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.output_text('update_tdiff_FAST1')
 version='JigLu_20240411'
 #
-parser=ap.ArgumentParser(prog='update_tdiff',description='Updating the time difference between local clock and gps.',epilog='Ver '+version)
-parser.add_argument('-v','--version', action='version', version=version)
-parser.add_argument('--verbose', action="store_true",default=False,help="print detailed information")
-parser.add_argument("-w","--rewrite",action="store_true",default=False,help="update the whole clock difference file.")
-parser.add_argument('-s','--show',nargs='?',default=False,const=True,help='show the handled clock difference.')
+parser=ap.ArgumentParser(prog='update_tdiff',description=text.help,epilog='Ver '+version,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument('--verbose', action="store_true",default=False,help=text.help_verbose)
+parser.add_argument("-w","--rewrite",action="store_true",default=False,help=text.help_w)
+parser.add_argument('-s','--show',action="store_true",default=False,help=text.help_s)
 args=(parser.parse_args())
 #
 dirname=os.path.split(os.path.realpath(__file__))[0]
@@ -112,7 +117,7 @@ if args.rewrite or dtj[-1]-t0[-1]<0:
 	for i in p: f.write(str(i)+' ')
 	f.close()
 else:
-	print('The difference file between FAST clock and standard is already the newest.')
+	print(text.info_ed)
 #
 if args.show:
 	fig=plt.figure(1)

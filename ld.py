@@ -1,10 +1,14 @@
-import os,platform
+import os,sys,platform
 import numpy as np
 import struct as st
 import psutil
 if platform.system()!='Windows':
 	import fcntl
 import json
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
+text=text.output_text('ld')
 #
 class ld():
 	def __init__(self,name):
@@ -21,7 +25,7 @@ class ld():
 		self.file=open(self.name,'rb+')
 		self.file.seek(0)
 		if len(size)!=5:
-			raise Exception('Worng size of data.')
+			raise Exception(text.error_ndd)
 		self.file.write(st.pack('>Q4I',*size))
 		self.file.flush()
 		self.file.close()
@@ -34,7 +38,7 @@ class ld():
 		if size[0]==self.file.tell():
 			return size
 		else:
-			raise Exception('Invalid ld file.')
+			raise Exception(text.error_nf)
 	#
 	def __refresh_size__(self):	# refresh the file size value in the LD file
 		self.file=open(self.name,'rb+')
@@ -42,11 +46,10 @@ class ld():
 		self.__size__[0]=self.file.tell()
 		self.__write_size__(self.__size__)
 		self.file.close()
-		#print self.__size__
 	#
 	def write_shape(self,shape):	# write the data shape into the LD file
 		if len(shape)!=4:
-			raise Exception('Data shape should be 4 integers.')
+			raise Exception(text.error_nshape)
 		self.__size__[1:]=np.int32(shape)
 		self.__write_size__(self.__size__)
 		self.file=open(self.name,'rb+')
@@ -62,9 +65,9 @@ class ld():
 		data=data.reshape(self.__size__[2:])
 		ndata_chan=np.int64(np.array(self.__size__[2:]).prod())
 		if ndata_chan!=data.size:
-			raise Exception('Data size unmatches the file.')
+			raise Exception(text.error_nds)
 		if chan_num>self.__size__[1]:
-			raise Exception('The input channel number is larger than total channel number of file.')
+			raise Exception(text.error_lcn)
 		d0=np.memmap(self.name,offset=24,shape=tuple(self.__size__[1:]),mode='r+',dtype='>d',order='C')
 		d0[chan_num]=data
 		d0.flush()
@@ -73,7 +76,7 @@ class ld():
 	#
 	def read_chan(self,chan_num,pol=-1):	# read the data in specific channel index in LD file
 		if chan_num>self.__size__[1]:
-			raise Exception('The input channel number is larger than total channel number of file.')
+			raise Exception(text.error_lcn)
 		if (-1).__eq__(pol) is True: pol=np.arange(self.__size__[4])
 		else: pol=np.array(pol).reshape(-1)
 		data=np.array(np.memmap(self.name,offset=24,shape=tuple(self.__size__[1:]),mode='r',dtype='>d',order='C')[chan_num][:,:,pol])
@@ -81,7 +84,7 @@ class ld():
 	#
 	def read_pol(self,pol_num):	# read the data in specific polarization index in LD file
 		if pol_num>self.__size__[4]:
-			raise Exception('The input channel number is larger than total channel number of file.')
+			raise Exception(text.error_lpn)
 		data=np.array(np.memmap(self.name,offset=24,shape=tuple(self.__size__[1:]),mode='r',dtype='>d',order='C')[:,:,:,pol_num])
 		return data
 	#
@@ -89,31 +92,31 @@ class ld():
 		if (-1).__eq__(pol) is True: pol=np.arange(self.__size__[4])
 		else: pol=np.array(pol).reshape(-1)
 		if not set(pol).issubset(set(np.arange(self.__size__[4]))):
-			raise Exception('The input polarization number is overrange.')
+			raise Exception(text.error_opn)
 		#
 		if len(select_chan)==0:
 			select_chan=np.arange(self.__size__[1])
 		elif not set(select_chan).issubset(set(np.arange(self.__size__[1]))):
-			raise Exception('The input channel number is overrange.')
+			raise Exception(text.error_ocn)
 		if end_period==0: end_period=self.__size__[2]
 		if end_bin==0: end_bin=self.__size__[3]
 		if start_period>end_period or start_period<0 or end_period>self.__size__[2]:
-			raise Exception('The number of subintegration range is not right')
+			raise Exception(text.error_nsn)
 		if start_bin==end_bin or start_bin<0 or end_bin>self.__size__[3]:
-			raise Exception('The number of phase bin range is not right')
+			raise Exception(text.error_nbn)
 		if start_bin>end_bin: bins=np.append(np.arange(int(start_bin),self.__size__[3]),np.arange(int(end_bin)))
 		else: bins=np.arange(start_bin,end_bin)
 		memory=psutil.virtual_memory()
 		avlmemory = memory.available/1024/1024/1024  #Gb
 		dsize=len(select_chan)*(end_period-start_period)*len(bins)*8/2**30  #Gb
 		if dsize>avlmemory*0.8:
-			raise Exception('The data is larger than the available memory')
+			raise Exception(text.error_ldm)
 		data=np.array(np.memmap(self.name,offset=24,shape=tuple(self.__size__[1:]),mode='r',dtype='>d',order='C')[:,start_period:end_period][select_chan][:,:,bins][:,:,:,pol])
 		return data
 	#
 	def write_data(self,data):	# write all data of a LD file
 		if data.size!=np.prod(self.__size__[1:]):
-			raise Exception('Data size unmatches the file.')
+			raise Exception(text.error_nds)
 		data=data.reshape(*self.__size__[1:])
 		d0=np.memmap(self.name,offset=24,shape=tuple(self.__size__[1:]),mode='r+',dtype='>d',order='C')
 		d0[:]=data
@@ -123,16 +126,16 @@ class ld():
 	#
 	def __read_chan0__(self,chan_num,ndata_chan0):	# discarded
 		if chan_num>self.__size__[1]:
-			raise Exception('The input channel number is larger than total channel number of file.')
+			raise Exception(text.error_lcn)
 		data=np.array(np.memmap(self.name,offset=24,shape=(chan_num+1,ndata_chan0),mode='r',dtype='>d',order='C')[chan_num])
 		return data
 	#
 	def write_period(self,data,p_num):	# write data into specific sub-integration index in LD file
 		ndata_period=np.int64(self.__size__[3]*self.__size__[4])
 		if (self.__size__[1]*ndata_period)!=data.size:
-			raise Exception('Data size unmatches the file.')
+			raise Exception(text.error_nds)
 		if p_num>self.__size__[2]:
-			raise Exception('The input period number is larger than total period number of file.')
+			raise Exception(text.error_lpn)
 		data=data.reshape(self.__size__[1],self.__size__[3],self.__size__[4])
 		d0=np.memmap(self.name,offset=24,shape=tuple(self.__size__[1:]),mode='r+',dtype='>d',order='C')
 		d0[:,p_num]=data
@@ -142,7 +145,7 @@ class ld():
 	#
 	def read_period(self,p_num,pol=-1):	# read the data in specific sub-integration index in LD file
 		if p_num>self.__size__[2]:
-			raise Exception('The input period number is larger than total period number of file.')
+			raise Exception(text.error_lpn)
 		if (-1).__eq__(pol) is True: pol=np.arange(self.__size__[4])
 		else: pol=np.array(pol).reshape(-1)
 		data=np.array(np.memmap(self.name,offset=24,shape=tuple(self.__size__[1:]),mode='r',dtype='>d',order='C')[:,p_num:p_num+1,:,pol])
@@ -151,9 +154,9 @@ class ld():
 	def __write_bin_segment__(self,data,bin_start):	# write the data segment with all frequency channels into LD file at the specified starting bin index
 		ndata_chan=np.int64(np.array(self.__size__[2:]).prod())
 		if self.__size__[1]!=len(data):
-			raise Exception('Data size unmatches the file.')
+			raise Exception(text.error_nds)
 		if (bin_start*self.__size__[4]+np.array(data.shape[1:]).prod())>ndata_chan or bin_start<0:
-			raise Exception('The input bin number is overrange.')
+			raise Exception(text.error_obn)
 		data=data.reshape(self.__size__[1],-1,self.__size__[4])
 		d0=np.memmap(self.name,offset=24,shape=(self.__size__[1],self.__size__[2]*self.__size__[3],self.__size__[4]),mode='r+',dtype='>d',order='C')
 		d0[:,bin_start:(bin_start+data.shape[1])]=data
@@ -164,9 +167,9 @@ class ld():
 	def __write_chanbins_add__(self,data,bin_start,chan_num):	# add the data series onto specific frequency channel of LD file at specified starting bin index
 		ndata_chan=np.int64(np.array(self.__size__[2:]).prod())
 		if self.__size__[4]!=data.shape[1]:
-			raise Exception('Data size unmatches the file.')
+			raise Exception(text.error_nds)
 		if (bin_start*self.__size__[4]+np.array(data.shape).prod())>ndata_chan or bin_start<0:
-			raise Exception('The input bin number is overrange.')
+			raise Exception(text.error_obn)
 		data=data.reshape(-1)
 		size=data.size
 		with open(self.name,'rb+') as self.file:
@@ -185,9 +188,9 @@ class ld():
 	def __write_chanbins__(self,data,bin_start,chan_num):	# write the data series into specific frequency channel of LD file at specified starting bin index
 		ndata_chan=np.int64(np.array(self.__size__[2:]).prod())
 		if self.__size__[4]!=data.shape[1]:
-			raise Exception('Data size unmatches the file.')
+			raise Exception(text.error_nds)
 		if (bin_start*self.__size__[4]+np.array(data.shape).prod())>ndata_chan or bin_start<0:
-			raise Exception('The input bin number is overrange.')
+			raise Exception(text.error_obn)
 		data=data.reshape(-1,self.__size__[4])
 		d0=np.memmap(self.name,offset=24,shape=(self.__size__[1],self.__size__[2]*self.__size__[3],self.__size__[4]),mode='r+',dtype='>d',order='C')
 		d0[chan_num,bin_start:(bin_start+data.shape[1])]=data
@@ -195,7 +198,7 @@ class ld():
 	#
 	def __read_bin_segment__(self,bin_start,bin_num,pol=-1):	# read data segment with specified starting bin index and total bin numbers in all frequency channels
 		if ((bin_start+bin_num)*self.__size__[4])>ndata_chan or bin_start<0:
-			raise Exception('The input bin number is overrange.')
+			raise Exception(text.error_obn)
 		if (-1).__eq__(pol) is True: pol=np.arange(self.__size__[4])
 		else: pol=np.array(pol).reshape(-1)
 		data=np.array(np.memmap(self.name,offset=24,shape=tuple(self.__size__[1:]),mode='r',dtype='>d',order='C')[:,:,bin_start:(bin_start+bin_num),pol])
@@ -205,21 +208,21 @@ class ld():
 		if (-1).__eq__(pol) is True: pol=np.arange(self.__size__[4])
 		else: pol=np.array(pol).reshape(-1)
 		if not set(pol).issubset(set(np.arange(self.__size__[4]))):
-			raise Exception('The input polarization number is overrange.')
+			raise Exception(text.error_opn)
 		#
 		if len(select_chan)==0: select_chan=np.arange(self.__size__[1])
 		elif not set(select_chan).issubset(set(np.arange(self.__size__[1]))):
-			raise Exception('The input channel number is overrange.')
+			raise Exception(text.error_ocn)
 		#
 		if len(select_bin)==0: select_bin=np.arange(self.__size__[3])
 		elif not set(select_bin).issubset(set(np.arange(self.__size__[3]))):
-			raise Exception('The input phase bin number is overrange.')
+			raise Exception(text.error_obn)
 		#
 		start_period=int(start_period)
 		end_period=int(end_period)
 		if end_period ==0: end_period=self.__size__[2]
 		if start_period > end_period or start_period<0 or end_period>self.__size__[2]:
-			raise Exception('The number of subintegration range is not right')
+			raise Exception(text.error_nsn)
 		#
 		memory=psutil.virtual_memory()
 		avlmemory = memory.available/1024/1024/1024  #Gb
@@ -252,20 +255,20 @@ class ld():
 		if (-1).__eq__(pol) is True: pol=np.arange(self.__size__[4])
 		else: pol=np.array(pol).reshape(-1)
 		if not set(pol).issubset(set(np.arange(self.__size__[4]))):
-			raise Exception('The input polarization number is overrange.')
+			raise Exception(text.error_opn)
 		#
 		scmark=True
 		if len(select_chan)==0: 
 			select_chan=np.arange(self.__size__[1])
 			scmark=False
 		elif not set(select_chan).issubset(set(np.arange(self.__size__[1]))):
-			raise Exception('The input channel number is overrange.')
+			raise Exception(text.error_ocn)
 		#
 		start_period=int(start_period)
 		end_period=int(end_period)
 		if end_period ==0: end_period=self.__size__[2]
 		if start_period > end_period or start_period<0 or end_period>self.__size__[2]:
-			raise Exception('The number of subintegration range is not right')
+			raise Exception(text.error_nsn)
 		#
 		memory=psutil.virtual_memory()
 		avlmemory = memory.available/1024/1024/1024  #Gb
@@ -278,7 +281,7 @@ class ld():
 				weight[select_chan]=1
 		elif weighted == 'weights' or weighted == 'chan_weight':
 			if weighted == 'chan_weight':
-				if 'chan_weight' not in info['data_info'].keys(): raise Exception('the chan_weight is not given')
+				if 'chan_weight' not in info['data_info'].keys(): raise Exception(text.error_ncw)
 				weight=np.array(self.read_para('chan_weight'))
 				scchan=np.zeros(len(weight))
 				scchan[select_chan]=1
@@ -286,9 +289,9 @@ class ld():
 				else: scmark=True
 				weight=(weight*scchan).reshape(-1,1,1,1)
 			elif weighted == 'weights':
-				if 'weights' not in info['data_info'].keys(): raise Exception('the weights is not given')
+				if 'weights' not in info['data_info'].keys(): raise Exception(text.error_nw)
 				weight=np.array(self.read_info()['data_info']['weights'])[:,start_period:end_period].reshape(-1,end_period-start_period,1,1)
-		else: raise Exception('Please give the right weighted info')
+		else: raise Exception(text.error_nwi)
 		#
 		chans=np.arange(self.__size__[1])
 		sc0=set(chans).intersection(select_chan)
@@ -313,20 +316,20 @@ class ld():
 		if (-1).__eq__(pol) is True: pol=np.arange(self.__size__[4])
 		else: pol=np.array(pol).reshape(-1)
 		if not set(pol).issubset(set(np.arange(self.__size__[4]))):
-			raise Exception('The input polarization number is overrange.')
+			raise Exception(text.error_opn)
 		#
 		scmark=True
 		if len(select_chan)==0: 
 			select_chan=np.arange(self.__size__[1])
 			scmark=False
 		elif not set(select_chan).issubset(set(np.arange(self.__size__[1]))):
-			raise Exception('The input channel number is overrange.')
+			raise Exception(text.error_ocn)
 		#
 		start_period=int(start_period)
 		end_period=int(end_period)
 		if end_period ==0: end_period=self.__size__[2]
 		if start_period > end_period or start_period<0 or end_period>self.__size__[2]:
-			raise Exception('The number of subintegration range is not right')
+			raise Exception(text.error_nsn)
 		#
 		memory=psutil.virtual_memory()
 		avlmemory = memory.available/1024/1024/1024  #Gb
@@ -339,7 +342,7 @@ class ld():
 				weight[select_chan]=1
 		elif weighted == 'weights' or weighted == 'chan_weight':
 			if weighted == 'chan_weight':
-				if 'chan_weight' not in info['data_info'].keys(): raise Exception('the chan_weight is not given')
+				if 'chan_weight' not in info['data_info'].keys(): raise Exception(text.error_ncw)
 				weight=np.array(self.read_para('chan_weight'))
 				scchan=np.zeros(len(weight))
 				scchan[select_chan]=1
@@ -347,9 +350,9 @@ class ld():
 				else: scmark=True
 				weight=(weight*scchan).reshape(-1,1,1,1)
 			elif weighted == 'weights':
-				if 'weights' not in info['data_info'].keys(): raise Exception('the weights is not given')
+				if 'weights' not in info['data_info'].keys(): raise Exception(text.error_nw)
 				weight=np.array(self.read_info()['data_info']['weights'])[:,start_period:end_period].reshape(-1,end_period-start_period,1,1)
-		else: raise Exception('Please give the right weighted info')
+		else: raise Exception(text.error_nwi)
 		#
 		if weighted == 'weights' or scmark: 
 			data=np.zeros([end_period-start_period,self.__size__[3],*np.shape(pol)])
@@ -373,20 +376,20 @@ class ld():
 		if (-1).__eq__(pol) is True: pol=np.arange(self.__size__[4])
 		else: pol=np.array(pol).reshape(-1)
 		if not set(pol).issubset(set(np.arange(self.__size__[4]))):
-			raise Exception('The input polarization number is overrange.')
+			raise Exception(text.error_opn)
 		#
 		scmark=True
 		if len(select_chan)==0: 
 			select_chan=np.arange(self.__size__[1])
 			scmark=False
 		elif not set(select_chan).issubset(set(np.arange(self.__size__[1]))):
-			raise Exception('The input channel number is overrange.')
+			raise Exception(text.error_ocn)
 		#
 		start_period=int(start_period)
 		end_period=int(end_period)
 		if end_period ==0: end_period=self.__size__[2]
 		if start_period > end_period or start_period<0 or end_period>self.__size__[2]:
-			raise Exception('The number of subintegration range is not right')
+			raise Exception(text.error_nsn)
 		#
 		memory=psutil.virtual_memory()
 		avlmemory = memory.available/1024/1024/1024  #Gb
@@ -399,7 +402,7 @@ class ld():
 				weight[select_chan]=1
 		elif weighted == 'weights' or weighted == 'chan_weight':
 			if weighted == 'chan_weight':
-				if 'chan_weight' not in info['data_info'].keys(): raise Exception('the chan_weight is not given')
+				if 'chan_weight' not in info['data_info'].keys(): raise Exception(text.error_ncw)
 				weight=np.array(self.read_para('chan_weight'))
 				scchan=np.zeros(len(weight))
 				scchan[select_chan]=1
@@ -407,9 +410,9 @@ class ld():
 				else: scmark=True
 				weight=(weight*scchan).reshape(-1,1,1,1)
 			elif weighted == 'weights':
-				if 'weights' not in info['data_info'].keys(): raise Exception('the weights is not given')
+				if 'weights' not in info['data_info'].keys(): raise Exception(text.error_nw)
 				weight=np.array(self.read_info()['data_info']['weights'])[:,start_period:end_period].reshape(-1,end_period-start_period,1,1)
-		else: raise Exception('Please give the right weighted info')
+		else: raise Exception(text.error_nwi)
 		#
 		chans=np.arange(self.__size__[1])
 		sc0=set(chans).intersection(select_chan)
@@ -441,7 +444,7 @@ class ld():
 	#
 	def write_info(self,info):	# write the information dictionary into the LD file
 		for i in info.values():
-			if type(i) is not dict: raise Exception('The information format is wrong.')
+			if type(i) is not dict: raise Exception(text.error_ni)
 		self.file=open(self.name,'r+')
 		self.file.seek(24+np.array(self.__size__[1:]).prod()*8)
 		self.file.write(json.dumps(info,indent=1))
@@ -488,5 +491,5 @@ class ld():
 		if key in info.keys():
 			return info[key]
 		else:
-			raise Exception('Wrong parameter name.')
+			raise Exception(text.error_np)
 #

@@ -9,23 +9,28 @@ try:
 except:
 	import pyfits as ps
 #
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
+text=text.output_text('ldcal')
 version='JigLu_20220221'
 #
-parser=ap.ArgumentParser(prog='ldcal',description='Process noise data in fits file to obtain calibration parameters, or merge multi-calibration-file to a large file.',epilog='Ver '+version)
-parser.add_argument('-v','--version', action='version', version=version)
-parser.add_argument('--verbose', action="store_true",default=False,help="print detailed information")
-parser.add_argument("filename",nargs='+',help="name of file or filelist")
-parser.add_argument("--cal_period",dest="cal_period",default=0,type=np.float64,help="period of the calibration fits file (s)")
-parser.add_argument("-o","--output",dest="output",default="psr",help="output file name")
-parser.add_argument("-r","--reverse",action="store_true",default=False,help="reverse the band")
-parser.add_argument("--trend",action="store_true",default=False,help="fit the calibration parameter evolution")
-parser.add_argument("-s","--subi",action="store_true",default=False,help="take one subint as the calculation unit")
-parser.add_argument("-w","--overwrite",action="store_true",default=False,help="overwrite the existed output file")
+parser=ap.ArgumentParser(prog='ldcal',description=text.help,epilog='Ver '+version,add_help=False,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument('--verbose', action="store_true",default=False,help=text.help_verbose)
+parser.add_argument("filename",nargs='+',help=text.help_filename)
+parser.add_argument("--cal_period",dest="cal_period",default=0,type=np.float64,help=text.help_cal_period)
+parser.add_argument("-o","--output",dest="output",default="psr",help=text.help_o)
+parser.add_argument("-r","--reverse",action="store_true",default=False,help=text.help_r)
+parser.add_argument("--trend",action="store_true",default=False,help=text.help_trend)
+parser.add_argument("-s","--subi",action="store_true",default=False,help=text.help_s)
+parser.add_argument("-w","--overwrite",action="store_true",default=False,help=text.help_w)
 args=(parser.parse_args())
 command=['ldcal.py']
 #
 if args.verbose:
-	sys.stdout.write('Analyzing the arguments...\n')
+	print(text.info_ana)
 filelist=args.filename
 filenum=len(filelist)
 if filelist[0][-3:]=='.ld':
@@ -42,15 +47,15 @@ else:
 	telename,pol_type,npol,nchan,freq,bandwidth,tsamp,nsblk,bw_sign,stt_imjd,stt_smjd,stt_offs,nsub,offs_sub='','',0,0,0,0.0,0.0,0,True,0,0,0.0,0,0.0
 #
 def file_error(para,filetype):
-	parser.error(filetype+" have different parameters: "+para+".")
+	parser.error(text.error_dp % (filetype, para))
 #
-def fits_check(fname,notfirst=True,filetype='Fits file'):	# check the consistency of file
+def fits_check(fname,notfirst=True,filetype='PSRFITS'):	# check the consistency of file
 	if not os.path.isfile(fname):
-		parser.error(filetype+' name '+fname+' '+'is invalid.')
+		parser.error(text.error_ifn % (filetype, fname))
 	try:
 		f=ps.open(filelist[i],mmap=True)
 	except:
-		parser.error(filetype+' '+fname+' '+' is invalid.')
+		parser.error(text.error_if % (filetype,fname))
 	head=f['PRIMARY'].header
 	subint=f['SUBINT']
 	subint_header=subint.header
@@ -91,20 +96,20 @@ def fits_check(fname,notfirst=True,filetype='Fits file'):	# check the consistenc
 	del subint_data
 	f.close()
 #
-def ld_check(fname,notfirst=True,filetype='Ld file'):	# check the consistency of file
+def ld_check(fname,notfirst=True,filetype='LD'):	# check the consistency of file
 	if not os.path.isfile(fname):
-		parser.error(filetype+' name '+fname+' '+'is invalid.')
+		parser.error(text.error_ifn % (filetype, fname))
 	try:
 		f=ld.ld(filelist[i])
 		finfo=f.read_info()
 	except:
-		parser.error(filetype+' '+fname+' is invalid.')
+		parser.error(text.error_if % (filetype,fname))
 	global telename,npol,nchan,freq_start,freq_end,stt_time,seg_time,flen
 	if finfo['data_info']['mode']=='cal':
 		if not finfo['calibration_info']['cal_mode']=='seg':
-			parser.error(filetype+' '+fname+' is not segmented calibration file.')
+			parser.error(text.error_ns % (filetype,fname))
 	else:
-		parser.error(filetype+' '+fname+' is not calibration file.')
+		parser.error(text.error_nc % (filetype,fname))
 	if not notfirst:
 		telename,npol,nchan,freq_start,freq_end=finfo['telescope_info']['telename'],finfo['data_info']['npol'],finfo['data_info']['nchan'],finfo['data_info']['freq_start'],finfo['data_info']['freq_end']
 	else:
@@ -174,9 +179,9 @@ elif mark=='ld':
 	nseg=len(seg_times)
 	info={'data_info':{'freq_start':freq_start,'freq_end':freq_end,'nchan':int(nchan),'stt_time':stt_time,'npol':int(npol),'mode':'cal','length':np.sum(file_len)},'telescope_info':{'telename':telename}}
 	if args.reverse:
-		sys.stdout.write('Warning: Band of the ld file will not be reversed, and the flag \'-r\' will be ignored.\n')
+		print(text.warning_br)
 	if args.subi:
-		sys.stdout.write('Warning: The flag \'-s\' will be ignored.\n')
+		print(text.warning_is)
 #
 name=args.output
 if len(name)>3:
@@ -192,7 +197,7 @@ if os.path.isfile(name+'.ld'):
 		name=name0
 #
 if args.verbose:
-	sys.stdout.write('Constructing the output file...\n')
+	print(text.info_con)
 #
 d=ld.ld(name+'.ld')
 #
@@ -201,7 +206,7 @@ if args.trend:
 command=' '.join(command)
 info['history_info']={'history':[command]}
 #
-sys.stdout.write('Processing the noise file...\n')
+print(text.info_pros)
 #
 def deal_seg(n1,n2):
 	cumsub=0
@@ -255,7 +260,7 @@ if mark=='fits':
 				noise_time[i]=(cumlen[jumps[i+1]-1]+cumlen[jumps[i]]+file_len[jumps[i]]*tsamp/86400)/2
 		else:
 			if filenum==1:
-				parser.error('The evolution of calibration parameters cannot be obtained from only one calibration file.')
+				parser.error(text.error_nce)
 			noise_time=(cumlen[-1]+file_len[-1]*tsamp/86400)/2
 			noise_info=np.zeros([filenum,npol,nchan])
 			for i in np.arange(filenum):

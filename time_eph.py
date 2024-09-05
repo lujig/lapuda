@@ -3,9 +3,13 @@ import numpy.polynomial.chebyshev as nc
 import struct as st
 import datetime as dt
 import psr_read as pr
-import os
+import os,sys
 import copy as cp
 import adfunc as af
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
+text=text.output_text('time_eph')
 #
 ephname='DE436.1950.2050'	# the ephemeris file name
 sl=299792458.0	# speed of light
@@ -18,7 +22,6 @@ mjd0=43144.0003725	# the bifurcation MJD time for TT and TCG
 au_dist=149597870691	# astronomical unit (m)
 pi_mm=3.14159265358979323846264338327950288	# PI in mpmath
 pi=np.float64(pi_mm)	# PI
-dirname=os.path.split(os.path.realpath(__file__))[0]	# the directory of the programs
 #
 def readeph(et,ephname=ephname):	# read the parameters from ephemeris
 	# 0 mercury; 1 venus; 2 earth; 3 mars; 4 jupiter; 5 saturn; 6 uranus; 7 neptune; 8 pluto; 9 moon; 10 sun; 11 barycenter; 12 earth-moon-center
@@ -64,9 +67,9 @@ def readeph(et,ephname=ephname):	# read the parameters from ephemeris
 	nut=np.zeros([et.size,6])
 	lib=np.zeros([et.size,9])
 	if ephem_start-2400000.5>(date+second/86400).min():
-		raise Exception('The input time is earlier than the start time of the planet ephemeris, please change the ephemeris or input time.')
+		raise Exception(text.error_ete)
 	elif ephem_end-2400000.5<(date+second/86400).max():
-		raise Exception('The input time is latter than the end time of the planet ephemeris, please change the ephemeris or input time.')
+		raise Exception(text.error_lte)
 	block_loc=(date+2400000.5-ephem_start+second/86400)/ephem_step
 	nr=np.uint32(block_loc)
 	t0=block_loc-nr
@@ -260,7 +263,7 @@ def readpos(telename):
 	if telename.encode() in values[:,0]:
 		return np.float64(values[values[:,0]==telename.encode()][0,1:4])
 	else:
-		raise Exception('The name of the telescope cannot be recognized.')
+		raise Exception(text.error_ntn)
 #
 class vector:
 	def __init__(self,x,y,z,center='geo',scale='si',coord='equ',unit=1.0,type0='pos'):
@@ -555,9 +558,9 @@ class time:
 				nr0=main
 				if not self.extrapolation:
 					if np.min(nr0)<0:
-						raise Exception('The input time is earlier than the start time of the clock difference, please change the input time.')
+						raise Exception(text.error_etc)
 					elif np.max(nr0)>(flen-2):
-						raise Exception('The input time is latter than the end time of the clock difference, please update the clock difference file or change the input time.')
+						raise Exception(text.error_ltc)
 				resi=resi+localunix.second
 				set_nr=list(set(nr0))
 				set_len=len(set_nr)
@@ -585,9 +588,9 @@ class time:
 				t,dt=f[:,0:2].T
 				if not self.extrapolation:
 					if np.min(self.mjd)<np.min(t):
-						raise Exception('The input time is earlier than the start time of the GPS difference, please change the input time.')
+						raise Exception(text.error_etg)
 					elif np.max(self.mjd)>np.max(t):
-						raise Exception('The input time is latter than the end time of the GPS difference, please update the GPS difference file or change the input time.')
+						raise Exception(text.error_ltg)
 				utcsec=np.interp(gpssec/86400+self.mjd,t,dt,right=dt[-1])*1e-9
 			return utcsec+gpssec
 	#
@@ -614,9 +617,9 @@ class time:
 			mjd0,taimjd0,deltat=np.loadtxt(dirname+'/materials/'+'tai2ut1.txt').T
 			if not self.extrapolation:
 				if np.min(self.mjd)<np.min(taimjd0)+1:
-					raise Exception('The input time is earlier than the start time of the TAI-UT1, please change the input time.')
+					raise Exception(text.error_etu)
 				elif np.max(self.mjd)>np.max(taimjd0)-1:
-					raise Exception('The input time is latter than the end time of the TAI-UT1, please update the TAI-UT1 difference file or change the input time.')
+					raise Exception(text.error_ltu)
 				deltat=np.interp(self.mjd,taimjd0,deltat)
 			else:
 				deltat=np.zeros(self.size,dtype=np.float64)
@@ -632,9 +635,9 @@ class time:
 			mjd0,deltat=np.loadtxt(dirname+'/materials/'+'tai2tt.txt')[:,[0,2]].T
 			if not self.extrapolation:
 				if np.min(self.mjd)<np.min(mjd0):
-					raise Exception('The input time is earlier than the start time of the TAI-TT(BIPM), please change the input time.')
+					raise Exception(text.error_ett)
 				if np.max(self.mjd)>np.max(mjd0):
-					raise Exception('The input time is latter than the end time of the TAI-TT(BIPM), please update the TAI-TT(BIPM) difference file or change the input time.')
+					raise Exception(text.error_ltt)
 			ttmjd=self.utc2tai()+32.184+np.interp(self.mjd,mjd0,deltat,right=deltat[-1])*1e-6
 			return ttmjd
 	#
@@ -644,9 +647,9 @@ class time:
 			mjd0,deltat=np.loadtxt(dirname+'/materials/'+'tai2tt.txt')[:,[0,2]].T
 			if not self.extrapolation:
 				if np.min(self.mjd)<np.min(mjd0):
-					raise Exception('The input time is earlier than the start time of the TAI-TT(BIPM), please change the input time.')
+					raise Exception(text.error_ett)
 				if np.max(self.mjd)>np.max(mjd0):
-					raise Exception('The input time is latter than the end time of the TAI-TT(BIPM), please update the TAI-TT(BIPM) difference file or change the input time.')
+					raise Exception(text.error_ltt)
 			tt_tai=32.184+np.interp(utc,mjd0,deltat,right=deltat[-1])*1e-6
 			return tt_tai
 	#
@@ -655,9 +658,9 @@ class time:
 			mjd0,deltat=np.loadtxt(dirname+'/materials/'+'tai2tt.txt')[:,[0,2]].T
 			if not self.extrapolation:
 				if np.min(self.mjd)<np.min(mjd0):
-					raise Exception('The input time is earlier than the start time of the TAI-TT(BIPM), please change the input time.')
+					raise Exception(text.error_ett)
 				elif np.max(self.mjd)>np.max(mjd0):
-					raise Exception('The input time is latter than the end time of the TAI-TT(BIPM), please update the TAI-TT(BIPM) difference file or change the input time.')
+					raise Exception(text.error_ltt)
 			tt_tai=32.184+np.interp(self.mjd,mjd0,deltat,right=deltat[-1])*1e-6
 			return -tt_tai
 	#
@@ -1054,9 +1057,9 @@ class times:
 		dut1dot=np.interp(self.utc.mjd,tai0[:-1],dut1dot0,right=dut1dot0[-1])
 		if not self.extrapolation:
 			if np.min(self.utc.mjd)<np.min(utc0)+1:
-				raise Exception('The input time is earlier than the start time of the EOPC, please change the input time.')
+				raise Exception(text.error_eto)
 			elif np.max(self.utc.mjd)>np.max(utc0)-1:
-				raise Exception('The input time is latter than the end time of the EOPC, please update the EOPC difference file or change the input time.')
+				raise Exception(text.error_lto)
 			xp=np.interp(self.utc.mjd,utc0,xp0)*(np.pi/(180*60*60))
 			yp=np.interp(self.utc.mjd,utc0,yp0)*(np.pi/(180*60*60))
 		else:

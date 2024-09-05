@@ -1,5 +1,282 @@
+# ddpsr.py
+ddpsr	help	Dedisperse the psrfits data.
+ddpsr	help_filename	name of file or filelist
+ddpsr	help_h	show this help message and exit
+ddpsr	help_v	show program's version number and exit
+ddpsr	help_verbose	print detailed information
+ddpsr	help_a	name of calibration file or calibration filelist
+ddpsr	help_cal_period	period of the calibration fits file (s)
+ddpsr	help_subi	take one subint as the calibration unit
+ddpsr	help_cal_para	the time range of the calibration file
+ddpsr	help_trend	fit the calibration parameter evolution
+ddpsr	help_o	output file name
+ddpsr	help_fr	output frequency range (MHz) in form start_freq,end_freq
+ddpsr	help_d	dispersion measure
+ddpsr	help_n	input pulsar name
+ddpsr	help_e	input pulsar parameter file
+ddpsr	help_z	file recording zap channels
+ddpsr	help_r	reverse the band
+ddpsr	help_m	number of processes
+ddpsr	help_w	overwrite the existed output file
+ddpsr	info_ana	Analyzing the arguments...
+ddpsr	info_pnf	Processing the noise file...
+ddpsr	info_con	Constructing the output file...
+ddpsr	info_ddd	Dedispersing and folding the data...
+ddpsr	warning_crset	Warning: The allowed time range of calibration file for single value need to be not more than that for trend fitting, and the former has been forced to be equal to the latter.
+ddpsr	warning_nds	Warning: The noise data used in calulation is too short to get accurate calibration parameters.
+ddpsr	warning_cpne	Warning: Only one file is used to do the calibration and the calibration parameters are adopted without regard to the evolution.
+ddpsr	warning_1sne	Warning: The calibration file has only one segment and the calibration parameters are adopted without regard to the evolution.
+ddpsr	warning_orne	Warning: The file time of effective calibration segments are out of the interpolating range and the calibration parameters are adopted without regard to the evolution.
+ddpsr	error_fdp	Fits %s have different parameters: %s.
+ddpsr	error_nfn	Fits %s name is invalid.
+ddpsr	error_nff	Fits %s is invalid.
+ddpsr	error_dnc	Data files are not continuous.
+ddpsr	error_cpi	The calculation parameter is invalid.
+ddpsr	error_cfni	Calibration file name is invalid.
+ddpsr	error_lfnc	LD file is not caliration file.
+ddpsr	error_lcdt	LD calibration file has different telescope name.
+ddpsr	error_lcdc	LD calibration file has different channel number.
+ddpsr	error_npg	Noise period is not given.
+ddpsr	error_sflte	Starting frequency larger than ending frequency.
+ddpsr	error_oif	Input frequency is overrange.
+ddpsr	error_nfm	At most one of flags -n and -e is required.
+ddpsr	error_ndm	With pulsar name or ephemeris, DM value is needless.
+ddpsr	error_npn	A valid pulsar name is required.
+ddpsr	error_dmp	DM should be provided.
+ddpsr	error_zfi	The zap channel file is invalid.
+ddpsr	error_zno	The zapped channel number is overrange.
+ddpsr	error_pnl	The processes number is too large!
+ddpsr	error_nds	The noise data used in calulation is too short.
+ddpsr	error_cfto	The calibration file time is out of the interpolating range.
+ddpsr	error_cfta	The calibration file time is out of the allowed range.
+ddpsr	error_ftoe	The file time is out of the extrapolating range.
+ddpsr	error_ncs	No valid calibration segment closed to the observation data.
+ddpsr	error_cfu	The calibration file mode is unknown.
+ddpsr	info_pros	Processing the %s-th fits file...
+ddpsr	info_pft	Processing the %s-th fits file takes %s second.
+# dfpsr.py
+dfpsr	help	Dedisperse and Fold the psrfits data.
+dfpsr	help_filename	name of file or filelist
+dfpsr	help_h	show this help message and exit
+dfpsr	help_v	show program's version number and exit
+dfpsr	help_verbose	print detailed information
+dfpsr	help_a	name of calibration file or calibration filelist
+dfpsr	help_cal_period	period of the calibration fits file (s)
+dfpsr	help_subi	take one subint as the calibration unit
+dfpsr	help_cal_para	the time range of the calibration file
+dfpsr	help_trend	fit the calibration parameter evolution
+dfpsr	help_o	output file name
+dfpsr	help_fr	output frequency range (MHz) in form start_freq,end_freq
+dfpsr	help_d	dispersion measure
+dfpsr	help_p	pulsar period (s)
+dfpsr	help_n	input pulsar name
+dfpsr	help_e	input pulsar parameter file
+dfpsr	help_c	numbers of Chebyshev polynomial coefficients on time axis
+dfpsr	help_b	number of phase bins in each period
+dfpsr	help_s	length of sub-integration (s)
+dfpsr	help_nsub	total number of sub-integrations
+dfpsr	help_sub_nperiod	the number of period in one sub-integration
+dfpsr	help_z	file recording zap channels
+dfpsr	help_r	reverse the band
+dfpsr	help_l	large RAM
+dfpsr	help_m	number of processes
+dfpsr	help_w	overwrite the existed output file
+dfpsr	help_extrapolate	extrapolate the time-standard-convertion and EOPC parameters to predict the pulse phase (100 days at most)
+dfpsr	info_ana	Analyzing the arguments...
+dfpsr	info_pnf	Processing the noise file...
+dfpsr	info_con	Constructing the output file...
+dfpsr	info_ddd	Dedispersing and folding the data...
+dfpsr	info_pros	Processing the %s-th fits file...
+dfpsr	info_pft	Processing the %s-th fits file takes %s second.
+dfpsr	warning_crset	Warning: The allowed time range of calibration file for single value need to be not more than that for trend fitting, and the former has been forced to be equal to the latter.
+dfpsr	warning_dts	Warning: Duration time of a subint is too short, then the out put file is indeed single pulse mode.
+dfpsr	warning_nds	Warning: The noise data used in calulation is too short to get accurate calibration parameters.
+dfpsr	warning_cpne	Warning: Only one file is used to do the calibration and the calibration parameters are adopted without regard to the evolution.
+dfpsr	warning_1sne	Warning: The calibration file has only one segment and the calibration parameters are adopted without regard to the evolution.
+dfpsr	warning_orne	Warning: The file time of effective calibration segments are out of the interpolating range and the calibration parameters are adopted without regard to the evolution.
+dfpsr	warning_oldcd	Warning: the clock correction is too old, and the extrapolated values are used instead. Please update it (see README for detail).
+dfpsr	warning_oldtc	Warning: the time-standard-convertion and EOPC parameters is too old, and the extrapolated values are used instead. Please execute update_cv.py to update them.
+dfpsr	error_fdp	Fits %s have different parameters: %s.
+dfpsr	error_nfn	Fits %s name is invalid.
+dfpsr	error_nff	Fits %s is invalid.
+dfpsr	error_dnc	Data files are not continuous.
+dfpsr	error_cpi	The calculation parameter is invalid.
+dfpsr	error_cfni	Calibration file name is invalid.
+dfpsr	error_lfnc	LD file is not caliration file.
+dfpsr	error_lcdt	LD calibration file has different telescope name.
+dfpsr	error_lcdc	LD calibration file has different channel number.
+dfpsr	error_npg	Noise period is not given.
+dfpsr	error_sflte	Starting frequency larger than ending frequency.
+dfpsr	error_oif	Input frequency is overrange.
+dfpsr	error_nfm	At most one of flags -n and -e is required.
+dfpsr	error_pne	With pulsar name or ephemeris, period is needless.
+dfpsr	error_npn	A valid pulsar name is required.
+dfpsr	error_ppp	Pulsar Parameter should be provided.
+dfpsr	error_bdp	Both DM and period should be provided.
+dfpsr	error_sfm	At most one of flags --sublen, --nsub and --sub_nperiod is required.
+dfpsr	error_dts	Duration time of a subint is too short.
+dfpsr	error_sin	The sub-integration number can not be negative.
+dfpsr	error_pnn	The period number in one sub-integration must be positive.
+dfpsr	error_pbnl	Provided phase bin number in each period is too large.
+dfpsr	error_zfi	The zap channel file is invalid.
+dfpsr	error_zno	The zapped channel number is overrange.
+dfpsr	error_mfns	The multi-processes function is not supported on Windows!
+dfpsr	error_pnl	The processes number is too large!
+dfpsr	error_nds	The noise data used in calulation is too short.
+dfpsr	error_cfto	The calibration file time is out of the interpolating range.
+dfpsr	error_cfta	The calibration file time is out of the allowed range.
+dfpsr	error_ftoe	The file time is out of the extrapolating range.
+dfpsr	error_ncs	No valid calibration segment closed to the observation data.
+dfpsr	error_cfu	The calibration file mode is unknown.
+dfpsr	error_ccfo	The clock correction file is too old, please update it (see README for detail).
+dfpsr	error_tceo	The time-standard-convertion and EOPC file is too old, please execute update_cv.py to update them.
+# ld.py
+ld	error_ndd	Worng dimension of data.
+ld	error_nf	Invalid ld file.
+ld	error_nshape	Data shape should be 4 integers.
+ld	error_nds	Data size unmatches the file.
+ld	error_lcn	The input channel number is larger than total channel number of file.
+ld	error_lpn	The input polarization number is larger than total polarization number of file.
+ld	error_opn	The input polarization number is overrange.
+ld	error_ocn	The input channel number is overrange.
+ld	error_nsn	The number of subintegration range is not right.
+ld	error_nbn	The number of phase bin range is not right.
+ld	error_ldm	The data is larger than the available memory.
+ld	error_lpn	The input period number is larger than total period number of file.
+ld	error_obn	The input phase bin number is overrange.
+ld	error_ncw	the chan_weight is not given
+ld	error_nw	the weights is not given
+ld	error_nwi	Please give the right weighted info
+ld	error_ni	The information format is wrong.
+ld	error_np	Wrong parameter name.
+# ldaz.py
+ldaz	help	Analyzing the interfered channels in frequency domain of LD file.
+ldaz	help_filename	name of file or filelist
+ldaz	help_h	show this help message and exit
+ldaz	help_v	show program's version number and exit
+ldaz	help_verbose	print detailed information
+ldaz	help_j	the criterion to screen the interfered channels on calibration parameters
+ldaz	help_p	numbers of Chebyshev polynomial coefficients on calibration parameters
+ldaz	help_cr	channel range without interference in form start_chan,end_chan
+ldaz	help_m	modify the zap parameter of the LD file
+ldaz	help_c	correct the data of the LD file
+ldaz	info_ana	Analyzing the arguments...
+ldaz	error_nld	File %s is not LD format.
+ldaz	error_nvn	Ld files name %s is invalid.
+ldaz	error_nvld	Ld files %s is invalid.
+ldaz	error_npd	Ld files %s is not pulsar data file.
+ldaz	error_dcn	Ld files have different channel numbers.
+ldaz	error_ncn	Starting channel number larger than ending channel number.
+ldaz	error_ocr	Input channel range is overrange.
+# ldcal.py
+ldcal	help	Process noise data in fits file to obtain calibration parameters, or merge multi-calibration-file to a large file.
+ldcal	help_h	show this help message and exit
+ldcal	help_v	show program's version number and exit
+ldcal	help_verbose	print detailed information
+ldcal	help_filename	name of file or filelist
+ldcal	help_cal_period	period of the calibration fits file (s)
+ldcal	help_o	output file name
+ldcal	help_r	reverse the band
+ldcal	help_trend	fit the calibration parameter evolution
+ldcal	help_s	take one subint as the calculation unit
+ldcal	help_w	overwrite the existed output file
+ldcal	info_ana	Analyzing the arguments...
+ldcal	info_con	Constructing the output file...
+ldcal	info_pros	Processing the noise file...
+ldcal	warning_br	Warning: Band of the ld file will not be reversed, and the flag '-r' will be ignored.
+ldcal	warning_is	Warning: The flag '-s' will be ignored.
+ldcal	error_dp	%s file have different parameters: %s.
+ldcal	error_ifn	%s file name %s is invalid.
+ldcal	error_if	%s file %s is invalid.
+ldcal	error_nc	%s file %s is not calibration file.
+ldcal	error_ns	%s file %s is not segmented calibration file.
+ldcal	error_nce	The evolution of calibration parameters cannot be obtained from only one calibration file.
+# ldcomp.py
+ldcomp	help	Compress the ld file.
+ldcomp	help_h	show this help message and exit
+ldcomp	help_v	show program's version number and exit
+ldcomp	help_filename	input file/file list to be compressed
+ldcomp	help_d	modify the dispersion measure to this value while compressing
+ldcomp	help_nchan	frequency scrunch to NCHAN_NEW channels
+ldcomp	help_F	frequency scrunch to one channel
+ldcomp	help_nsub	time scrunch to NSUB_NEW subints
+ldcomp	help_T	time scrunch to one subint
+ldcomp	help_b	bin scrunch to NBIN_NEW bins
+ldcomp	help_B	bin scrunch to one bin
+ldcomp	help_P	only reserve intensity
+ldcomp	help_fr	limit the frequency range FREQ0,FREQ1
+ldcomp	help_z	file recording zap channels
+ldcomp	help_w	compress as the 2-D weights parameters
+ldcomp	help_o	output file name (only for single input file)
+ldcomp	help_e	extension name, and the output will be set as INPUT_EXT.ld
+ldcomp	warning_ifw	Warning: The data in file %s do not has 2-D weights parameters, and the flag -w is ignored.
+ldcomp	warning_sofn	Warning: the output file name of file '+filei+' is set to be '+output0+'.ld.
+ldcomp	warning_fn	Warning: %s is/are invalid, or can not be compressed.
+ldcomp	warning_snf	Warning: the new sub-integration number {0} for file {1} can not be achieved, and the sub-integration number of new data is set to be {2}.
+ldcomp	error_ue	%s is unexist.
+ldcomp	error_ofn	The output file name can be specified only for one input file case.
+ldcomp	error_ofne	The output file name and extension name can not be specified at the same time.
+ldcomp	error_ofno	The name of output file already existed. Please provide a new name.
+ldcomp	error_1fr	At least one of flags -f, -F, -t, -T, -b and -B is required.
+ldcomp	error_mff	At most one of flags -f and -F is required.
+ldcomp	error_mft	At most one of flags -t and -T is required.
+ldcomp	error_mfb	At most one of flags -b and -B is required.
+ldcomp	error_joke	What do you want to do? To obtain a point?
+ldcomp	error_cnl	The input channel number is larger than the channel number of some dat file.
+ldcomp	error_snl	The input subint number is larger than the sub-integration number of some dat file.
+ldcomp	error_bnl	The input bin number is larger than the bin number of some dat file.
+ldcomp	error_nzf	The zap channel file is invalid.
+ldcomp	error_zno	The zapped channel number is overrange.
+ldcomp	error_sfl	Starting frequency larger than ending frequency.
+ldcomp	error_ifo	Input frequency is overrange.
+# ldconv.py
+ldconv	help	Convert the ld file to other data format.
+ldconv	help_h	show this help message and exit
+ldconv	help_v	show program's version number and exit
+ldconv	help_filename	name of ld file to convert
+ldconv	help_m	data format to convert: ld->dat, ToA->tim
+ldconv	help_o	output file name
+ldconv	error_nfn	A valid ld file name is required.
+ldconv	error_nof	The output file format is unrecognized.
+# lddm.py
+lddm	help	Calculate the best DM value. Press 's' in figure window to save figure.
+lddm	help_h	show this help message and exit
+lddm	help_v	show program's version number and exit
+lddm	help_filename	input ld file/files
+lddm	help_fr	limit the frequency rangeFREQ0,FREQ1
+lddm	help_sr	limit the subint range SUBINT0,SUBINT1
+lddm	help_n	normalized the data at each channel before optimization
+lddm	help_k	only print the result in text-form instead of plot
+lddm	help_o	output the results into a file
+lddm	help_m	add a parameter best_dm in the info of ld file
+lddm	help_c	correct the data with the best DM
+lddm	help_d	center of the fitting dispersion measure
+lddm	help_i	total range of the fitting dispersion measure
+lddm	help_degree	fit the dm-maxima curve with Nth order polynomial
+lddm	help_z	file recording zap channels
+lddm	help_p	fitting precision of the DM
+lddm	error_fue	File %s is unexist.
+lddm	error_zfi	The zap channel file is invalid.
+lddm	error_mfc	At most one of flags -m and -c is required.
+lddm	error_pvn	The precision of the visualized result cannot be reset.
+lddm	error_vnm	The visualized results cannot be manifested for multi-files.
+lddm	error_zno	The zapped channel number is overrange.
+lddm	error_nfr	A valid frequency range should be given.
+lddm	error_sfl	Starting frequency larger than ending frequency.
+lddm	error_ifo	Input frequency is overrange.
+lddm	error_ibn	Input bandwidth is too narrow.
+lddm	error_nsr	A valid subint range should be given.
+lddm	error_ssl	Starting subint is larger than ending subint.
+lddm	info_bdm	The best DM of file %s for pulsar %s cannot be found.
+lddm	info_ana	Analyse for %s:
+lddm	info_save	Figure file %s has been saved.
+lddm	warning_ilf	Warning: %s is/are not valid ld file
+lddm	input_fn	Please input figure name:
+# ldpara.py
 ldpara	help	Show the parameters of ld file.
 ldpara	help_filename	input ld file
+ldpara	help_h	show this help message and exit
+ldpara	help_v	show program's version number and exit
 ldpara	help_c	parameter name list, include nsub, nchan, nbin, npol, stt_time, file_time, psr_name, period, nperiod, dm, freq, bw and length
 ldpara	help_H	list the inquirable parameter names for the specified file/files
 ldpara	help_a	print all inquirable parameters for the specified file/files
@@ -7,3 +284,369 @@ ldpara	help_g	parameter group name, e.g. additional_info, calibration_info, data
 ldpara	info_np	Parameter %s can not be found.
 ldpara	error_nf	Valid file names are required.
 ldpara	info_ng	The parameter group name %s can not be recognized.
+# ldplot.py
+ldplot	help	Plot the ld data file.
+ldplot	help_h	show this help message and exit
+ldplot	help_v	show program's version number and exit
+ldplot	help_filename	input ld file/files
+ldplot	help_f	show the frequency domain image
+ldplot	help_t	show the time domain image
+ldplot	help_p	show the average pulse profile
+ldplot	help_d	show a simple dynamic spectrum image
+ldplot	help_sec	show the second spectrum image of the dynamic spectrum
+ldplot	help_l	show the polarization infos
+ldplot	help_N	x,y divide the window into x by y panels
+ldplot	help_fr	limit the frequency range to [f1,f2] MHz
+ldplot	help_cr	limit the frequency range to [chan1,chan2]
+ldplot	help_tr	limit the time range to [t1,t2] seconds
+ldplot	help_sr	limit the time range to [sub1,sub2]
+ldplot	help_br	limit the phase range to [p1,p2], The full range is [0,1]
+ldplot	help_binr	limit the phase range to [bin1,bin2]
+ldplot	help_polar	plot the specified polarization (0123 for IQUV,default=0)
+ldplot	help_r	shift the phase [-1,1], positive towards right, negative towards left
+ldplot	help_n	Normalize the data
+ldplot	help_s	save figures as the specified name, and the file type could be PNG, EPS or PDF
+ldplot	warning_psi	Warning: showing polarization needs not to specify polarization index.
+ldplot	info_nfn	The ld file %s name does not exsit.
+ldplot	info_fns	%s is not a showable file.
+ldplot	info_ffn	Input frequency for file %s is overrange, and this file is ignored.
+ldplot	info_ffo	Input frequency for file %s is overrange, and the intersection band is used instead.
+ldplot	info_frfn	Input frequency range for file %s is too narrow, and this file is ignored.
+ldplot	info_tfn	Input time for file %s is overrange, and this file is ignored.
+ldplot	info_tfo	Input time for file %s is overrange, and the intersection epoch is used instead.
+ldplot	info_trfs	Input time range for file %s is too short, and this file is ignored.
+ldplot	info_prfn	Input phase range for file %s is too narrow, and this file is ignored.
+ldplot	info_bfn	Input bin for file %s is overrange, and this file is ignored.
+ldplot	info_bfo	Input bin for file %s is overrange, and the intersection interval is used instead.
+ldplot	info_pfo	Input polarization for file %s is overrange, and this file is ignored.
+ldplot	info_fnp	The polarization number for file %s does not support showing polarization, and this file is ignored.
+ldplot	info_fnss	The sub-integration or frequency channel number for file %s does not support showing the second spectrum image of the dynamic spectrum, and this file is ignored.
+ldplot	info_fn	There are %s valid files in total.
+ldplot	info_pros	Processing the data ...
+ldplot	info_abo	Program aborted.
+ldplot	info_mps	The multi-plot parameters could be smaller, and it has been adjusted automatically.
+ldplot	error_mff	At most one of flags --cr and --fr is required.
+ldplot	error_mft	At most one of flags --sr and --tr is required.
+ldplot	error_mfp	At most one of flags --br, --binr and -r is required.
+ldplot	error_scl	Starting channel number larger than ending channel number.
+ldplot	error_ico	Input channel number is overrange.
+ldplot	error_sfl	Starting frequency larger than ending frequency.
+ldplot	error_ifo	Input frequency is overrange.
+ldplot	error_ssl	Starting sub-integration number larger than sub-integration number.
+ldplot	error_iso	Input sub-integration number is overrange.
+ldplot	error_stl	Starting time larger than ending time.
+ldplot	error_ito	Input time is overrange.
+ldplot	error_ibo	Input bin number is overrange.
+ldplot	error_ipro	Input phase range is overrange.
+ldplot	error_spee	Starting phase must be unequal to ending phase.
+ldplot	error_ipo	Input polarization is overrange.
+ldplot	error_mfs	At most one of flags -f, -t, -p, -d, -l and --sec is required.
+ldplot	error_lfs	At least one of flags -f, -t, -p, -d, -l and --sec is required.
+ldplot	error_mpl	The multi-plot parameters is too large.
+ldplot	error_noe	The name of output figure file already existed. Please provide a new name.
+# ldrm.py
+ldrm	help	Calculate the best RM value. Press 's' in figure window to save figure
+ldrm	help_h	show this help message and exit
+ldrm	help_v	show program's version number and exit
+ldrm	help_filename	input ld file/files
+ldrm	help_fr	limit the frequency rangeFREQ0,FREQ1
+ldrm	help_r	the initial RM value
+ldrm	help_br	the baseline range PHASE0,PHASE1 or pulse-off phase width
+ldrm	help_sr	limit the subint range SUBINT0,SUBINT1
+ldrm	help_k	only print the result in text-form instead of plot
+ldrm	help_o	output the results into a file
+ldrm	help_d	center of the fitting dispersion measure
+ldrm	help_i	total range of the fitting dispersion measure
+ldrm	help_c	correct the data with the best RM
+ldrm	help_n	scrunch the frequency by a factor n
+ldrm	help_z	file recording zap channels
+ldrm	error_fue	File %s is unexist.
+ldrm	error_npc	The data in file %s is unpolarized/uncalibrated.
+ldrm	error_scn	The channel numbers for file %s is too small to fit the rotation measure.
+ldrm	error_zfi	The zap channel file is invalid.
+ldrm	error_vnm	The visualized results cannot be manifested for multi-files.
+ldrm	error_zno	The zapped channel number is overrange.
+ldrm	error_nfr	A valid frequency range should be given.
+ldrm	error_sfl	Starting frequency larger than ending frequency.
+ldrm	error_ifo	Input frequency is overrange.
+ldrm	error_ibn	Input bandwidth is too narrow.
+ldrm	error_nsr	A valid subint range should be given.
+ldrm	error_ssl	Starting subint is larger than ending subint.
+ldrm	error_npr	A valid phase range/phase width should be given.
+ldrm	error_sftl	The scrunch factor is too large.
+ldrm	info_ana	Analyse for %s:
+ldrm	info_save	Figure file %s has been saved.
+ldrm	warning_ilf	Warning: %s is/are not valid ld file
+ldrm	input_fn	Please input figure name:
+# ldslc.py
+ldslc	help	Slice the ld file.
+ldslc	help_h	show this help message and exit
+ldslc	help_v	show program's version number and exit
+ldslc	help_filename	input ld file to be sliced
+ldslc	help_cr	limit the frequency channel range CHAN0,CHAN1
+ldslc	help_fr	limit the frequency (MHz) range FREQ0,FREQ1
+ldslc	help_sr	limit the sub-integration range SUBINT0,SUBINT1
+ldslc	help_tr	limit the time (s) range TIME0,TIME1
+ldslc	help_pr	select the output polarization index/indices
+ldslc	help_nt	slice the file in NT pieces in time domain
+ldslc	help_nf	slice the file in NF pieces in frequency domain
+ldslc	help_lt	slice the file in pieces with length LT (s)
+ldslc	help_lf	slice the file in pieces with bandwidth LF (MHz)
+ldslc	help_ns	slice the file in pieces with NS sub-integrations
+ldslc	help_nc	slice the file in pieces with NC frequency channgels
+ldslc	help_o	the output file name
+ldslc	warning_tnl	Warning: The time domain piece number should be smaller than original sub-integration number.
+ldslc	warning_tps	Warning: The time span of each piece should be larger than 1 sub-integration.
+ldslc	warning_tpl	Warning: The time span of each piece should be smaller than the original length.
+ldslc	warning_snl	Warning: The sub-integration number in each piece should be smaller than the original sub-integration number.
+ldslc	warning_fnl	Warning: The frequency domain piece number should be smaller than original channel number.
+ldslc	warning_bps	Warning: The bandwidth of each piece should be larger than 1 channel.
+ldslc	warning_bpl	Warning: The bandwidth of each piece should be smaller than the original bandwidth.
+ldslc	warning_cnl	Warning: The frequency channel number in each piece should be smaller than the original channel number.
+ldslc	error_nfn	A valid ld file name is required.
+ldslc	error_ndf	The data format does not support slicing.
+ldslc	error_nfrs	At least one of data ranging or slicing flags is required.
+ldslc	error_mff	At most one of flags --cr and --fr is required.
+ldslc	error_mft	At most one of flags --sr and --tr is required.
+ldslc	error_mfst	At most one of flags --nt, --lt and --ns is required.
+ldslc	error_mfsf	At most one of flags --nf, --lf and --nc is required.
+ldslc	error_sfl	Starting frequency larger than ending frequency.
+ldslc	error_ifo	Input frequency is overrange.
+ldslc	error_scl	Starting channel larger than ending channel.
+ldslc	error_ico	Input channel number is overrange.
+ldslc	error_stl	Starting time larger than ending time.
+ldslc	error_ito	Input time is overrange.
+ldslc	error_ssl	Starting sub-integration number larger than ending number.
+ldslc	error_iso	Input sub-integration number is overrange.
+ldslc	error_ipo	Input polarization is overrange.
+ldslc	error_tnn	The time domain piece number cannot be negative.
+ldslc	error_tsn	The time span of each piece cannot be negative.
+ldslc	error_snn	The sub-integration number in each piece cannot be negative.
+ldslc	error_fnn	The frequency domain piece number cannot be negative.
+ldslc	error_bwn	The bandwidth of each piece cannot be negative.
+ldslc	error_cnn	The frequency channel number in each piece cannot be negative.
+ldslc	error_nfe	The name of output file already existed. Please provide a new name.
+ldslc	error_onfe	The name of one of the output file already existed. Please provide a new name.
+# ldtem.py
+ldtem	help	Generate the profile template with multi-profiles.
+ldtem	help_h	show this help message and exit
+ldtem	help_v	show program's version number and exit
+ldtem	help_filename	input ld file/files
+ldtem	help_T	time scrunch to one subint for each file
+ldtem	help_fr	calculate in the frequency range (FREQ0,FREQ1)
+ldtem	help_sr	calculate in the subint range (SUBINT0,SUBINT1)
+ldtem	help_z	file recording zap channels
+ldtem	help_o	output file name
+ldtem	help_d	the progress will not correcting the DM deviation before calculating rotating phase
+ldtem	help_l	the number of frequency-domain points for linear fitting
+ldtem	help_b	the bin number of output profile
+ldtem	help_a	do not discard the low-rms data
+ldtem	help_r	use only red component of the profile as template
+ldtem	help_c	the template has multi-components
+ldtem	help_freqtem	generate 2-D freq-domain template
+ldtem	help_p	fit the template with several peaks
+ldtem	error_zfi	The zap channel file is invalid.
+ldtem	error_zno	The zapped channel number is overrange.
+ldtem	error_snl	Starting subint number larger than ending subint number.
+ldtem	error_iso	Input subint is overrange.
+ldtem	error_sfl	Starting frequency larger than ending frequency.
+ldtem	error_one	The name of output file already existed. Please provide a new name.
+ldtem	error_nfn	Ld file name %s is invalid.
+ldtem	error_nf	Ld file %s is invalid.
+ldtem	error_dft	The pulsar recorded in %s is different from others.
+ldtem	error_dfr	The frequency ranges of the input data are different.
+ldtem	error_ifo	Input frequency is overrange.
+ldtem	error_dfp	The freq-domain template cannot be constructed for data with different frequency parameters.
+ldtem	error_mcnr	The multi-component mode does not support red component template.
+ldtem	error_mcnp	The multi-component mode does not support peak-fit.
+ldtem	error_mfnp	The multi-frequency mode does not support peak-fit.
+ldtem	error_nfi	The number of frequency-domain points for linear fitting is invalid.
+ldtem	error_ue	Unexpected error. The produced profile is zero on every phase bin.
+ldtem	info_fanpa	Failed to add a new peak automatically, please add it manually.
+ldtem	info_pnl	The peak number is too large, and the fitting has stopped.
+ldtem	info_fpf	The fiting for the peak %s failed.
+ldtem	info_zeb	The produced template is zero on every phase bin, and it will not be saved.
+ldtem	info_help	\nldtem interactive commands\n\nBlack solid curve       :   processed pulse profile\nYellow dotted curve     :   fitted peak\nRed dashed curve        :   fitting curve for pulse profile\nGreen dash-dotted curve :   a new peak to be fitted\nBlue solid curve        :   fitting residuals\n\nMouse:\n  Left-click to select the centre of a peak\n    then left-click again to select a width of a peak.\n    then left-click again to select a height of a peak.\nKeyboard:\n  h  Show this help\n  f  fit the profile with appending the green dash-dotted peak\n  r  Reset a peak\n  q  Exit peak fitting and save the template.\n  b  Exit peak fitting without saving.\n\n
+# ldtim.py
+ldtim	help	Get the timing solution the ToA.
+ldtim	help_filename	input ToA file with ld or txt format
+ldtim	help_h	show this help message and exit
+ldtim	help_v	show program's version number and exit
+ldtim	help_p	input par file
+ldtim	help_fit	fitting parameter
+ldtim	help_i	plot mode: pre-fit and post-fit residuals (prepost), post-fit residuals (post), DM (dm)
+ldtim	help_time	plot the fitting time residuals instead of phase
+ldtim	help_s	save the post-fit pulsar parameters and residuals into files
+ldtim	help_x	the x-axis of the ToA
+ldtim	help_m	merge thd ToAs in one observation
+ldtim	help_e	the error limit of the ToA
+ldtim	help_c	the criterion of the effective ToA residuals
+ldtim	help_z	the zero point of the ToA
+ldtim	help_d	the date limit of the ToA in the format "DATE0,DATE1"
+ldtim	info_save	The parameters and residuals have been saved into the files %s and %s, respectively.
+ldtim	error_ntfn	ToA file name is invalid.
+ldtim	error_ndr	A valid date range is required.
+ldtim	error_nsfn	The number of save files cannot be more than 2.
+ldtim	error_pfe	The file to save pulsar parameters has been existed.
+ldtim	error_rfe	tThe file to save residuals has been existed.
+# ldtimi.py
+ldtimi	help	Get the timing solution with the ToAs interactively.
+ldtimi	help_filename	input ToA file with ld or txt format
+ldtimi	help_h	show this help message and exit
+ldtimi	help_v	show program's version number and exit
+ldtimi	help_p	input par file
+ldtimi	help_tr	limit the time range
+ldtimi	warning_ftoa	Warning: the ToAs are too few to be fitted.
+ldtimi	warning_ndfti	Warning: the pulse data file is not found, and use the file with same name in the directory of ToA file instead.
+ldtimi	warning_ndfni	Warning: the pulse data file is not found, and use the file in this directory with same name in this instead.
+ldtimi	warning_nb	Warning: this pulsar is not a binary, and the X-Axis cannot be Orbit phase.
+ldtimi	error_nfn	ToA file name is invalid.
+ldtimi	error_slte	Starting time latter than ending time.
+ldtimi	tk_niel	The inputing error limit is invalid!
+ldtimi	info_rms	RMS of the fit residuals (s):
+ldtimi	info_ndf	The corresponding file does not exist.
+ldtimi	info_pp	Pulsar parameters:
+ldtimi	info_help	\nldtimi interactive commands\n\nMouse:\n  Left-click and drag to select or unselect (with the key 'v' or left Shift holded on) ToAs in a rectangle region. \n    --Left-click on a single ToA to select or unselect (with the key 'v' or left Shift holded on) it. \n    --Hold on the key 'z' or left-Ctrl and left-drag to select a rectangle region to zoom in. \n  Right-click and drag to delete or undelete (with the key 'v' or left Shift holded on) ToAs in a rectangle region.\n    --Right-click on a single ToA to delete or undelete (with the key 'v' or left Shift holded on) it.\n  Middle-click on a single ToA to check the corresponding pulse profile of it.\n    --Left-click on the figure or press ESC to close the figure.\n\nKeyboard:\n  h    Show this help\n  u    Undo last delete command\n  y    Redo last undo command\n  r    Reset zoom to the initial region\n  e    Reset selection\n  b    Restart the fitting\n  m    Merge the neighboring ToAs\n  a/d  Add/substract one period for the selected ToAs or the ToAs on the right side of the cursor\n  f    Fit the ToAs displayed currently\n  p    Print the selected parameters\n  s    Save parfile to a specified file\n  x    Save the fit residuals to a specified file\n  q    Exit program\n\n
+# ldtoa.py
+ldtoa	help	Get the relative pulse rotating phase and DM of the ld file.
+ldtoa	help_h	show this help message and exit
+ldtoa	help_v	show program's version number and exit
+ldtoa	help_filename	input ld file/files
+ldtoa	help_p	pulse profile template ld file
+ldtoa	help_freq_align	use same frequency band to obtain the ToA
+ldtoa	help_T	time scrunch to one subint to obtain result
+ldtoa	help_fr	calculate in the frequency range (FREQ0,FREQ1)
+ldtoa	help_sr	calculate in the subint range (SUBINT0,SUBINT1)
+ldtoa	help_br	calculate with the data in phase range (PHASE0,PHASE1) of the template
+ldtoa	help_z	file recording zap channels
+ldtoa	help_Z	zap same channels for the template file
+ldtoa	help_o	output file name
+ldtoa	help_d	the progress will not correcting the DM deviation before calculating rotating phase
+ldtoa	help_l	the number of frequency-domain points for linear fitting
+ldtoa	help_n	normalized the data at each channel before cal
+ldtoa	help_freqtem	use 2d freq domain template to obtain ToA
+ldtoa	help_a	shift algorithm (default: pgs)
+ldtoa	info_disf	The file %s are discarded in calculating the ToA.
+ldtoa	info_diss0	The following subint are discarded in calculating the ToA: %s.
+ldtoa	info_diss1	the {0}-th subint of the file {1}
+ldtoa	error_ifn	A valid ld file name is required.
+ldtoa	error_zfi	The zap channel file is invalid.
+ldtoa	error_zno	The zapped channel number is overrange.
+ldtoa	error_snl	Starting subint number larger than ending subint number.
+ldtoa	error_iso	Input subint is overrange.
+ldtoa	error_ftnd	The freq-domain template need not to correct the dispersion measure.
+ldtoa	error_sfl	Starting frequency larger than ending frequency.
+ldtoa	error_pri	The given phase range is invalid.
+ldtoa	error_prs	The given phase range is too small.
+ldtoa	error_nfn	Ld file name %s is invalid.
+ldtoa	error_nf	Ld file %s is invalid.
+ldtoa	error_dft	The pulsar recorded in %s is different from the template.
+ldtoa	error_dnst	The data should come from the same telescope.
+ldtoa	error_dcn	The channel numbers of data and template are different, and the zap file should not be same.
+ldtoa	error_dbt	The template has different frequency band from the data.
+ldtoa	error_dfr	The frequency ranges of data and template are different, and the zap file should not be same.
+ldtoa	error_bno	Frequency bands of data and template have no overlap.
+ldtoa	error_ifo	Input frequency is overrange.
+ldtoa	error_dfp	The freq-domain ToA cannot be obtained for data with different frequency parameters from that of the template.
+ldtoa	error_one	The name of output file already existed. Please provide a new name.
+ldtoa	error_mcnf	The multi-component freq-domain template cannot be adopted for non-freq-domain ToA determination.
+ldtoa	error_ft1f	The freq-domain ToA cannot be obtained for template with only one frequency channel.
+ldtoa	error_nfi	The number of frequency-domain points for linear fitting is invalid.
+ldtoa	error_tmr	The timing method cannot be recognized.
+# ldzap.py
+ldzap	help	Zap the interference in ld file.
+ldzap	help_filename	input ld file
+ldzap	help_h	show this help message and exit
+ldzap	help_v	show program's version number and exit
+ldzap	help_z	file recording to zap channels
+ldzap	help_n	normalized the data at each channel
+ldzap	help_a	use mean value as the screening standard
+ldzap	help_r	discard the weights information recorded in the data and rezap the data
+ldzap	help_p	plot the mean pulse profile in dynamic spectra mode anyway
+ldzap	help_o	the name of output file
+ldzap	warning_longt	Warning: plot the mean pulse profile in dynamic spectra mode may take a long time.
+ldzap	info_mulmode	The auto-zapping program cannot be used in more than one modes.
+ldzap	info_save	Saved the zapping matrix in the %s_zap.txt.
+ldzap	info_saved	Created a new ld file: %s to save data.
+ldzap	info_savew	Re-wrote the data weight in file %s.
+ldzap	info_help	\nldzap interactive commands\n\nMouse:\n  Left-click selects the start of a range\n    then left-click again to zoom, or right-click to zap.\n  Right-click zaps current cursor location.\n\n  mid-click plot the pulse profile at the channel (or sub integration) current cursor location.\n\nKeyboard:\n  h  Show this help\n  f  Switch into frequency-vs-phase domain \n  t  Switch into time-vs-phase domain\n  d  Switch into frequency-vs-time domain (dynamic spectra)\n  c  Switch between the spectrum and calibration parameters in the vertical subplot for frequency domain\n  u  Undo the last zap command\n  r  Reset zoom and update figure\n  z  Zap distinct noise or rise the noise critical level\n  x  Withdraw zappping distinct noise or lower the noise critical level\n  o  Switch between the on-pulse and off-pulse mode for frequency-vs-time domain (Default: off-pulse)\n  s  Save zapped version as the specified output or change the weight in the data information and quit\n  w  Rewrite the weight in the data information and quit\n  q  Exit program\n
+# psr_model.py
+psr_model	warning_h4s	Warning: Both H4 and STIG in par file, then ignoring STIG
+psr_model	warning_nmp	Strong Warning: The mass of the pulsar is not given in parfile, use 1.4 times of solarmass in calculation.
+psr_model	error_np	One or more parameters is invalid.
+psr_model	error_nb	One or more parameters belongs to binary parameters, but the pulsar %s is not a binary pulsar.
+psr_model	error_nm	Parameter %s is not a parameter for %s model.
+psr_model	error_nt0	No T0 or T0ASC in pulsar paras.
+psr_model	error_nde	Either DD or ELL1 model cannot be used.
+# psr_read.py
+psr_read	error_nbp0	The %s model does not have parameter %s.
+psr_read	error_nbp0	The parameter %s is a parameter in binary model, but the pulsar %s is not a binary pulsar.
+psr_read	error_nmp	The parameter %s cannot be modified.
+psr_read	error_nrp	The parameter %s cannot be recognized.
+psr_read	error_nrmbp	The parameter %s is a necessary parameter in %s model and cannot be removed.
+psr_read	error_nrmp	The parameter %s cannot be removed.
+psr_read	error_nrmpp	The parameter pepoch cannot be removed if frequency derivative exists.
+psr_read	error_npn	No pulsar name in par file.
+psr_read	error_npu	No parameter units in par file.
+psr_read	error_wfra	The format of RA is wrong.
+psr_read	error_wfdec	The format of DEC is wrong.
+psr_read	error_npp	No pulsar position in par file.
+psr_read	error_npp0	No pulsar period in par file.
+psr_read	error_pnp	The parameter %s is in parfile without %s.
+psr_read	error_npe	No PEPOCH in par file.
+psr_read	error_nbpb	The binary orbit period is not given in par file.
+psr_read	error_nt0om0	There is no T0 and OM parameters for %s binary model, please use ELL1 type binary model.
+psr_read	error_nt0om1	There is no T0 and OM parameters for %s binary model.
+psr_read	error_ntasc0	There is no TASC parameter in parfile for ELL1 type binary model, please use another binary model.
+psr_read	error_ntasc1	There is no TASC parameter for ELL1 type binary model.
+psr_read	error_nt0	No T0 or T0ASC in pulsar paras.
+psr_read	warning_ndmep	Warning: No DMEPOCH in the parfile, using PEPOCH instead.
+psr_read	warning_nposep	Warning: No POSEPOCH in the parfile, using PEPOCH instead.
+psr_read	warning_nnbp	Strong Warning: No %s parameter for %s model.
+psr_read	warning_npv	Warning: No parameter version in the parfile.
+psr_read	warning_nev	Warning: No ephemris version in the parfile.
+psr_read	warning_spnp	Strong Warning: The parameter %s is in parfile without %s.
+psr_read	warning_ne	Warning: The parameter %s has no error.
+psr_read	warning_ndm	Strong Warning: No pulsar DM in par file, set DM as 0!
+psr_read	warning_nbpma	Waring: The parameter %s is found in parfile, maybe %s model can be adopted.
+psr_read	warning_nbpui	Waring: The parameter %s for %s model is not found in parfile, use %s model instead.
+psr_read	warning_nps	Warning: The parameters %s in the parfile is not used.
+# time_eph.py
+time_eph	error_ete	The input time is earlier than the start time of the planet ephemeris, please change the ephemeris or input time.
+time_eph	error_lte	The input time is latter than the end time of the planet ephemeris, please change the ephemeris or input time.
+time_eph	error_ntn	The name of the telescope cannot be recognized.
+time_eph	error_etc	The input time is earlier than the start time of the clock difference, please change the input time.
+time_eph	error_ltc	The input time is latter than the end time of the clock difference, please update the clock difference file or change the input time.
+time_eph	error_etg	The input time is earlier than the start time of the GPS difference, please change the input time.
+time_eph	error_ltg	The input time is latter than the end time of the GPS difference, please update the GPS difference file or change the input time.
+time_eph	error_etu	The input time is earlier than the start time of the TAI-UT1, please change the input time.
+time_eph	error_ltu	The input time is latter than the end time of the TAI-UT1, please update the TAI-UT1 difference file or change the input time.
+time_eph	error_ett	The input time is earlier than the start time of the TAI-TT(BIPM), please change the input time.
+time_eph	error_ltt	The input time is latter than the end time of the TAI-TT(BIPM), please update the TAI-TT(BIPM) difference file or change the input time.
+time_eph	error_eto	The input time is earlier than the start time of the EOPC, please change the input time.
+time_eph	error_lto	The input time is latter than the end time of the EOPC, please update the EOPC difference file or change the input time.
+# update_cv
+update_cv	help	Updating the time difference { (1) gps2utc, (2) leap, (3) polarmotion, (4) tai2ut1, (5) tai2tt }.
+update_cv	help_h	show this help message and exit
+update_cv	help_v	show program's version number and exit
+update_cv	help_verbose	print detailed information
+update_cv	help_u	update the specified time difference.
+update_cv	help_s	show the specified time difference, contain { (6) leaptxt, (7) utc2ut1 }.
+update_cv	error_nuc	The selected clock difference to be updated cannot be recognized.
+update_cv	error_nsc	The selected clock difference to be shown cannot be recognized.
+# update_tdiff_FAST
+update_tdiff_FAST	help	Updating the time difference between local clock and GPS.
+update_tdiff_FAST	help_h	show this help message and exit
+update_tdiff_FAST	help_v	show program's version number and exit
+update_tdiff_FAST	help_verbose	print detailed information
+update_tdiff_FAST	help_w	update the whole clock difference file
+update_tdiff_FAST	help_s	show the handled clock difference
+update_tdiff_FAST	info_ed	All present clock data have been included in the clock-difference file.
+# update_tdiff_FAST1
+update_tdiff_FAST1	help	Updating the time difference between local clock and standard time.
+update_tdiff_FAST1	help_h	show this help message and exit
+update_tdiff_FAST1	help_v	show program's version number and exit
+update_tdiff_FAST1	help_verbose	print detailed information
+update_tdiff_FAST1	help_w	update the whole clock difference file
+update_tdiff_FAST1	help_s	show the handled clock difference
+update_tdiff_FAST1	info_ed	The difference file between FAST clock and standard is already the newest.

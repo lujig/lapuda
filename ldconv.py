@@ -2,18 +2,23 @@
 import argparse as ap
 import numpy as np
 import astropy.io.fits as ps
-import os,ld,time
+import os,ld,time,sys
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.output_text('ldconv')
 version='JigLu_20201012'
-parser=ap.ArgumentParser(prog='ldconv',description='Convert the ld file to other data format.',epilog='Ver '+version)
-parser.add_argument('-v','--version', action='version', version=version)
-parser.add_argument("filename",help="name of ld file to convert")
-parser.add_argument('-m',dest='mode',default='dat',help="data format to convert: ld->dat, ToA->tim")
-parser.add_argument("-o","--output",dest="output",default="",help="output file name")
+parser=ap.ArgumentParser(prog='ldconv',description=text.help,epilog='Ver '+version,add_help=False,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument("filename",help=text.help_filename)
+parser.add_argument('-m',dest='mode',default='dat',help=text.help_m)
+parser.add_argument("-o","--output",dest="output",default="",help=text.help_o)
 #
 args=(parser.parse_args())
 if not os.path.isfile(args.filename):
-	parser.error('A valid ld file name is required.')
+	parser.error(text.error_nfn)
 d=ld.ld(args.filename)
 shape=tuple(d.read_shape())
 info=d.read_info()
@@ -43,4 +48,4 @@ elif info['data_info']['mode']=='ToA' and args.mode=='tim':
 		fout.write('{:26s} {:10.6f} {:28s} {:4f} {:8s}'.format(ftmp,(result[i,5]+result[i,6])/2,str(int(result[i,0]))+str(result[i,1]/86400)[1:],result[i,2]*1e6,info['telescope_info']['telename'])+'\n')
 	fout.close()
 else:
-	parser.error('The output file format is unrecognized.')
+	parser.error(text.error_nof)

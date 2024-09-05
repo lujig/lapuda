@@ -6,24 +6,29 @@ import numpy.fft as fft
 import os,ld,time,sys,copy
 import adfunc as ad
 import psr_model as pm
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.output_text('ldcomp')
 version='JigLu_20180506'
-parser=ap.ArgumentParser(prog='ldcomp',description='Compress the ld file.',epilog='Ver '+version)
-parser.add_argument('-v','--version',action='version',version=version)
-parser.add_argument("filename",nargs='+',help="input file/file list to be compressed")
-parser.add_argument('-d',dest='dm',default=np.inf,type=np.float64,help="modify the dispersion measure to this value while compressing")
-parser.add_argument('--nchan',dest='nchan_new',default=0,type=np.int16,help="frequency scrunch to NCHAN_NEW channels")
-parser.add_argument('-F',action='store_true',default=False,dest='fscrunch',help='frequency scrunch to one channel')
-parser.add_argument('--nsub',dest='nsub_new',default=0,type=np.int16,help="time scrunch to NSUB_NEW subints")
-parser.add_argument('-T',action='store_true',default=False,dest='tscrunch',help='time scrunch to one subint')
-parser.add_argument('-b','--nbin',dest='nbin_new',default=0,type=np.int16,help="bin scrunch to NBIN_NEW bins")
-parser.add_argument('-B',action='store_true',default=False,dest='bscrunch',help='bin scrunch to one bin')
-parser.add_argument('-P',action='store_true',default=False,dest='pscrunch',help='only reserve intensity')
-parser.add_argument('--fr','--frequency_range',default=0,dest='freqrange',help='limit the frequency rangeFREQ0,FREQ1')
-parser.add_argument("-z","--zap",dest="zap_file",default=0,help="file recording zap channels")
-parser.add_argument("-w","--weights",dest="weights",action='store_true',default=False,help="compress as the 2-D weights parameters")
-parser.add_argument("-o","--output",dest="output",default='',help="output file name (only for single input file)")
-parser.add_argument("-e","--extension",dest="ext",default='',help="extension name, and the output will be set as INPUT_EXT.ld")
+parser=ap.ArgumentParser(prog='ldcomp',description=text.help,epilog='Ver '+version,add_help=False,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument("filename",nargs='+',help=text.help_filename)
+parser.add_argument('-d',dest='dm',default=np.inf,type=np.float64,help=text.help_d)
+parser.add_argument('--nchan',dest='nchan_new',default=0,type=np.int16,help=text.help_nchan)
+parser.add_argument('-F',action='store_true',default=False,dest='fscrunch',help=text.help_F)
+parser.add_argument('--nsub',dest='nsub_new',default=0,type=np.int16,help=text.help_nsub)
+parser.add_argument('-T',action='store_true',default=False,dest='tscrunch',help=text.help_T)
+parser.add_argument('-b','--nbin',dest='nbin_new',default=0,type=np.int16,help=text.help_b)
+parser.add_argument('-B',action='store_true',default=False,dest='bscrunch',help=text.help_B)
+parser.add_argument('-P',action='store_true',default=False,dest='pscrunch',help=text.help_P)
+parser.add_argument('--fr','--frequency_range',default=0,dest='freqrange',help=text.help_fr)
+parser.add_argument("-z","--zap",dest="zap_file",default=0,help=text.help_z)
+parser.add_argument("-w","--weights",dest="weights",action='store_true',default=False,help=text.help_w)
+parser.add_argument("-o","--output",dest="output",default='',help=text.help_o)
+parser.add_argument("-e","--extension",dest="ext",default='',help=text.help_e)
 args=(parser.parse_args())
 command0=['ldcomp.py']
 #
@@ -31,15 +36,15 @@ filelist0=args.filename
 #
 if args.output:
 	if len(filelist0)!=1:
-		parser.error('The output file name can be specified only for one input file case.')
+		parser.error(text.error_ofn)
 	if args.ext:
-		parser.error('The output file name and extension name can not be specified at the same time.')
+		parser.error(text.error_ofne)
 	output_mark=True
 	output=args.output
 	if len(output)>3:
 		if output[-3:]=='.ld': output=output[:-3]
 	if os.path.isfile(output):
-		parser.error('The name of output file already existed. Please provide a new name.')
+		parser.error(text.error_ofno)
 elif args.ext:
 	output_mark=False
 	ext=args.ext
@@ -55,7 +60,7 @@ filelist=[]
 nchan,nsub,nbin,freq_start0,freq_end0=10**8,10**8,10**8,0,1e100
 for i in filelist0:	# check the files
 	if not os.path.isfile(i):
-		parser.error(i+' is unexist.')
+		parser.error(text.error_ue % i)
 	else:
 		try:
 			filei=ld.ld(i)
@@ -72,35 +77,35 @@ for i in filelist0:	# check the files
 			errorfile.append(i)
 #
 if errorfile:
-	print('Warning: '+', '.join(errorfile)+' is/are invalid, or can not be compressed.')
+	print(text.warning_fn % ', '.join(errorfile))
 #
 fflag=np.sum(list(map(bool,[args.nchan_new,args.fscrunch])))
 tflag=np.sum(list(map(bool,[args.nsub_new,args.tscrunch])))
 bflag=np.sum(list(map(bool,[args.nbin_new,args.bscrunch])))
 pflag=np.int16(args.pscrunch)
 if fflag+tflag+bflag+pflag==0:
-	parser.error('At least one of flags -f, -F, -t, -T, -b and -B is required.')
+	parser.error(text.error_1fr)
 elif fflag==2:
-	parser.error('At most one of flags -f and -F is required.')
+	parser.error(text.error_mff)
 elif tflag==2:
-	parser.error('At most one of flags -t and -T is required.')
+	parser.error(text.error_mft)
 elif bflag==2:
-	parser.error('At most one of flags -b and -B is required.')
+	parser.error(text.error_mfb)
 elif np.sum(map(bool,[args.fscrunch,args.tscrunch,args.bscrunch]))==3:
-	parser.error('What do you want to do? To obtain a point?')
+	parser.error(text.error_joke)
 #
 if args.nchan_new:
 	nchan_new=args.nchan_new
 	command0.append('--nchan '+str(nchan_new))
 	if nchan_new>nchan:
-		parser.error('The input channel number is larger than the channel number of some dat file.')
+		parser.error(text.error_cnl)
 elif args.fscrunch:
 	command0.append('-F')
 #
 if args.nsub_new:
 	command0.append('--nsub '+str(args.nsub_new))
 	if args.nsub_new>nsub:
-		parser.error('The input subint number is larger than the sub-integration number of some dat file.')
+		parser.error(text.error_snl)
 elif args.tscrunch:
 	command0.append('-T')
 #
@@ -108,7 +113,7 @@ if args.nbin_new:
 	nbin_new=args.nbin_new
 	command0.append('-b '+str(nbin_new))
 	if nbin_new>nbin:
-		parser.error('The input bin number is larger than the bin number of some dat file.')
+		parser.error(text.error_bnl)
 elif args.bscrunch:
 	command0.append('-B')
 #
@@ -118,18 +123,18 @@ if args.pscrunch:
 if args.zap_file:
 	command0.append('-z')
 	if not os.path.isfile(args.zap_file):
-		parser.error('The zap channel file is invalid.')
+		parser.error(text.error_nzf)
 	zchan=np.loadtxt(args.zap_file,dtype=np.int32)
 	if np.max(zchan)>=nchan or np.min(zchan)<0:
-		parser.error('The zapped channel number is overrange.')
+		parser.error(text.error_zno)
 #
 if args.freqrange:
 	command0.append('--fr '+args.freqrange)
 	freq_start,freq_end=np.float64(args.freqrange.split(','))
 	if freq_start>freq_end:
-		parser.error("Starting frequency larger than ending frequency.")
+		parser.error(text.error_sfl)
 	elif freq_start<freq_start0 or freq_end>freq_end0:
-		parser.error("Input frequency is overrange.")
+		parser.error(text.error_ifo)
 #
 for filei in filelist:
 	command=copy.deepcopy(command0)
@@ -150,7 +155,7 @@ for filei in filelist:
 			info['data_info']['mode']='subint'
 		nsub_new=int(np.ceil(nsub/np.ceil(nsub/args.nsub_new)))
 		if nsub_new!=args.nsub_new:
-			sys.stdout.write('Warning: the new sub-integration number '+str(args.nsub_new)+' for file '+filei+' can not be achieved, and the sub-integration number of new data is set to be '+str(nsub_new)+'.')
+			print(text.warning_snf.format(str(args.nsub_new),filei,str(nsub_new)))
 	elif args.tscrunch:
 		nsub_new=1
 		info['data_info']['mode']='subint'
@@ -169,7 +174,7 @@ for filei in filelist:
 	weights_comp=False
 	if args.weights:
 		if 'weights' not in info['data_info'].keys():
-			print("The data in file "+filei+" do not has 2-D weights parameters, and the flag -w is ignored.")
+			print(text.warning_ifw % filei)
 		else:
 			command.append('-w')
 			weights_comp=True
@@ -225,7 +230,7 @@ for filei in filelist:
 			output0=output+'_'+str(tmpnum)
 			tmpnum+=1
 		if output!=output0:
-			print('Warning: the output file name of file '+filei+' is set to be '+output0+'.ld.')
+			print(text.warning_sofn % (filei,output0))
 		d1=ld.ld(output0+'.ld')
 	#	
 	if 'history_info' in info.keys():

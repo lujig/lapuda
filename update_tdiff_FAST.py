@@ -8,14 +8,19 @@ import matplotlib.pyplot as plt
 import scipy.optimize as so
 import adfunc as af
 plt.rcParams['font.family']='Serif'
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.output_text('update_tdiff_FAST')
 version='JigLu_20220317'
 #
-parser=ap.ArgumentParser(prog='update_tdiff',description='Updating the time difference between local clock and gps.',epilog='Ver '+version)
-parser.add_argument('-v','--version', action='version', version=version)
-parser.add_argument('--verbose', action="store_true",default=False,help="print detailed information")
-parser.add_argument("-w","--rewrite",action="store_true",default=False,help="update the whole clock difference file.")
-parser.add_argument('-s','--show',action="store_true",default=False,help='show the handled clock difference.')
+parser=ap.ArgumentParser(prog='update_tdiff',description=text.help,epilog='Ver '+version,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument('--verbose', action="store_true",default=False,help=text.help_verbose)
+parser.add_argument("-w","--rewrite",action="store_true",default=False,help=text.help_w)
+parser.add_argument('-s','--show',action="store_true",default=False,help=text.help_s)
 args=(parser.parse_args())
 #
 dtj0=np.array([1537588300,1537623000,1538314761,1541724000,1541916000,1548391000,1550469000,1554826000])	# the time for FAST clock to adjust the time frequency
@@ -70,7 +75,7 @@ for i in flist:	# merge clock correction files
 	dt0.extend(np.float64(tmp[:,1]))
 #
 if len(t0)<20:	
-	print('All present clock data have been included in the clock-difference file.')
+	print(text.info_ed)
 	end=True
 else:	# screen the time points existed in present file
 	dt0=np.array(dt0)[np.argsort(t0)]
@@ -81,7 +86,7 @@ else:	# screen the time points existed in present file
 	end=False
 if end: pass
 elif len(t1)<20:
-	print('All present clock data have been included in the clock-difference file.')
+	print(text.info_ed)
 	end=True
 else:	# screen the time points with large time jump
 	lt=len(t1)
@@ -100,7 +105,7 @@ else:	# screen the time points with large time jump
 	dt2=dt1[jt1]
 if end: pass
 elif len(t2)<20:
-	print('All present clock data have been included in the clock-difference file.')
+	print(text.info_ed)
 	end=True
 else:	# create a uniform time line
 	if endunix==0: sttunix=t2[0]
@@ -108,7 +113,7 @@ else:	# create a uniform time line
 	t3=np.arange(sttunix,t2[-1],deltat)
 if end: pass
 elif len(t3)<20:
-	print('All present clock data have been included in the clock-difference file.')
+	print(text.info_ed)
 	end=True
 else:	# fit the clock correction with polynomials
 	dt3=np.interp(t3,t2,dt2)

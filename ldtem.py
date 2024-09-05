@@ -12,34 +12,39 @@ import warnings as wn
 import adfunc as af
 from sklearn.decomposition import PCA
 wn.filterwarnings('ignore')
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.output_text('ldtem')
 version='JigLu_20201202'
-parser=ap.ArgumentParser(prog='ldtem',description='Generate the profile template with multi-profiles.',epilog='Ver '+version)
-parser.add_argument('-v','--version',action='version',version=version)
-parser.add_argument("filename",nargs='+',help="input ld file or files")
-parser.add_argument('-T','--tscrunch',action='store_true',default=False,dest='tscrunch',help='time scrunch to one subint for each file')
-parser.add_argument('--fr','--frequency_range',default=0,dest='freqrange',help='calculate in the frequency range (FREQ0,FREQ1)')
-parser.add_argument('--sr','--subint_range',default=0,dest='subint_range',help='calculate in the subint range (SUBINT0,SUBINT1)')
-parser.add_argument('-z',"--zap",dest="zap_file",default=0,help="file recording zap channels")
-parser.add_argument('-o',"--output",dest="output",default="template",help="outputfile name")
-parser.add_argument('-d',action='store_true',default=False,dest='dm_corr',help='the progress will not correcting the DM deviation before calculating rotating phase')
-parser.add_argument('-l',"--linear_number",dest="lnumber",type=np.int8,default=0,help="the number of frequency-domain points for linear fitting")
-parser.add_argument('-b',"--nbin",dest="nbin",type=np.int16,default=256,help="the bin number of output profile")
-parser.add_argument('-a',action='store_true',default=False,dest='auto',help='do not discard the low-rms data')
-parser.add_argument('-m','--red',action='store_true',default=False,dest='red',help='use only red component of the profile as template')
-parser.add_argument('-c','--component',action='store_true',default=False,dest='component',help='the template has multi-components')
-parser.add_argument('--freqtem',action='store_true',default=False,dest='freqtem',help='generate 2-D freqdomain template')
-parser.add_argument('-p','--peak_fit',action='store_true',default=False,dest='peakfit',help='fit the template with several peaks')
+parser=ap.ArgumentParser(prog='ldtem',description=text.help,epilog='Ver '+version,add_help=False,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument("filename",nargs='+',help=text.help_filename)
+parser.add_argument('-T','--tscrunch',action='store_true',default=False,dest='tscrunch',help=text.help_T)
+parser.add_argument('--fr','--frequency_range',default=0,dest='freqrange',help=text.help_fr)
+parser.add_argument('--sr','--subint_range',default=0,dest='subint_range',help=text.help_sr)
+parser.add_argument('-z',"--zap",dest="zap_file",default=0,help=text.help_z)
+parser.add_argument('-o',"--output",dest="output",default="template",help=text.help_o)
+parser.add_argument('-d',action='store_true',default=False,dest='dm_corr',help=text.help_d)
+parser.add_argument('-l',"--linear_number",dest="lnumber",type=np.int8,default=0,help=text.help_l)
+parser.add_argument('-b',"--nbin",dest="nbin",type=np.int16,default=256,help=text.help_b)
+parser.add_argument('-a','--all',action='store_true',default=False,dest='auto',help=text.help_a)
+parser.add_argument('-r','--red',action='store_true',default=False,dest='red',help=text.help_r)
+parser.add_argument('-c','--component',action='store_true',default=False,dest='component',help=text.help_c)
+parser.add_argument('--freqtem',action='store_true',default=False,dest='freqtem',help=text.help_freqtem)
+parser.add_argument('-p','--peak_fit',action='store_true',default=False,dest='peakfit',help=text.help_p)
 args=(parser.parse_args())
 command=['ldtem.py']
 #
 if args.zap_file:
 	command.append('-z')
 	if not os.path.isfile(args.zap_file):
-		parser.error('The zap channel file is invalid.')
+		parser.error(text.error_zfi)
 	zchan=np.loadtxt(args.zap_file,dtype=np.int32)
 	if np.min(zchan)<0:
-		parser.error('The zapped channel number is overrange.')
+		parser.error(text.error_zno)
 else:
 	zchan=np.int32([])
 #
@@ -47,9 +52,9 @@ if args.subint_range:
 	command.append('--sr '+args.subint_range)
 	sub_start,sub_end=np.int32(args.subint_range.split(','))
 	if sub_end>0 and sub_start>sub_end:
-		parser.error("Starting subint number larger than ending subint number.")
+		parser.error(text.error_snl)
 	elif sub_start<0:
-		parser.error("Input subint is overrange.")
+		parser.error(text.error_iso)
 #
 if args.tscrunch:
 	command.append('-T')
@@ -58,7 +63,7 @@ if args.freqrange:
 	command.append('--fr '+args.freqrange)
 	freq_s,freq_e=np.float64(args.freqrange.split(','))
 	if freq_s>freq_e:
-		parser.error("Starting frequency larger than ending frequency.")
+		parser.error(text.error_sfl)
 else:
 	freq_s,freq_e=1,1e6
 freq_s_tmp,freq_e_tmp=freq_s,freq_e
@@ -72,26 +77,26 @@ else:
 		output='ld'
 		name=name[:-3]
 	if os.path.isfile(name+'.ld'):
-		parser.error('The name of output file already existed. Please provide a new name.')
+		parser.error(text.error_one)
 #
 filelist=args.filename
 filenum=len(filelist)
 nsub_new=[]
 psrname=''
 dm=0
-def ld_check(fname,filetype='Ld file',notfirst=True):
+def ld_check(fname,notfirst=True):
 	global freq_s,freq_e,psrname,dm,freq_s_tmp,freq_e_tmp,nchan0,psr
 	if not os.path.isfile(fname):
-		parser.error(filetype+' name '+fname+' '+'is invalid.')
+		parser.error(text.error_nfn % fname)
 	try:
 		f=ld.ld(filelist[i])
 		finfo=f.read_info()
 	except:
-		parser.error(filetype+' '+fname+' is invalid.')
+		parser.error(text.error_nf % fname)
 	if notfirst:
 		tmpname=pr.psr(finfo['pulsar_info']['psr_par'],warning=False).name
 		if psrname!=tmpname:
-			parser.error('The pulsar recorded in '+fname+' is different from the template.')
+			parser.error(text.error_dft % fname)
 	else:
 		psr=pr.psr(finfo['pulsar_info']['psr_par'],warning=False)
 		psrname=psr.name
@@ -101,13 +106,13 @@ def ld_check(fname,filetype='Ld file',notfirst=True):
 	nperiod=finfo['data_info']['nsub']
 	#
 	if args.zap_file:
-		if np.max(zchan)>=nchan or np.min(zchan)<0: parser.error('The zapped channel number is overrange.')
+		if np.max(zchan)>=nchan or np.min(zchan)<0: parser.error(text.error_zno)
 	#
 	if args.subint_range:
 		if sub_end<0: sub_end_tmp=nperiod+sub_end
 		else: sub_end_tmp=sub_end
-		if sub_start>sub_end_tmp: parser.error("Starting subint number larger than ending subint number.")
-		elif sub_end_tmp>nperiod or sub_end_tmp<0: parser.error("Input subint is overrange.")
+		if sub_start>sub_end_tmp: parser.error(text.error_snl)
+		elif sub_end_tmp>nperiod or sub_end_tmp<0: parser.error(text.error_iso)
 	#
 	if args.tscrunch: nsub_new.append(1)
 	elif args.subint_range: nsub_new.append(sub_end_tmp-sub_start)
@@ -117,16 +122,16 @@ def ld_check(fname,filetype='Ld file',notfirst=True):
 	freq=(freq_start+freq_end)/2.0
 	channel_width=(freq_end-freq_start)/nchan
 	if args.freqtem and not args.freqrange:
-		if freq_start!=freq_s_tmp or freq_end!=freq_e_tmp: parser.error("The frequency ranges of the input data are different.")
+		if freq_start!=freq_s_tmp or freq_end!=freq_e_tmp: parser.error(text.error_dfr)
 	freq_s_tmp=min(freq_start,freq_s_tmp)
 	freq_e_tmp=max(freq_end,freq_e_tmp)
 	if args.freqrange:
-		if freq_s<freq_start or freq_e>freq_end: parser.error("Input frequency is overrange.")
+		if freq_s<freq_start or freq_e>freq_end: parser.error(text.error_ifo)
 	if args.freqtem:
 		chanstart,chanend=np.int16(np.round((np.array([max(freq_s,freq_start),min(freq_e,freq_end)])-freq_start)/channel_width))
 		nchan_new=chanend-chanstart
 		if notfirst:
-			if nchan_new!=nchan0: parser.error("The freq-domain template cannot be constructed for data with different frequency parameters.")				
+			if nchan_new!=nchan0: parser.error(text.error_dfp)
 		else:
 			nchan0=nchan_new
 #
@@ -137,13 +142,6 @@ if not args.freqrange:
 	freq_e=freq_e_tmp
 #
 nsub_new=np.array(nsub_new)
-#
-name=args.output
-name_tmp='    '+name
-if name_tmp[-3:]=='.ld':
-	name=name[:-3]
-if os.path.isfile(name+'.ld'):
-	parser.error('The name of output file already existed. Please provide a new name.')
 #
 def shift(y,x):
 	fftdata=fft.rfft(y,axis=1)
@@ -184,17 +182,17 @@ if args.auto:
 if args.red:
 	command.append('-m')
 	if args.component:
-		parser.error('The multi-component mode doesnot support red component template.')
+		parser.error(text.error_mcnr)
 #
 if args.peakfit:
 	command.append('-p')
 #
 if args.component:
-	if args.peakfit: parser.error('The multi-component mode doesnot support peak-fit.')
+	if args.peakfit: parser.error(text.error_mcnp)
 	command.append('-c')
 #
 if args.freqtem:
-	if args.peakfit: parser.error('The multi-frequency mode doesnot support peak-fit.')
+	if args.peakfit: parser.error(text.error_mfnp)
 	command.append('--freqtem')
 #
 def lin(x,k):
@@ -343,7 +341,7 @@ for s in np.arange(nchan_res):
 		command.append('-l '+str(args.lnumber))
 		lnumber=args.lnumber
 		if lnumber>100 or lnumber<=2:
-			parser.error('The number of frequency-domain points for linear fitting is invalid.')
+			parser.error(text.error_nfi)
 	else:
 		fabss=fabs.sum(0)
 		lnumber=int(np.round(fabss.sum()/fabss.max()*2))
@@ -585,13 +583,13 @@ if args.peakfit:
 					h0=popt[-1]
 					prof1=prof2-mpeak(phase,*popt)
 				except:
-					sys.stdout.write("Failed to add a new peak automatically, please add it manually.\n")
+					print(text.info_fanpa)
 				update_fig()
 				tmppara=np.zeros(3)
 				canvas.draw()
 			if np.size(paras)*2>args.nbin:
 				fitmark='stop'
-				sys.stdout.write("The peak number is too large, and the fitting has stopped.\n\n")
+				print(text.info_pnl+'\n')
 		if a=='f':
 			if fitmark=='fit':
 				try: 
@@ -600,7 +598,7 @@ if args.peakfit:
 					h0=popt[-1]
 					prof1=prof2-mpeak(phase,*popt)
 				except:
-					sys.stdout.write("The fiting for the peak "+str(list(tmppara))+" failed.\n")
+					print(text.info_fpf % str(list(tmppara)))
 				update_fig()
 				fitmark='x0'
 				xymark='x'
@@ -610,7 +608,7 @@ if args.peakfit:
 				canvas.draw()
 			if np.size(paras)*2>args.nbin:
 				fitmark='stop'
-				sys.stdout.write("The peak number is too large, and the fitting has stopped.\n\n")
+				print(text.info_pnl+'\n')
 		if a=='q':
 			root.destroy()
 			savemark=True
@@ -628,22 +626,7 @@ if args.peakfit:
 				canvas.draw()
 				update_fig()
 		if a=='h':
-			sys.stdout.write("\nldtem interactive commands\n\n")
-			sys.stdout.write("Black solid curve       :   processed pulse profile\n")
-			sys.stdout.write("Yellow dotted curve     :   fitted peak\n")
-			sys.stdout.write("Red dashed curve        :   fitting curve for pulse profile\n")
-			sys.stdout.write("Green dash-dotted curve :   a new peak to be fitted\n")
-			sys.stdout.write("Blue solid curve        :   fitting residuals\n\n")
-			sys.stdout.write("Mouse:\n")
-			sys.stdout.write("  Left-click to select the centre of a peak\n")
-			sys.stdout.write("    then left-click again to select a width of a peak.\n")
-			sys.stdout.write("    then left-click again to select a height of a peak.\n")
-			sys.stdout.write("Keyboard:\n")
-			sys.stdout.write("  h  Show this help\n")
-			sys.stdout.write("  f  fit the profile with appending the green dash-dotted peak\n")
-			sys.stdout.write("  r  Reset a peak\n")
-			sys.stdout.write("  q  Exit peak fitting and save the template.\n")
-			sys.stdout.write("  b  Exit peak fitting without saving.\n\n")
+			print(text.info_help.replace('\\n','\n'))
 	#
 	def leftclick(event):
 		global fitmark,xymark,tmppara
@@ -709,12 +692,12 @@ info={'data_info':{'mode':'template','nchan':int(nchan_res),'chan_weight':list(n
 if args.peakfit:
 	if not savemark:sys.exit()
 	if np.sum(np.array(paras)**2)==0:
-		print('The produced template is zero on every phase bin, and it will not be saved.')
+		print(text.info_zeb)
 		sys.exit()
 	info['template_info']={'peak_paras':paras.tolist()}
 	prof=np.array([[fprof]])
 else:
-	if np.sum(prof**2)==0: parser.error('Unexpected error. The produced profile is zero on every phase bin.')
+	if np.sum(prof**2)==0: parser.error(text.error_ue)
 	prof=prof.reshape(nchan_res,-1,args.nbin)
 #
 do=ld.ld(name+'.ld')

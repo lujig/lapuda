@@ -10,26 +10,31 @@ import warnings as wn
 import argparse as ap
 import ld
 wn.filterwarnings('ignore')
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.output_text('ldtim')
 version='JigLu_20220633'
-parser=ap.ArgumentParser(prog='ldtim',description='Get the timing solution the ToA.',epilog='Ver '+version)
-parser.add_argument('-v','--version',action='version',version=version)
-parser.add_argument("filename",help="input ToA file with ld or txt format")
-parser.add_argument('-p','--par',dest='par',help="input par file")
-parser.add_argument('--fit',dest='fit',default='f0',help="fitting parameter")
-parser.add_argument('-i','--illu',default='prepost',dest='illu',help="plot mode: pre-fit and post-fit residuals (prepost), post-fit residuals (post), DM (dm)")
-parser.add_argument('--time',action='store_true',default=False,dest='time',help="plot the fitting time residuals instead of phase")
-parser.add_argument('-s','--save',default='',dest='save',nargs='*',help="save the post-fit pulsar parameters and residuals into files")
-parser.add_argument('-x',dest='x',default='mjd',help="the x-axis of the ToA")
-parser.add_argument('-m','--merge',default=0,nargs='?',type=np.float64,dest='merge',help='normalized the data at each channel before cal ')
-parser.add_argument('-e','--err',dest='err',type=np.float64,default=1,help="the error limit of the ToA")
-parser.add_argument('-c','--crit',dest='crit',type=np.float64,default=1e6,help="the criterion of the effective ToA residuals")
-parser.add_argument('-z','--zero',dest='zero',default=0,type=np.float64,help="the zero point of the ToA")
-parser.add_argument('-d','--date',dest='date',default="",help="the date limit of the ToA in the format \"DATE0,DATE1\"")
+parser=ap.ArgumentParser(prog='ldtim',description=text.help,epilog='Ver '+version,add_help=False,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument("filename",help=text.help_filename)
+parser.add_argument('-p','--par',dest='par',help=text.help_p)
+parser.add_argument('--fit',dest='fit',default='f0',help=text.help_fit)
+parser.add_argument('-i','--illu',default='prepost',dest='illu',help=text.help_i)
+parser.add_argument('--time',action='store_true',default=False,dest='time',help=text.help_time)
+parser.add_argument('-s','--save',default='',dest='save',nargs='*',help=text.help_s)
+parser.add_argument('-x',dest='x',default='mjd',help=text.help_x)
+parser.add_argument('-m','--merge',default=0,nargs='?',type=np.float64,dest='merge',help=text.help_m)
+parser.add_argument('-e','--err',dest='err',type=np.float64,default=1,help=text.help_e)
+parser.add_argument('-c','--crit',dest='crit',type=np.float64,default=1e6,help=text.help_c)
+parser.add_argument('-z','--zero',dest='zero',default=0,type=np.float64,help=text.help_z)
+parser.add_argument('-d','--date',dest='date',default="",help=text.help_d)
 args=(parser.parse_args())
 #
 if not os.path.isfile(args.filename):
-	parser.error('ToA file name is invalid.')
+	parser.error(text.error_ntfn)
 d=ld.ld(args.filename)
 data=d.read_chan(0)[:,:,0]
 info=d.read_info()
@@ -52,7 +57,7 @@ if args.date:
 			for i in np.arange(len(date0)):
 				jj=jj^(date>date0[i])
 	except:
-		parser.error('A valid date range is required.')
+		parser.error(text.error_ndr)
 else:
 	jj=np.ones_like(date,dtype=bool)
 if args.merge==0:
@@ -61,7 +66,7 @@ if args.merge==0:
 if type(args.save) is list:
 	nsave=len(args.save)
 	if nsave>2:
-		parser.error('The number of save files cannot be more than 2.')
+		parser.error(text.error_nsfn)
 	if nsave==0:
 		name='psr'
 		name0=name
@@ -79,9 +84,9 @@ if type(args.save) is list:
 			parsave=args.save[0]
 			resisave=args.save[1]
 		if os.path.isfile(parsave):
-			parser.error('The file to save pulsar parameters has been existed.')
+			parser.error(text.error_pfe)
 		if os.path.isfile(resisave):
-			parser.error('The file to save residuals has been existed.')
+			parser.error(text.error_rfe)
 #
 date,sec,toae,dt,dterr,freq_start,freq_end,dm,dmerr,period=data[jj].T
 freq=(freq_start+freq_end)/2
@@ -211,7 +216,7 @@ if type(args.save) is list:
 	if args.time: dt_tmp,dterr_tmp=res,dterr
 	else: dt_tmp,dterr_tmp=(res-res.mean())*psr.p0,dterr*psr.p0
 	np.savetxt(resisave,np.array([time.local.date,time.local.second,dt_tmp,dterr_tmp]).T)
-	print('The parameters and residuals have been saved into the files '+parsave+' and '+resisave+', respectively.')
+	print(text.info_save % (parsave, resisave))
 #
 fig=plt.figure(3)
 plt.clf()

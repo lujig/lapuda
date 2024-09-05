@@ -7,7 +7,7 @@ dirname=os.path.split(os.path.realpath(__file__))[0]
 sys.path.append(dirname+'/doc')
 import text
 #
-text=text.ldpara_text()
+text=text.output_text('ldpara')
 version='JigLu_20200930'
 parser=ap.ArgumentParser(prog='ldpara',description=text.help,epilog='Ver '+version,add_help=False,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
 parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)

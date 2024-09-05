@@ -3,6 +3,11 @@ import time_eph as te
 import subprocess as sp
 import psr_read as pr
 import adfunc as af
+import os,sys
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
+text=text.output_text('psr_model')
 #
 dm_const=4148.8064224	# the constant to calculate the dispersion delay
 dm_const_si=7437506.761	# the constant to calculate the dispersion delay (in SI unit)
@@ -270,19 +275,19 @@ class psr_timing:
 		nparas=len(paras)
 		deriv=np.zeros([nparas,self.time.size])
 		if not pr.para_with_err.intersection(paras):
-			raise Exception('One or more parameters is invalid.')
+			raise Exception(text.error_np)
 		binary_paras=list(pr.paras_binary.intersection(paras))
 		lbp=len(binary_paras)
 		if lbp:
 			if not self.psr.binary:
-				raise Exception('One or more parameters belongs to binary parameters, but the pulsar '+self.psr.name+' is not a binary pulsar.')
+				raise Exception(text.error_nb % self.psr.name)
 			binary_der=self.compute_binary_der()
 			all_bparas_set=pr.__getattribute__('paras_'+self.psr.binary)
 			all_bparas=np.array(all_bparas_set['necessary']+all_bparas_set['optional'])
 			for i in np.arange(lbp):
 				para=binary_paras[i]
 				if para not in all_bparas:
-					raise Exception("Parameter "+para+" is not a parameter for "+self.psr.binary+" model.")
+					raise Exception(text.error_nm % (para,self.psr.binary))
 				ind1=np.where(np.array(paras)==para)[0][0]
 				ind2=np.where(all_bparas==para)[0][0]
 				deriv[ind1]=-binary_der[ind2]*self.dphasedt
@@ -1018,7 +1023,7 @@ class psr_timing:
 			mode=2
 			if 'nharm' in self.psr.paras:
 				nharm=self.nharm
-			if self.psr.stig: print("Warning: Both H4 and STIG in par file, then ignoring STIG")
+			if self.psr.stig: print(text.warning_h4s)
 			m2=h3**4/h4**3
 		else:
 			if 'stig' in self.psr.paras:
@@ -1458,7 +1463,7 @@ class psr_timing:
 		if m==0:
 			m1=1.4*sunmass
 			m=m1+m2
-			print("Strong Warning: The mass of the pulsar is not given in parfile, use 1.4 times of solarmass in calculation.")
+			print(text.warning_nmp)
 		else:
 			m1=m-m2
 		pb=self.psr.pb*86400
@@ -1735,7 +1740,7 @@ class psr_timing:
 		elif t0asc.mjd[0]:
 			tt0=self.bbat.minus(t0asc).mjd*86400
 		else:
-			raise Exception('No T0 or T0ASC in pulsar paras.')
+			raise Exception(text.error_nt0)
 		ecc+=edot*tt0
 		x+=xdot*tt0
 		eps1+=eps1dot*tt0
@@ -1841,7 +1846,7 @@ class psr_timing:
 				ecc=np.sqrt(eps1**2+eps2**2)
 				omega=np.arctan2(eps1,eps2)
 		else:
-			raise Exception('Either DD or ELL1 model cannot be used.')
+			raise Exception(text.error_nde)
 		#
 		if ('h3' in self.psr.paras) and (('h4' in self.psr.paras) or ('stig' in self.psr.paras)):
 			h3=self.psr.h3
@@ -1851,7 +1856,7 @@ class psr_timing:
 				mode=2
 				if 'nharm' in self.psr.paras:
 					nharm=self.nharm
-				if self.psr.stig: print("Warning: Both H4 and STIG in par file, then ignoring STIG")
+				if self.psr.stig: print(text.warning_h4s)
 				si=2*h3*h4/(h3**2+h4**2)
 				m2=h3**4/h4**3
 			else:

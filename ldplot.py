@@ -5,7 +5,6 @@ import numpy.fft as fft
 from matplotlib.figure import Figure
 import argparse as ap
 import os,time,ld,sys
-import warnings as wn
 import adfunc as af
 import matplotlib.pyplot as plt
 plt.rcParams['font.family']='Serif'
@@ -17,29 +16,33 @@ mpl.use('TkAgg')
 import warnings
 from scipy import ndimage
 import psutil
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.output_text('ldplot')
 version='JigLu_20240530'
-parser=ap.ArgumentParser(prog='ldplot',description='Plot the ld data file.')
-parser.add_argument('-v','--version',action='version',version=version)
-parser.add_argument('filename', nargs='+', help='input ld files')
-parser.add_argument('-f',action='store_true',default=False,dest='fdomain',help='show the frequency domain image')
-parser.add_argument('-t',action='store_true',default=False,dest='tdomain',help='show the time domain image')
-parser.add_argument('-p',action='store_true',default=False,dest='profile',help='show the average pulse profile')
-parser.add_argument('-d',action='store_true',default=False,dest='dysp',help='show a simple dynamic spectrum image')
-parser.add_argument('--sec',action='store_true',default=False,dest='second',help='show the second spectrum image of the dynamic spectrum')
-parser.add_argument('-l',action='store_true',default=False,dest='polarization',help='show the polarization infos')
-parser.add_argument('-N',default=None, dest='mulplot',help='x,y divide the window into x by y panels')
-parser.add_argument('--fr',default='',dest='frange',help='limit the frequency range to [f1,f2] MHz')
-parser.add_argument('--cr',default='',dest='crange',help='limit the frequency range to [chan1,chan2]')
-parser.add_argument('--tr',default='',dest='trange',help='limit the time range to [t1,t2] Seconds')
-parser.add_argument('--sr',default='',dest='srange',help='limit the time range to [sub1,sub2]')
-parser.add_argument('--br',default='',dest='prange',help='limit the phase range to [p1,p2], The full range is [0,1]')
-parser.add_argument('--binr',default='',dest='brange',help='limit the phase range to [bin1,bin2]')
-parser.add_argument('--polar',default=0,dest='polar',type=int,help='plot the specified polarization (0123 for IQUV,default=0)')
-parser.add_argument('-r','--shift', type=float, default=0, help='shift the phase [-1,1], positive towards right, negative towards left')
-#parser.add_argument('--rtail',action='store_true',default=False,dest='removetail',help='remove the last sub-integration')
-parser.add_argument('-n','--norm',action='store_true',default=False,dest='norm',help='Normalize the data')
-parser.add_argument('-s', '--savefigure',default='', help='save figures as the specified name, and the file type could be PNG, EPS or PDF')
+parser=ap.ArgumentParser(prog='ldplot',description=text.help,epilog='Ver '+version,add_help=False,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument("filename",nargs='+',help=text.help_filename)
+parser.add_argument('-f',action='store_true',default=False,dest='fdomain',help=text.help_f)
+parser.add_argument('-t',action='store_true',default=False,dest='tdomain',help=text.help_t)
+parser.add_argument('-p',action='store_true',default=False,dest='profile',help=text.help_p)
+parser.add_argument('-d',action='store_true',default=False,dest='dysp',help=text.help_d)
+parser.add_argument('--sec',action='store_true',default=False,dest='second',help=text.help_sec)
+parser.add_argument('-l',action='store_true',default=False,dest='polarization',help=text.help_l)
+parser.add_argument('-N',default=None, dest='mulplot',help=text.help_N)
+parser.add_argument('--fr',default='',dest='frange',help=text.help_fr)
+parser.add_argument('--cr',default='',dest='crange',help=text.help_cr)
+parser.add_argument('--tr',default='',dest='trange',help=text.help_tr)
+parser.add_argument('--sr',default='',dest='srange',help=text.help_sr)
+parser.add_argument('--br',default='',dest='prange',help=text.help_br)
+parser.add_argument('--binr',default='',dest='brange',help=text.help_binr)
+parser.add_argument('--polar',default=0,dest='polar',type=int,help=text.help_polar)
+parser.add_argument('-r','--shift', type=float, default=0, help=text.help_r)
+parser.add_argument('-n','--norm',action='store_true',default=False,dest='norm',help=text.help_n)
+parser.add_argument('-s', '--savefigure',default='', help=text.help_s)
 args = parser.parse_args()
 warnings.filterwarnings("ignore")
 #
@@ -49,66 +52,66 @@ fflag=np.sum(list(map(bool,[args.crange,args.frange])))
 tflag=np.sum(list(map(bool,[args.srange,args.trange])))
 bflag=np.sum(list(map(bool,[args.prange,args.brange,args.shift])))
 if fflag==2:
-	parser.error('At most one of flags --cr and --fr is required.')
+	parser.error(text.error_mff)
 elif tflag==2:
-	parser.error('At most one of flags --sr and --tr is required.')
+	parser.error(text.error_mft)
 elif bflag==2:
-	parser.error('At most one of flags --br, --binr and -r is required.')
+	parser.error(text.error_mfp)
 #
 if args.crange:
 	chanstart0,chanend0=np.int32(args.crange.split(','))
-	if chanend0<=chanstart0 and chanend0!=-1: parser.error("Starting channel number larger than ending channel number.")
-	elif chanstart0<0: parser.error("Input channel number is overrange.")
+	if chanend0<=chanstart0 and chanend0!=-1: parser.error(text.error_scl)
+	elif chanstart0<0: parser.error(text.error_ico)
 elif args.frange:
 	freq_start0,freq_end0=np.float64(args.frange.split(','))
-	if freq_end0<=freq_start0: parser.error("Starting frequency larger than ending frequency.")
-	elif freq_start0<0: parser.error("Input frequency is overrange.")
+	if freq_end0<=freq_start0: parser.error(text.error_sfl)
+	elif freq_start0<0: parser.error(text.error_ifo)
 #
 if args.srange:
 	substart0,subend0=np.int32(args.srange.split(','))
-	if subend0<=substart0 and subend0!=-1 : parser.error("Starting sub-integration number larger than sub-integration number.")
-	elif substart0<0: parser.error("Input sub-integration number is overrange.")
+	if subend0<=substart0 and subend0!=-1 : parser.error(text.error_ssl)
+	elif substart0<0: parser.error(text.error_iso)
 elif args.trange:
 	time_start0,time_end0=np.float64(args.trange.split(','))
-	if time_end0<=time_start0: parser.error("Starting time larger than ending time.")
-	elif time_start0<0 or time_end0<0: parser.error("Input time is overrange.")
+	if time_end0<=time_start0: parser.error(text.error_stl)
+	elif time_start0<0 or time_end0<0: parser.error(text.error_ito)
 #
 if args.brange:
 	binstart0,binend0=np.int32(args.brange.split(','))
-	if binstart0<0 or (binend0<0 and binend0!=-1): parser.error("Input bin number is overrange.")
+	if binstart0<0 or (binend0<0 and binend0!=-1): parser.error(text.error_ibo)
 elif args.prange:
 	phase_start0,phase_end0=np.float64(args.frange.split(','))
-	if phase_start0<0 or phase_end0<0 or phase_start0>1 or phase_end0>1: parser.error("Input channel number is overrange.")
-	if phase_start0==phase_end0: parser.error("Starting phase must be unequal to ending phase.")
+	if phase_start0<0 or phase_end0<0 or phase_start0>1 or phase_end0>1: parser.error(text.error_ipro)
+	if phase_start0==phase_end0: parser.error(text.error_spee)
 #
 if args.polar:
-	if args.polar>=4: parser.error("Input polarization is overrange.")
+	if args.polar>=4: parser.error(text.error_ipo)
 	if args.polarization:
-		print("Warning: showing polarization needs not to specify polarization index.")
+		print(text.warning_psi)
 if args.polarization: dx,dy=6,8
 else: dx,dy=8,6
 #
 plotflag=np.sum(list(map(bool,[args.fdomain,args.tdomain,args.profile,args.dysp,args.second,args.polarization])))
 if plotflag>1:
-	parser.error('At most one of flags -f, -t, -p, -d, -l and --sec is required.')
+	parser.error(text.error_mfs)
 elif plotflag==0:
-	parser.error('At least one of flags -f, -t, -p, -d, -l and --sec is required.')
+	parser.error(text.error_lfs)
 #
 if args.mulplot:
 	row,column=np.int8(args.mulplot.split(','))
-	if row>6 or column>10: parser.error('The multi-plot parameters is too large.')
+	if row>6 or column>10: parser.error(text.error_mpl)
 else: row,column=1,1
 # check the files
 filelist=[]
 ranges=[]
 for fname in filelist0:
 	if not os.path.isfile(fname):
-		print('The ld file '+fname+' name does not exsit.')
+		print(text.info_nfn % fname)
 		continue
 	d=ld.ld(fname)
 	info=d.read_info()
 	if info['data_info']['mode'] not in ['single','subint','template']:
-		print(fname+' is not a showable file.')
+		print(text.info_fns % fname)
 		continue
 	#
 	nchan=int(info['data_info']['nchan'])
@@ -122,22 +125,22 @@ for fname in filelist0:
 	#
 	if args.frange:
 		if freq_start>freq_end0 or freq_end<freq_start0:
-			print('Input frequency for file '+fname+' is overrange, and this file is ignored.')
+			print(text.info_ffn % fname)
 			continue
 		if freq_start>freq_start0 or freq_end<freq_end0:
-			print('Input frequency for file '+fname+' is overrange, and the intersection band is used instead.')
+			print(text.info_ffo % fname)
 		freq_start1=max(freq_start,freq_start0)
 		freq_end1=min(freq_end,freq_end0)
 		chanstart,chanend=np.int16(np.round((np.array([freq_start1,freq_end1])-freq_start)/channel_width))
 		if chanstart==chanend:
-			print('Input frequency range for file '+fname+' is too narrow, and this file is ignored.')
+			print(text.info_frfn % fname)
 			continue
 	elif args.crange:
 		if chanstart0>nchan:
-			print('Input frequency for file '+fname+' is overrange, and this file is ignored.')
+			print(text.info_ffn % fname)
 			continue
 		if chanend0>nchan:
-			print('Input frequency for file '+fname+' is overrange, and the intersection band is used instead.')
+			print(text.info_ffo % fname)
 		chanstart=max(chanstart0,0)
 		chanend=min(chanend0,nchan)
 		if chanend0==-1: chanend=nchan
@@ -147,22 +150,22 @@ for fname in filelist0:
 	#
 	if args.trange:
 		if time_start0>length:
-			print("Input time for file "+fname+" is overrange, and this file is ignored.")
+			print(text.info_tfn % fname)
 			continue
 		if time_end0>length:
-			print('Input time for file '+fname+' is overrange, and the intersection epoch is used instead.')
+			print(text.info_tfo % fname)
 		time_start1=time_start0
 		time_end1=min(length,time_end0)
 		substart,subend=np.int16(np.round(np.array([time_start1,time_end1])/sublen))
 		if substart==subend:
-			print('Input time range for file '+fname+' is too short, and this file is ignored.')
+			print(text.info_trfs % fname)
 			continue
 	elif args.srange:
 		if substart0>nsub:
-			print("Input time for file "+fname+" is overrange, and this file is ignored.")
+			print(text.info_tfn % fname)
 			continue
 		if subend0>nsub:
-			print('Input time for file '+fname+' is overrange, and the intersection epoch is used instead.')
+			print(text.info_tfo % fname)
 		substart=max(substart0,0)
 		subend=min(subend0,nsub)
 		if subend0==-1: subend=nsub
@@ -174,14 +177,14 @@ for fname in filelist0:
 	if args.prange:
 		binstart,binend=np.int16(np.round(np.array([phase_start0,phase_end0])*nbin))
 		if binstart==binnend:
-			print('Input phase range for file '+fname+' is too narrow, and this file is ignored.')
+			print(text.info_prfn % fname)
 			continue
 	elif args.brange:
 		if binstart0>nbin:
-			print("Input bin for file "+fname+" is overrange, and this file is ignored.")
+			print(text.info_bfn % fname)
 			continue
 		if binend0>nbin:
-			print('Input bin for file '+fname+' is overrange, and the intersection interval is used instead.')
+			print(text.info_bfo % fname)
 		binstart=binstart0
 		binend=min(binend0,nbin)
 		if binend0==-1: binend=nbin
@@ -192,7 +195,7 @@ for fname in filelist0:
 	#
 	if args.polar:
 		if args.polar not in np.arange(npol):
-			print("Input polarization for file "+fname+" is overrange, and this file is ignored.")
+			print(text.info_pfo % fname)
 			continue
 	polar=args.polar
 	filelist.append(fname)
@@ -200,23 +203,23 @@ for fname in filelist0:
 	#
 	if args.polarization:
 		if npol<4:
-			print("The polarization number for file "+fname+" does not support showing polarization, and this file is ignored.")
+			print(text.info_fnp % fname)
 			continue
 	#
 	if args.second:
 		if nchan<2 or nbin<2:
-			print("The sub-integration or frequency channel number for file "+fname+" does not support showing the second spectrum image of the dynamic spectrum, and this file is ignored.")
+			print(text.info_fnss)
 			continue
 #
 nfile=len(filelist)
 if len(filelist0)>1:
-	print('There are '+str(nfile)+' valid files in total.')
-	if nfile>0: print('Processing the data ...')
-	else: print('Program aborted.')
+	print(text.info_fn % str(nfile))
+	if nfile>0: print(text.info_pros)
+	else: print(text.info_abo)
 #
 if args.mulplot:
 	if (row-1)*column>=nfile or row*(column-1)>=nfile:
-		print('The multi-plot parameters could be smaller, and it has been adjusted automatically')
+		print(text.info_mps)
 		row=(nfile>np.array([0,2,6,15,24,40])).sum()
 		column=int(np.ceil(nfile/row))
 		nout=1
@@ -273,11 +276,11 @@ if args.savefigure:
 	#
 	if nout==1:
 		fignames.append(name)
-		if os.path.isfile(name+ext): parser.error('The name of output figure file already existed. Please provide a new name.')
+		if os.path.isfile(name+ext): parser.error(text.error_noe)
 	else:
 		for i in np.arange(nout):
 			fignames.append(name+'_'+str(i))
-			if os.path.isfile(name+'_'+str(i)+ext): parser.error('The name of output figure file already existed. Please provide a new name.')
+			if os.path.isfile(name+'_'+str(i)+ext): parser.error(text.error_noe)
 #
 def shift(y,x,axis=1):
 	fftp=fft.rfft(y,axis=axis)

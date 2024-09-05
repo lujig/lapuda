@@ -12,22 +12,27 @@ import adfunc as af
 wn.filterwarnings('ignore')
 import matplotlib.pyplot as plt
 plt.rcParams['font.family']='Serif'
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.output_text('ldrm')
 version='JigLu_20201202'
-parser=ap.ArgumentParser(prog='ldrm',description='Calculate the best RM value. Press \'s\' in figure window to save figure.',epilog='Ver '+version)
-parser.add_argument('-v','--version',action='version',version=version)
-parser.add_argument("filename",nargs='+',help="input ld file or files")
-parser.add_argument('--fr','--frequency_range',default=0,dest='frequency',help='limit the frequency rangeFREQ0,FREQ1')
-parser.add_argument('-r','--rmi',default=0,type=np.float64,dest='rmi',help='the initial RM value')
-parser.add_argument('--br','--baseline_range',default='',dest='base',help='the baseline range PHASE0,PHASE1 or pulse-off phase width')
-parser.add_argument('--sr','--subint_range',default=0,dest='subint',help='limit the subint range SUBINT0,SUBINT1')
-parser.add_argument('-k','--text',action='store_true',default=False,dest='text',help='only print the result in text-form instead of plot')
-parser.add_argument('-o','--file',default='',dest='file',help='output the results into a file')
-parser.add_argument('-d','--dm_center',dest='dm',default=0,type=np.float64,help="center of the fitting dispersion measure")
-parser.add_argument('-i','--dm_zone',dest='zone',default=0,type=np.float64,help="total range of the fitting dispersion measure")
-parser.add_argument('-c',action='store_true',default=False,dest='correct',help='correct the data with the best rm')
-parser.add_argument('-n',type=np.int16,default=0,dest='compf',help='scrunch the frequency by a factor n')
-parser.add_argument("-z","--zap",dest="zap_file",default=0,help="file recording zap channels")
+parser=ap.ArgumentParser(prog='ldrm',description=text.help,epilog='Ver '+version,add_help=False,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument("filename",nargs='+',help=text.help_filename)
+parser.add_argument('--fr','--frequency_range',default=0,dest='frequency',help=text.help_fr)
+parser.add_argument('-r','--rmi',default=0,type=np.float64,dest='rmi',help=text.help_r)
+parser.add_argument('--br','--baseline_range',default='',dest='base',help=text.help_br)
+parser.add_argument('--sr','--subint_range',default=0,dest='subint',help=text.help_sr)
+parser.add_argument('-k','--text',action='store_true',default=False,dest='text',help=text.help_k)
+parser.add_argument('-o','--file',default='',dest='file',help=text.help_o)
+parser.add_argument('-d','--dm_center',dest='dm',default=0,type=np.float64,help=text.help_d)
+parser.add_argument('-i','--dm_zone',dest='zone',default=0,type=np.float64,help=text.help_i)
+parser.add_argument('-c',action='store_true',default=False,dest='correct',help=text.help_c)
+parser.add_argument('-n',type=np.int16,default=0,dest='compf',help=text.help_n)
+parser.add_argument("-z","--zap",dest="zap_file",default=0,help=text.help_z)
 args=(parser.parse_args())
 wn.filterwarnings('ignore')
 command=['ldrm.py']
@@ -38,14 +43,14 @@ errorfile=[]
 filedict={}
 for i in filelist:
 	if not os.path.isfile(i):
-		parser.error(i+' is unexist.')
+		parser.error(text.error_fue % i)
 	else:
 		try:
 			filei=ld.ld(i)
 			if filei.read_para('pol_type')!='IQUV':
-				parser.error('The data in file '+i+' is unpolarized/uncalibrated.')
+				parser.error(text.error_npc % i)
 			if filei.read_shape()[0]<=2:
-				parser.error('The channel numbers for file '+i+' is too small to fit the rotation measure.')
+				parser.error(text.error_scn % i)
 			psr_par=filei.read_para('psr_par')
 			psr_name=pr.psr(psr_par,warning=False).name
 			if psr_name in filedict.keys(): filedict[psr_name].append([i,psr_par])
@@ -53,7 +58,7 @@ for i in filelist:
 		except:
 			errorfile.append(i)
 if errorfile:
-	print('Warning: '+', '.join(errorfile)+' is/are not valid ld file')
+	print(text.warning_ilf % ', '.join(errorfile))
 psrlist=list(filedict.keys())
 #
 if args.file:
@@ -62,7 +67,7 @@ if args.file:
 if args.zap_file:
 	command.append('-z')
 	if not os.path.isfile(args.zap_file):
-		parser.error('The zap channel file is invalid.')
+		parser.error(text.error_zfi)
 	zchan0=np.loadtxt(args.zap_file,dtype=np.int32)
 else:
 	zchan0=np.array([],dtype=np.int32)
@@ -88,11 +93,11 @@ command=' '.join(command)
 if not args.text:
 	if len(psrlist)>0:
 		if len(psrlist)>1 or len(filedict[psrlist[0]])>1:
-			parser.error('The visualized results cannot be manifested for multi-files.')
+			parser.error(text.error_vnm)
 #
 for psr_name in psrlist:
 	first=True
-	print('Analyzing for '+psr_name+':')
+	print(text.info_ana % psr_name)
 	for filename,psr_par in filedict[psr_name]:
 		psr_para=pr.psr(psr_par,warning=first)
 		first=False
@@ -107,7 +112,7 @@ for psr_name in psrlist:
 		nsub=info['data_info']['nsub']
 		if len(zchan0):
 			if np.max(zchan0)>=nchan or np.min(zchan0)<0:
-				parser.error('The zapped channel number is overrange.')
+				parser.error(text.error_zno)
 		dm0=info['data_info']['dm']
 		period=info['data_info']['period']
 		#
@@ -123,17 +128,17 @@ for psr_name in psrlist:
 		if args.frequency:
 			freqtmp=np.float64(args.frequency.split(','))
 			if len(freqtmp)!=2:
-				parser.error('A valid frequency range should be given.')
+				parser.error(text.error_nfr)
 			freq_start,freq_end=freqtmp
 			chanstart,chanend=np.int16(np.round((np.array([freq_start,freq_end])-freq_start0)/channel_width))
 			if chanstart>chanend:
-				parser.error("Starting frequency larger than ending frequency.")
+				parser.error(text.error_sfl)
 			elif chanstart<0 or chanend>nchan:
-				parser.error("Input frequency is overrange.")
+				parser.error(text.error_ifo)
 			freq_start,freq_end=np.array([chanstart,chanend])*channel_width+freq_start0
 			chan=np.arange(chanstart,chanend)
 			if len(chan)<2:
-				parser.error('Input bandwidth is too narrow.')
+				parser.error(text.error_ibn)
 			freq=frequency[chan]
 		else:
 			freq=frequency
@@ -145,9 +150,9 @@ for psr_name in psrlist:
 			if subint[1]<0:
 				subint[1]=subint[1]+nsub
 			if len(subint)!=2:
-				parser.error('A valid subint range should be given.')
+				parser.error(text.error_nsr)
 			if subint[0]>subint[1]:
-				parser.error("Starting subint is larger than ending subint.")
+				parser.error(text.error_ssl)
 			subint_start=max(int(subint[0]),0)
 			subint_end=min(int(subint[1]+1),nsub)
 		else:
@@ -174,7 +179,7 @@ for psr_name in psrlist:
 				nbase=bn.size
 				pn=af.radipos(i.mean(0),base_nbin=nbase)
 			else:
-				parser.error('A valid phase range/phase width should be given.')
+				parser.error(text.error_npr)
 		else:
 			nbase=int(nbin/10)
 			pn,bn=af.radipos(i.mean(0),base=True,base_nbin=nbase)
@@ -184,7 +189,7 @@ for psr_name in psrlist:
 		u-=u[:,bn].mean(1).reshape(-1,1)
 		if args.compf:
 			if len(freq)/args.compf<3:
-				parser.error('The scrunch factor is too large.')
+				parser.error(text.error_sftl)
 			lenf=int(len(freq)//args.compf*args.compf)
 			lam2=lam2[:lenf].reshape(-1,args.compf).mean(1)
 		#
@@ -310,11 +315,11 @@ for psr_name in psrlist:
 			ax1.legend(fontsize=20,frameon=False)
 			#
 			def save_fig():
-				figname=input("Please input figure name:")
+				figname=input(text.input_fn)
 				if figname.split('.')[-1] not in ['ps','eps','png','pdf','pgf']:
 					figname+='.pdf'
 				fig.savefig(figname)
-				sys.stdout.write('Figure file '+figname+' has been saved.')
+				print(text.info_save % figname)
 			#
 			try:
 				import gtk

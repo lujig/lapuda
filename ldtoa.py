@@ -11,31 +11,36 @@ import psr_model as pm
 import warnings as wn
 import adfunc as af
 wn.filterwarnings('ignore')
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.output_text('ldtoa')
 version='JigLu_20201202'
-parser=ap.ArgumentParser(prog='ldtoa',description='Get the relative pulse rotating phase and DM of the ld file.',epilog='Ver '+version)
-parser.add_argument('-v','--version',action='version',version=version)
-parser.add_argument("filename",nargs='+',help="input ld file or files")
-parser.add_argument('-p',dest='template',required=True,help="pulse profile template ld file")
-parser.add_argument('--freq_align',action='store_true',default=False,dest='freq_align',help="use same frequency band to obtain the ToA")
-parser.add_argument('-T','--tscrunch',action='store_true',default=False,dest='tscrunch',help='time scrunch to one subint to obtain result')
-parser.add_argument('--fr','--frequency_range',default=0,dest='freqrange',help='calculate in the frequency range (FREQ0,FREQ1)')
-parser.add_argument('--sr','--subint_range',default=0,dest='subint_range',help='calculate in the subint range (SUBINT0,SUBINT1)')
-parser.add_argument('--br','--phase_range',default=0,dest='phaserange',help='calculate with the data in phase range (PHASE0,PHASE1) of the template')
-parser.add_argument('-z',"--zap",dest="zap_file",default=0,help="file recording zap channels")
-parser.add_argument('-Z',action='store_true',default=False,dest="zap_template",help="zap same channels for the template file")
-parser.add_argument('-o',"--output",dest="output",default="",help="output file name")
-parser.add_argument('-d',action='store_true',default=False,dest='dm_corr',help='the progress will not correcting the DM deviation before calculating rotating phase')
-parser.add_argument('-l',"--linear_number",dest="lnumber",type=np.int8,default=0,help="the number of frequency-domain points for linear fitting")
-parser.add_argument('-n',action='store_true',default=False,dest='norm',help='normalized the data at each channel before cal')
-parser.add_argument('--freqtem',action='store_true',default=False,dest='freqtoa',help='use 2d freq domain template to obtain ToA')
-parser.add_argument('-a',default='pgs',dest='algorithm',help='shift algorithm (default: pgs)')
+parser=ap.ArgumentParser(prog='ldtoa',description=text.help,epilog='Ver '+version,add_help=False,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument("filename",nargs='+',help=text.help_filename)
+parser.add_argument('-p',dest='template',required=True,help=text.help_p)
+parser.add_argument('--freq_align',action='store_true',default=False,dest='freq_align',help=text.help_freq_align)
+parser.add_argument('-T','--tscrunch',action='store_true',default=False,dest='tscrunch',help=text.help_T)
+parser.add_argument('--fr','--frequency_range',default=0,dest='freqrange',help=text.help_fr)
+parser.add_argument('--sr','--subint_range',default=0,dest='subint_range',help=text.help_sr)
+parser.add_argument('--br','--phase_range',default=0,dest='phaserange',help=text.help_br)
+parser.add_argument('-z',"--zap",dest="zap_file",default=0,help=text.help_z)
+parser.add_argument('-Z',action='store_true',default=False,dest="zap_template",help=text.help_Z)
+parser.add_argument('-o',"--output",dest="output",default="",help=text.help_o)
+parser.add_argument('-d',action='store_true',default=False,dest='dm_corr',help=text.help_d)
+parser.add_argument('-l',"--linear_number",dest="lnumber",type=np.int8,default=0,help=text.help_l)
+parser.add_argument('-n',action='store_true',default=False,dest='norm',help=text.help_n)
+parser.add_argument('--freqtem',action='store_true',default=False,dest='freqtoa',help=text.help_freqtem)
+parser.add_argument('-a',default='pgs',dest='algorithm',help=text.help_a)
 args=(parser.parse_args())
 command=['ldtoa.py']
 dirname=os.path.abspath('.')
 #
 if not os.path.isfile(args.template):
-	parser.error('A valid ld file name is required.')
+	parser.error(text.error_ifn)
 #
 d0=ld.ld(args.template)
 info0=d0.read_info()
@@ -51,14 +56,14 @@ nbin0=info0['data_info']['nbin']
 if args.zap_file:
 	command.append('-z')
 	if not os.path.isfile(args.zap_file):
-		parser.error('The zap channel file is invalid.')
+		parser.error(text.error_zfi)
 	zchan=np.loadtxt(args.zap_file,dtype=np.int32)
 	if np.min(zchan)<0:
-		parser.error('The zapped channel number is overrange.')
+		parser.error(text.error_zno)
 	if args.zap_template:
 		command.append('-Z')
 		if np.max(zchan)>=nchan0:
-			parser.error('The zapped channel number is overrange.')
+			parser.error(text.error_zno)
 		zchan=np.array(list(set(np.where(info0['data_info']['chan_weight']==0)[0]).union(zchan)))
 else:
 	zchan=np.int32([])
@@ -67,9 +72,9 @@ if args.subint_range:
 	command.append('-s '+args.subint_range)
 	sub_start,sub_end=np.int32(args.subint_range.split(','))
 	if sub_end>0 and sub_start>sub_end:
-		parser.error("Starting subint number larger than ending subint number.")
+		parser.error(text.error_snl)
 	elif sub_start<0:
-		parser.error("Input subint is overrange.")
+		parser.error(text.error_iso)
 #
 if args.tscrunch:
 	command.append('-T')
@@ -79,7 +84,7 @@ if args.freq_align:
 #
 if args.dm_corr: 
 	command.append('-d ')
-	if args.freqtoa: parser.error('The freq-domain template need not to correct the dispersion measure.')
+	if args.freqtoa: parser.error(text.error_ftnd)
 #
 if args.freqtoa:
 	command.append('-F ')
@@ -92,7 +97,7 @@ if args.freqrange:
 	command.append('--fr '+args.freqrange)
 	freq_s,freq_e=np.float64(args.freqrange.split(','))
 	if freq_s>freq_e:
-		parser.error("Starting frequency larger than ending frequency.")
+		parser.error(text.error_sfl)
 else:
 	freq_s,freq_e=freq_start0,freq_end0
 #
@@ -100,11 +105,11 @@ if args.phaserange:
 	command.append('--pr '+args.freqrange)
 	phase_s,phase_e=np.float64(args.freqrange.split(','))
 	if phase_s>1 or phase_s<0 or phase_e>1 or phase_e<0:
-		parser.error("The given phase range is invalid.")
+		parser.error(text.error_pri)
 	if phase_e>phase_s: phase_s+=1
 	zbins0=np.sort(np.arange(nbin0).reshape(1,-1).repeat(2,axis=1).reshape(-1)[int(nbin0*phase_e):int(nbin0*phase_s)])
 	if zbins0.size==nbin0:
-		parser.error("The given phase range is too small.")
+		parser.error(text.error_prs)
 else:
 	phase_s,phase_e=0,1
 	zbins0=np.array([])
@@ -113,64 +118,64 @@ filelist=args.filename
 filenum=len(filelist)
 nsub_new=[]
 telename=''
-def ld_check(fname,filetype='Ld file'): # check the consistensy of LD files
+def ld_check(fname): # check the consistensy of LD files
 	global freq_s,freq_e,tmptele,telename
 	if not os.path.isfile(fname):
-		parser.error(filetype+' name '+fname+' '+'is invalid.')
+		parser.error(text.error_nfn % fname)
 	try:
 		f=ld.ld(filelist[i])
 		finfo=f.read_info()
 	except:
-		parser.error(filetype+' '+fname+' is invalid.')
+		parser.error(text.error_nf % fname)
 	tmpname=pr.psr(finfo['pulsar_info']['psr_par'],warning=False).name
 	if not telename: telename=finfo['telescope_info']['telename']
 	tmptele=finfo['telescope_info']['telename']
 	if psrname!=tmpname:
-		parser.error('The pulsar recorded in '+fname+' is different from the template.')
+		parser.error(text.error_dft % fname)
 	if telename!=tmptele:
-		parser.error('The data should come from the same telescope.')
+		parser.error(text.error_dnst)
 	#
 	nchan=finfo['data_info']['nchan']
 	nperiod=finfo['data_info']['nsub']
 	#
 	if args.zap_file:
 		if args.zap_template:
-			if nchan0!=nchan: parser.error('The channel numbers of data and template are different, and the zap file should not be same.')
-		if np.max(zchan)>=nchan or np.min(zchan)<0: parser.error('The zapped channel number is overrange.')
+			if nchan0!=nchan: parser.error(text.error_dcn)
+		if np.max(zchan)>=nchan or np.min(zchan)<0: parser.error(text.error_zno)
 	#
 	if args.subint_range:
 		if sub_end<0: sub_end_tmp=nperiod+sub_end
 		else: sub_end_tmp=sub_end
-		if sub_start>sub_end_tmp: parser.error("Starting subint number larger than ending subint number.")
-		elif sub_end_tmp>nperiod or sub_end_tmp<0: parser.error("Input subint is overrange.")
+		if sub_start>sub_end_tmp: parser.error(text.error_snl)
+		elif sub_end_tmp>nperiod or sub_end_tmp<0: parser.error(text.error_iso)
 	#
 	if args.tscrunch: nsub_new.append(1)
 	elif args.subint_range: nsub_new.append(sub_end_tmp-sub_start)
 	else: nsub_new.append(nperiod)
 	#
 	freq_start,freq_end=finfo['data_info']['freq_start'],finfo['data_info']['freq_end']
-	if freq_start0>=freq_end or freq_end0<=freq_start: parser.error('The template has different frequency band from the data.')
+	if freq_start0>=freq_end or freq_end0<=freq_start: parser.error(text.error_dbt)
 	freq=(freq_start+freq_end)/2.0
 	channel_width=(freq_end-freq_start)/nchan
 	if args.zap_file and args.zap_template:
 		if max(np.abs(freq_end-freq_end0),np.abs(freq_start-freq_start0))>min(channel_width,channel_width0):
-			parser.error('The frequency ranges of data and template are different, and the zap file should not be same.')
+			parser.error(text.error_dfr)
 	if args.freq_align:
-		if freq_start0>freq_end or freq_end<freq_start0: parser.error("Frequency bands of data and template have no overlap.")
+		if freq_start0>freq_end or freq_end<freq_start0: parser.error(text.error_bno)
 		if args.freqrange: 
-			if freq_s<freq_start or freq_e>freq_end: parser.error("Input frequency is overrange.")
+			if freq_s<freq_start or freq_e>freq_end: parser.error(text.error_ifo)
 		else:
 			freq_s=max(freq_s,freq_start)
 			freq_e=min(freq_e,freq_end)
 	elif args.freqrange:
-		if freq_s<freq_start or freq_e>freq_end: parser.error("Input frequency is overrange.")
+		if freq_s<freq_start or freq_e>freq_end: parser.error(text.error_ifo)
 	if args.freqtoa:
 		if args.freq_align:
 			chanstart,chanend=np.int16(np.round((np.array([freq_s,freq_e])-freq)/channel_width+0.5*nchan))
 		else:
 			chanstart,chanend=0,nchan
 		nchan_new=chanend-chanstart
-		if nchan_new!=nchan0: parser.error("The freq-domain ToA cannot be obtained for data with different frequency parameters from that of the template.")				
+		if nchan_new!=nchan0: parser.error(text.error_dfp)
 #
 for i in np.arange(filenum):
 	ld_check(filelist[i])
@@ -191,12 +196,12 @@ else:
 		name=name[:-3]
 	elif name_tmp[-4:] in ['.txt','.tim']:
 		if os.path.isfile(name):
-			parser.error('The name of output file already existed. Please provide a new name.')
+			parser.error(text.error_one)
 		output=name_tmp[-3:]
 	else: output='ld'
 	if output=='ld':
 		if os.path.isfile(name+'.ld'):
-			parser.error('The name of output file already existed. Please provide a new name.')
+			parser.error(text.error_one)
 #
 def shift(y,x):
 	ffts=y*np.exp(x*1j)
@@ -309,7 +314,7 @@ else:
 			else: der2=cald2(tpdata0,tpdata0)
 		else:
 			if d0.read_shape()[0]>1:
-				parser.error("The multi-component freq-domain template cannot be adopted for non-freq-domain ToA determination.")
+				parser.error(text.error_mcnf)
 			tpdata0=data0
 			tmp=tpdata0[0]
 			center0=np.arctan2((tmp*np.sin(np.pi*2/nbin0*np.arange(nbin0))).sum(),(tmp*np.cos(np.pi*2/nbin0*np.arange(nbin0))).sum())
@@ -319,7 +324,7 @@ else:
 			der2=cald2(tpdata0[0],tpdata0[0])
 	else:
 		data0=d0.read_data()[:,:,:,0]
-		if len(data0)==1: parser.error("The freq-domain ToA cannot be obtained for template with only one frequency channel.")
+		if len(data0)==1: parser.error(text.error_ft1f)
 		if nsub0==1:
 			tpdata0=data0[:,0]*np.asarray(info0['data_info']['chan_weight']).reshape(-1,1)
 			tmp=tpdata0.sum(0)
@@ -343,7 +348,7 @@ if args.lnumber:
 	command.append('-l '+str(args.lnumber))
 	lnumber=args.lnumber
 	if lnumber>100 or lnumber<=2:
-		parser.error('The number of frequency-domain points for linear fitting is invalid.')
+		parser.error(text.error_nfi)
 else:
 	lnumber=int(round(nbin0/ew/2))
 	lnumber=max(3,lnumber)
@@ -352,7 +357,7 @@ algorithms=['pgs','corr','fit','pgs1']
 if args.algorithm in algorithms:
 	command.append('-m '+args.algorithm)
 else:
-	parser.error('The timing method cannot be recognized.')
+	parser.error(text.error_tmr)
 #
 command=' '.join(command)
 #
@@ -592,7 +597,6 @@ for k in np.arange(filenum):
 						tmp=True
 				if not tmp:
 					ddm,ddmerr=dmcor(data1,freq_real,rchan,period0,info['data_info']['dm'],output=0)
-				#print('The relative DM from the template file to data file is '+str(ddm-ddm0))
 				dm_new=ddm+info['data_info']['dm']
 			else:
 				dm_new=info['data_info']['dm']
@@ -745,9 +749,9 @@ for k in np.arange(filenum):
 #
 if len(discard)>0:
 	if args.tscrunch:
-		print('The file'+(len(discard)>1)*'s'+' '+', '.join(discard)+' are discarded in calculating the ToA.')
+		print(text.info_disf % ', '.join(discard))
 	else:
-		print('The following subint'+(len(discard)>1)*'s'+' are discarded in calculating the ToA: '+' '.join(list(map(lambda x: 'the '+str(x[1])+'th subint of the file '+x[0],discard)))+'.')
+		print(text.info_diss0 % (' '.join(list(map(lambda x: text.info_diss1.format(str(x[1]),str(x[0])),discard)))+'.'))
 	result=result[:(-len(discard))]
 #
 if output=='ld':

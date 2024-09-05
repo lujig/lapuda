@@ -5,48 +5,52 @@ import numpy.polynomial.chebyshev as nc
 import scipy.optimize as so
 import scipy.signal as ss
 import argparse as ap
-import os,ld
+import os,ld,sys
 import subprocess as sp
 import time
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.output_text('ldaz')
 version='JigLu_20220711'
-#
-parser=ap.ArgumentParser(prog='ldaz',description='Analyzing the interfered channels in frequency domain of LD file.',epilog='Ver '+version)
-parser.add_argument('-v','--version', action='version', version=version)
-parser.add_argument('--verbose', action="store_true",default=False,help="print detailed information")
-parser.add_argument("filename",nargs='+',help="name of file or filelist")
-parser.add_argument('-j','--crit',dest='crit',default=0.1,type=np.float64,help="the criterion to screen the interfered channels on calibration parameters")
-parser.add_argument("-p","--polynum",dest="polynum",default=7,type=int,help="numbers of Chebyshev polynomial coefficients on calibration parameters")
-parser.add_argument("--cr",dest='chanrange',default="1,650",help="channel range without interference in form start_chan,end_chan")
-parser.add_argument('-m',action='store_true',default=False,dest='modify',help='modify the zap parameter of the LD file')
-parser.add_argument('-c',action='store_true',default=False,dest='correct',help='correct the data of the LD file')
+parser=ap.ArgumentParser(prog='ldaz',description=text.help,epilog='Ver '+version,add_help=False,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument('--verbose', action="store_true",default=False,help=text.help_verbose)
+parser.add_argument("filename",nargs='+',help=text.help_filename)
+parser.add_argument('-j','--crit',dest='crit',default=0.1,type=np.float64,help=text.help_j)
+parser.add_argument("-p","--polynum",dest="polynum",default=7,type=int,help=text.help_p)
+parser.add_argument("--cr",dest='chanrange',default="1,650",help=text.help_cr)
+parser.add_argument('-m',action='store_true',default=False,dest='modify',help=text.help_m)
+parser.add_argument('-c',action='store_true',default=False,dest='correct',help=text.help_c)
 args=(parser.parse_args())
 command=['ldaz.py']
 #
 if args.verbose:
-	sys.stdout.write('Analyzing the arguments...\n')
+	print(text.info_ana)
 filelist=args.filename
 filenum=len(filelist)
 #
 def ld_check(fname,notfirst=True):	# check the validity of file
 	fnametmp='___'+fname
 	if fnametmp[-3:]!='.ld':
-		parser.error('File '+fname+' is not LD format.')
+		parser.error(text.error_nld % fname)
 	if not os.path.isfile(fname):
-		parser.error('Ld files name '+fname+' is invalid.')
+		parser.error(text.error_nvn % fname)
 	try:
 		f=ld.ld(filelist[i])
 		finfo=f.read_info()
 	except:
-		parser.error('Ld files '+fname+' is invalid.')
+		parser.error(text.error_nvld % fname)
 	global nchan
 	if not ((finfo['data_info']['mode']=='single')|(finfo['data_info']['mode']=='subint')):
-		parser.error('Ld files '+fname+' is not pulsar data file.')
+		parser.error(text.error_npd % fname)
 	if not notfirst:
 		nchan=np.int16(finfo['data_info']['nchan'])
 	else:
 		if nchan!=np.int16(finfo['data_info']['nchan']):
-			parser.error("Ld files have different channel numbers.")
+			parser.error(text.error_dcn)
 #
 for i in np.arange(filenum):
 	ld_check(filelist[i],notfirst=i)
@@ -54,9 +58,9 @@ for i in np.arange(filenum):
 command.append('--cr '+args.chanrange)
 chanstart,chanend=np.int16(args.chanrange.split(','))
 if chanstart>chanend:
-	parser.error("Starting channel number larger than ending channel number.")
+	parser.error(text.error_ncn)
 elif chanstart<0 or chanend>nchan:
-	parser.error("Input channel range is overrange.")
+	parser.error(text.error_ocr)
 #
 command.append('-j '+str(args.crit))
 command.append('-p '+str(args.polynum))

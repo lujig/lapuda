@@ -115,4 +115,6 @@ Zhengli Wang
 
 ## License
 
-[MIT](LICENSE)
+Permission is hereby granted to any person obtaining a copy of this software and associated documentation files, to deal in the Software, including without limitation the rights to use, copy, modify, merge, publish, distribute, and/or sublicense the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: 
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.

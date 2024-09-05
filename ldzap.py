@@ -12,17 +12,22 @@ import psutil as pu
 import asyncio as ai
 import threading as th
 plt.rcParams['font.family']='Serif'
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
 #
+text=text.output_text('ldzap')
 version='JigLu_20240315'
-parser=ap.ArgumentParser(prog='ldzap',description='Zap the frequency domain interference in ld file.',epilog='Ver '+version)
-parser.add_argument('-v','--version',action='version',version=version)
-parser.add_argument("-z","--zap",dest="zap_file",default=0,help="file recording zap channels")
-parser.add_argument('-n',action='store_true',default=False,dest='norm',help='normalized the data at each channel')
-parser.add_argument('-a',action='store_true',default=False,dest='mean',help='use mean value as the screening standard')
-parser.add_argument('-r',action='store_true',default=False,dest='redo',help='discard the weights information recorded in the data and rezap the data')
-parser.add_argument('-p',action='store_true',default=False,dest='dprof',help='plot the mean pulse profile in dynamic spectra mode anyway')
-parser.add_argument("-o","--output",dest="output",help="the name of output file")
-parser.add_argument("filename",help="input ld file")
+parser=ap.ArgumentParser(prog='ldzap',description=text.help,epilog='Ver '+version,add_help=False,formatter_class=lambda prog: ap.RawTextHelpFormatter(prog, max_help_position=50))
+parser.add_argument('-h', '--help', action='help', default=ap.SUPPRESS,help=text.help_h)
+parser.add_argument('-v','--version',action='version',version=version,help=text.help_v)
+parser.add_argument("-z","--zap",dest="zap_file",default=0,help=text.help_z)
+parser.add_argument('-n',action='store_true',default=False,dest='norm',help=text.help_n)
+parser.add_argument('-a',action='store_true',default=False,dest='mean',help=text.help_a)
+parser.add_argument('-r',action='store_true',default=False,dest='redo',help=text.help_r)
+parser.add_argument('-p',action='store_true',default=False,dest='dprof',help=text.help_p)
+parser.add_argument("-o","--output",dest="output",help=text.help_o)
+parser.add_argument("filename",help=text.help_filename)
 args=(parser.parse_args())
 #
 class tree:
@@ -368,11 +373,9 @@ def noiselevel(data):
 		ctmp1=np.where(level==i)[0]
 		if ctmp0.size>0: critn[0,i]=ctmp0.min()
 		if ctmp1.size>0: critn[1,i]=ctmp1.max()
-	#print(critn)
 	for i in max_noiselevel-np.arange(max_noiselevel)-1:
 		if critn[0,i]>0: level1[critn[0,i]:]=i
 		if critn[1,i]>0: level[:critn[1,i]]=i
-	#print((level==1).sum(),(level==2).sum(),(level==3).sum(),(level==4).sum(),(level==5).sum())
 	level[int(level.size/2):]=level1[int(level.size/2):]
 	return level[np.argsort(ind)].reshape(nx,ny)
 #
@@ -408,7 +411,7 @@ elif nchan*nsub*nbin*25<fd: mem='disk'
 else: mem='none'
 #
 if mem!='mem0' and args.dprof:
-	print('Warning: plot the mean pulse profile in dynamic spectra mode may take a long time.')
+	print(text.warning_longt)
 #
 zapn=weight0==0
 if mem!='none':
@@ -874,7 +877,7 @@ def keymotion(a):
 	elif a=='z':	# press 'z' to zap distinct noise or rise the noise critical level
 		if mem=='none': return
 		if mtree.nstate and state!=mtree.nstate:
-			print('The auto-zapping program cannot be used in more than one modes.')
+			print(text.info_mulmode)
 			return
 		if mtree.nlevel>=max_noiselevel: return
 		if mtree.nlevel==0: mtree.nstate=state
@@ -949,7 +952,7 @@ def keymotion(a):
 		root.destroy()
 		if zapn.sum()==0: return
 		np.savetxt(args.filename[:-3]+'_zap.txt',zapn,fmt='%i')
-		print('Saved the zapping matrix in the %s' % (args.filename[:-3]+'_zap.txt'))
+		print(text.info_save % args.filename[:-3])
 		if args.redo:
 			chanweight=(info['additional_info']['chan_weight_raw']*(np.logical_not(zapn)).mean(1)).tolist()
 		else:
@@ -961,7 +964,7 @@ def keymotion(a):
 		info['data_info']['weights']=weights
 		if args.output:
 			newld=ld.ld(name+'.ld')
-			print('Created a new ld file: %s to save data.' % (args.output+'.ld'))
+			print(text.info_saved % (args.output+'.ld'))
 			newld.write_shape([nchan,nsub,nbin,npol])
 			for i in np.arange(nchan):
 				if chanweight[i]==0: continue
@@ -971,7 +974,7 @@ def keymotion(a):
 			newld.write_info(info)
 		else:
 			d.write_info(info)
-			print('Re-wrote the data weight in file %s.' % (args.filename))
+			print(text.info_savew % (args.filename))
 	elif a=='w':
 		root.destroy()
 		if args.redo:
@@ -984,7 +987,7 @@ def keymotion(a):
 		info['data_info']['chan_weight']=chanweight
 		info['data_info']['weights']=weights
 		d.write_info(info)
-		print('Re-wrote the data weight in file %s.' % (args.filename))
+		print(text.info_savew % (args.filename))
 	elif a=='c':
 		if calmark:
 			global cali
@@ -1015,26 +1018,7 @@ def keymotion(a):
 		lim0=limlist[-1]
 		plotimage([lim0[0][0],lim0[1][0]],[lim0[0][1],lim0[1][1]])
 	elif a=='h':
-		sys.stdout.write("\nldzap interactive commands\n\n")
-		sys.stdout.write("Mouse:\n")
-		sys.stdout.write("  Left-click selects the start of a range\n")
-		sys.stdout.write("	then left-click again to zoom, or right-click to zap.\n")
-		sys.stdout.write("  Right-click zaps current cursor location.\n\n")
-		sys.stdout.write("  mid-click plot the pulse profile at the channel (or sub integration) current cursor location.\n\n")
-		sys.stdout.write("Keyboard:\n")
-		sys.stdout.write("  h  Show this help\n")
-		sys.stdout.write("  f  Switch into frequency-vs-phase domain \n")
-		sys.stdout.write("  t  Switch into time-vs-phase domain\n")
-		sys.stdout.write("  d  Switch into frequency-vs-time domain (dynamic spectra)\n")
-		sys.stdout.write("  c  Switch between the spectrum and calibration parameters in the vertical subplot for frequency domain\n")
-		sys.stdout.write("  u  Undo the last zap command\n")
-		sys.stdout.write("  r  Reset zoom and update figure\n")
-		sys.stdout.write("  z  Zap distinct noise or rise the noise critical level\n")
-		sys.stdout.write("  x  Withdraw zappping distinct noise or lower the noise critical level\n")
-		sys.stdout.write("  o  Switch between the on-pulse and off-pulse mode for frequency-vs-time domain (Default: off-pulse)\n")
-		sys.stdout.write("  s  Save zapped version as the specified output or change the weight in the data information and quit\n")
-		sys.stdout.write("  w  Rewrite the weight in the data information and quit\n")
-		sys.stdout.write("  q  Exit program\n\n")
+		print(text.info_help.replace('\\n','\n'))
 #
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk

@@ -3,6 +3,10 @@ import time_eph as te
 import subprocess as sp
 import copy as cp
 import os,sys
+dirname=os.path.split(os.path.realpath(__file__))[0]
+sys.path.append(dirname+'/doc')
+import text
+text=text.output_text('psr_read')
 #
 class psr:
 	def __init__(self,name,parfile=False,glitch=False,warning=True):
@@ -45,11 +49,11 @@ class psr:
 				if self.binary:
 					paradict=eval('paras_'+self.binary)
 					paralist=paradict['necessary']+paradict['optional']
-					if para not in paralist: raise Exception('The '+self.binary+' model does not have parameter '+para+'.')
+					if para not in paralist: raise Exception(text.error_nbp0 % (self.binary,para))
 				else:
-					raise Exception('The parameter '+para+' is a parameter in binary model, but the pulsar '+self.name+' is not a binary pulsar.')
+					raise Exception(text.error_nbp1 % (para,self.name))
 			elif para in ['name',  'ephver', 'ephem', 'units']:
-				raise Exception('The parameter '+para+' cannot be modified.')
+				raise Exception(text.error_nmp % para)
 			elif para in {'p0', 'f0', 'p2', 'p1', 'f1', 'p3', 'f2', 'f3'}:
 				if para=='p0': self.f0=1/paraval
 				elif para=='f0': self.p0=1/paraval
@@ -60,7 +64,7 @@ class psr:
 				elif para=='p3': self.f3=-paraval*self.f0**2-4*self.p2*self.f0*self.f1-2*self.p1*self.f1**2-2*self.p1*self.f0*self.f2
 				elif para=='f3': self.p3=-paraval*self.p0**2-4*self.f2*self.p0*self.p1-2*self.f1*self.p1**2-2*self.f1*self.p0*self.p2
 			elif para not in all_paras:
-				raise Exception('The parameter '+para+' cannot be recognized.')
+				raise Exception(text.error_nrp % para)
 			if para in paras_time:
 				if type(paraval) is not te.time:
 					paraval=te.time(paraval,0,scale=self.units.lower())
@@ -78,9 +82,9 @@ class psr:
 			elif para in paras_binary:
 				paradict=eval('paras_'+self.binary)
 				paralist=paradict['necessary']
-				if para in paralist: raise Exception('The parameter '+para+' is a necessary parameter in '+self.binary+' model and cannot be removed.')
+				if para in paralist: raise Exception(text.error_nrmbp % (para,self.binary))
 			elif para in ['name',  'ephver', 'ephem', 'p0', 'f0', 'dm', 'units']:
-				raise Exception('The parameter '+para+' cannot be removed.')
+				raise Exception(text.error_nrmp % para)
 			elif para in {'p2', 'p1', 'f1', 'p3', 'f2', 'f3'}:
 				if para=='p1': 
 					self.f1=0
@@ -102,7 +106,7 @@ class psr:
 					self.paras.remove('p3')
 			elif para=='pepoch':
 				if ('f1' in self.paras) or ('f2' in self.paras) or ('f3' in self.paras) or ('f4' in self.paras) or ('f5' in self.paras):
-					raise Exception('The parameter pepoch cannot be removed if frequency derivative exists.')
+					raise Exception(text.error_nrmpp)
 			elif para in ['dmepoch','posepoch']:
 				paraval=self.pepoch
 			self.__setattr__(para,paraval)				
@@ -391,14 +395,14 @@ class psr:
 			self.name=paras['NAME'][0]
 			self.paras.extend(['name'])
 		else:
-			raise Exception('No pulsar name in par file.')
+			raise Exception(text.error_npn)
 		#
 		if 'UNITS' in paras_key:
 			i=paras['UNITS']
 			self.units=i[0]
 			self.paras.append('units')
 		else:
-			raise Exception('No para units in par file.')
+			raise Exception(text.error_npu)
 		#
 		if ('RAJ' in paras_key) and ('DECJ' in paras_key):
 			i=paras['RAJ']
@@ -410,10 +414,10 @@ class psr:
 				if len(i)==2:
 					self.raj_err=np.float64(i[1])/60**lra*5*np.pi
 				else:
-					print('Warning: The parameter raj has no error.')
+					print(text.warning_ne % 'RAJ')
 					self.raj_err=0
 			else:
-				raise Exception('The format of RA is wrong.')
+				raise Exception(text.error_wfra)
 			i=paras['DECJ']
 			dec=np.float64(i[0].split(':'))
 			ldec=len(dec)
@@ -426,10 +430,10 @@ class psr:
 				if len(i)==2:
 					self.decj_err=np.float64(i[1])/60**ldec/3*np.pi
 				else:
-					print('Warning: The parameter decj has no error.')
+					print(text.warning_ne % 'DECJ')
 					self.decj_err=0
 			else:
-				raise Exception('The format of DEC is wrong.')
+				raise Exception(text.error_wfdec)
 			self.paras.extend(['raj','decj'])
 		elif ('ELONG' in paras_key) and ('ELAT' in paras_key):
 			self.paras.extend(['elong','elat'])
@@ -437,16 +441,16 @@ class psr:
 			self.elong=np.float64(i[0])/180*np.pi
 			if len(i)==2: self.elong_err=np.float64(i[1])/180*np.pi
 			else:
-				print('Warning: The parameter elong has no error.')
+				print(text.warning_ne % 'ELONG')
 				self.elong_err=0
 			i=paras['ELAT']
 			self.elat=np.float64(i[0])/180*np.pi
 			if len(i)==2: self.elat_err=np.float64(i[1])/180*np.pi
 			else:
-				print('Warning: The parameter elat has no error.')
+				print(text.warning_ne % 'ELAT')
 				self.elat_err=0
 		else:
-			raise Exception('No pulsar position in par file.')
+			raise Exception(text.error_npp)
 		#
 		if 'F0' in paras_key:
 			i=paras['F0']
@@ -456,7 +460,7 @@ class psr:
 				self.f0_err=np.float64(i[1])
 				self.p0_err=self.f0_err/self.f0**2
 			else:
-				print('Warning: The parameter f0 has no error.')
+				print(text.warning_ne % 'F0')
 				self.f0_err=0
 				self.p0_err=0
 			self.paras.extend(['f0','p0'])
@@ -468,12 +472,12 @@ class psr:
 				self.p0_err=np.float64(i[1])
 				self.f0_err=self.p0_err/self.p0**2
 			else:
-				print('Warning: The parameter p0 has no error.')
+				print(text.warning_ne % 'P0')
 				self.f0_err=0
 				self.p0_err=0
 			self.paras.extend(['f0','p0'])
 		else:
-			raise Exception('No pulsar period in par file.')
+			raise Exception(text.error_npp0)
 		#
 		if 'F1' in paras_key:
 			i=paras['F1']
@@ -483,7 +487,7 @@ class psr:
 				self.f1_err=np.float64(i[1])
 				self.p1_err=np.sqrt((self.f1_err*self.p0**2)**2+(2*self.f1*self.p0*self.p0_err)**2)
 			else:
-				print('Warning: The parameter f1 has no error.')
+				print(text.warning_ne % 'F1')
 				self.f1_err=0
 				self.p1_err=0
 			self.paras.extend(['f1','p1'])
@@ -495,7 +499,7 @@ class psr:
 				self.p1_err=np.float64(i[1])
 				self.f1_err=np.sqrt((self.p1_err*self.f0**2)**2+(2*self.p1*self.f0*self.f0_err)**2)
 			else:
-				print('Warning: The parameter p1 has no error.')
+				print(text.warning_ne % 'P1')
 				self.f1_err=0
 				self.p1_err=0
 			self.paras.extend(['f1','p1'])
@@ -505,7 +509,7 @@ class psr:
 		#
 		if 'F2' in paras_key:
 			if 'f1' not in self.paras:
-				raise Exception('The parameter F2 is in parfile without F1.')
+				raise Exception(text.error_pnp % ('F2','F1'))
 			i=paras['F2']
 			self.f2=np.float64(i[0])
 			self.p2=-self.f2*self.p0**2-2*self.f1*self.p0*self.p1
@@ -513,13 +517,13 @@ class psr:
 				self.f2_err=np.float64(i[1])
 				self.p2_err=np.sqrt((self.f2_err*self.p0**2)**2+((self.f2*self.p0+self.f1*self.p1)*2*self.p0_err)**2+(2*self.f1*self.p0*self.p1_err)**2+(2*self.p0*self.p1*self.f1_err)**2)
 			else:
-				print('Warning: The parameter f2 has no error.')
+				print(text.warning_ne % 'F2')
 				self.f2_err=0
 				self.p2_err=0
 			self.paras.extend(['f2','p2'])
 		elif 'P2' in paras_key:
 			if 'f1' not in self.paras:
-				raise Exception('The parameter P2 is in parfile without P1.')
+				raise Exception(text.error_pnp % ('P2','P1'))
 			i=paras['P2']
 			self.p2=np.float64(i[0])
 			self.f2=-self.p2*self.f0**2-2*self.p1*self.f0*self.f1
@@ -527,7 +531,7 @@ class psr:
 				self.p2_err=np.float64(i[1])
 				self.f2_err=np.sqrt((self.p2_err*self.f0**2)**2+((self.p2*self.f0+self.p1*self.f1)*2*self.p0_err)**2+(2*self.p1*self.f0*self.f1_err)**2+(2*self.f0*self.f1*self.p1_err)**2)
 			else:
-				print('Warning: The parameter p2 has no error.')
+				print(text.warning_ne % 'P2')
 				self.f2_err=0
 				self.p2_err=0
 			self.paras.extend(['f2','p2'])
@@ -537,7 +541,7 @@ class psr:
 		#
 		if 'F3' in paras_key:
 			if 'f2' not in self.paras:
-				raise Exception('The parameter F3 is in parfile without F2.')
+				raise Exception(text.error_pnp % ('F3','F2'))
 			i=paras['F3']
 			self.f3=np.float64(i[0])
 			self.p3=-self.f3*self.p0**2-4*self.f2*self.p0*self.p1-2*self.f1*self.p1**2-2*self.f1*self.p0*self.p2
@@ -545,13 +549,13 @@ class psr:
 				self.f3_err=np.float64(i[1])
 				self.p3_err=np.sqrt((self.f3_err*self.p0**2)**2+((self.f3*self.p0+2*self.f2*self.p1+self.f1*self.p2)*2*self.p0_err)**2+((self.f2*self.p0+self.f1*self.p1)*4*self.p1_err)**2+(2*self.p0*self.p1*self.f2_err)**2+((self.p1**2+self.p0*self.p2)*2*self.f1_err)**2+(2*self.f1*self.p0*self.p2_err)**2)
 			else:
-				print('Warning: The parameter f3 has no error.')
+				print(text.warning_ne % 'F3')
 				self.f3_err=0
 				self.p3_err=0
 			self.paras.extend(['f3','p3'])
 		elif 'P3' in paras_key:
 			if 'f2' not in self.paras:
-				raise Exception('The parameter P3 is in parfile without P2.')
+				raise Exception(text.error_pnp % ('P3','P2'))
 			i=paras['P3']
 			self.p3=np.float64(i[0])
 			self.f3=-self.p3*self.f0**2-4*self.p2*self.f0*self.f1-2*self.p1*self.f1**2-2*self.p1*self.f0*self.f2
@@ -559,7 +563,7 @@ class psr:
 				self.p3_err=np.float64(i[1])
 				self.f3_err=np.sqrt((self.p3_err*self.f0**2)**2+((self.p3*self.f0+2*self.p2*self.f1+self.p1*self.f2)*2*self.f0_err)**2+((self.p2*self.f0+self.p1*self.f1)*4*self.f1_err)**2+(2*self.f0*self.f1*self.p2_err)**2+((self.f1**2+self.f0*self.f2)*2*self.p1_err)**2+(2*self.p1*self.f0*self.f2_err)**2)
 			else:
-				print('Warning: The parameter p3 has no error.')
+				print(text.warning_ne % 'P3')
 				self.f3_err=0
 				self.p3_err=0
 			self.paras.extend(['f3','p3'])
@@ -567,10 +571,10 @@ class psr:
 			self.f3=0
 			self.p3=0
 		#
-		self.deal_para('f4',paras,paras_key,err_case=['f3' not in self.paras],err_exc=['The parameter F4 is in parfile without F3.'])
-		self.deal_para('f5',paras,paras_key,err_case=['f4' not in self.paras],err_exc=['The parameter F5 is in parfile without F4.'])
+		self.deal_para('f4',paras,paras_key,err_case=['f3' not in self.paras],err_exc=[text.error_pnp % ('F4','F3')])
+		self.deal_para('f5',paras,paras_key,err_case=['f4' not in self.paras],err_exc=[text.error_pnp % ('F5','F4')])
 		#
-		if ('f1' in self.paras) and ('PEPOCH' not in paras_key): raise Exception('No PEPOCH in par file.')
+		if ('f1' in self.paras) and ('PEPOCH' not in paras_key): raise Exception(text.error_npe)
 		self.deal_para('pepoch',paras,paras_key)
 		#
 		if 'DM' in paras_key:
@@ -579,12 +583,12 @@ class psr:
 			if len(i)>1:
 				self.dm_err=np.float64(i[1])
 			else:
-				print('Warning: The parameter dm has no error.')
+				print(text.warning_ne % 'DM')
 				self.dm_err=0
 			self.paras.extend(['dm'])
 			self.deal_para('dm1',paras,paras_key)
-			self.deal_para('dm2',paras,paras_key,err_case=['dm1' not in self.paras],err_exc=['The parameter DM2 is in parfile without DM1.'])
-			self.deal_para('dm3',paras,paras_key,err_case=['dm2' not in self.paras],err_exc=['The parameter DM3 is in parfile without DM2.'])
+			self.deal_para('dm2',paras,paras_key,err_case=['dm1' not in self.paras],err_exc=[text.error_pnp % ('DM2','DM1')])
+			self.deal_para('dm3',paras,paras_key,err_case=['dm2' not in self.paras],err_exc=[text.error_pnp % ('DM3','DM2')])
 			self.dmmodel=0
 			if 'DMX' in paras_key:
 				i=paras['DM'].reshape(-1,4).T
@@ -599,7 +603,7 @@ class psr:
 				self.dmxr2=np.array([])
 		elif 'DMMODEL' in paras_key:
 			if 'DMOFF' not in paras_key:
-				raise Exception('The DMMODEL para is in parfile without DMOFF.')
+				raise Exception(text.error_pnp % ('DMMODEL','DMOFF'))
 			i=paras['DMMODEL']
 			self.dmmodel=np.float64(i[0])
 			self.dmmodel_err=np.float64(i[1])
@@ -616,39 +620,39 @@ class psr:
 			self.dmx=np.array([])
 			self.dmxr1=np.array([])
 			self.dmxr2=np.array([])
-			print('Strong Warning: No pulsar DM in par file, set DM as 0!')
+			print(text.warning_ndm)
 		#
-		self.deal_para('dm_s1yr',paras,paras_key,err_case=['DM_C1YR' not in paras_key],err_exc=['The parameter DM_S1YR is in parfile without DM_C1YR.'])
-		self.deal_para('dm_c1yr',paras,paras_key,err_case=['DM_S1YR' not in paras_key],err_exc=['The parameter DM_C1YR is in parfile without DM_S1YR.'])
-		self.deal_para('fddc',paras,paras_key,err_case=['FDDI' not in paras_key],err_exc=['The parameter FDDC is in parfile without FDDI.'])
-		self.deal_para('fddi',paras,paras_key,err_case=['FDDC' not in paras_key],err_exc=['The parameter FDDI is in parfile without FDDC.'])
-		self.deal_para('fd',paras,paras_key,err_case=['FDDI' not in paras_key],err_exc=['The parameter FD is in parfile without FDDI.'])
-		self.deal_para('cm1',paras,paras_key,err_case=['CMIDX' not in paras_key],err_exc=['The parameter CM is in parfile without CMIDX.'])
-		self.deal_para('cmidx',paras,paras_key,err_case=['CM' not in paras_key],err_exc=['The parameter CMIDX is in parfile without CM.'])
-		self.deal_para('cm2',paras,paras_key,err_case=['cm1' not in self.paras],err_exc=['The parameter CM2 is in parfile without CM1.'])
-		self.deal_para('cm3',paras,paras_key,err_case=['cm2' not in self.paras],err_exc=['The parameter CM3 is in parfile without CM2.'])
-		self.deal_para('dmepoch',paras,paras_key,exce='Warning: No DMEPOCH in the parfile, using PEPOCH instead.',value=self.pepoch.mjd)
-		self.deal_para('pmra',paras,paras_key,err_case=['PMDEC' not in paras_key],err_exc=['Strong Warning: The parameter PMRA is in parfile without PMDEC.'])
-		self.deal_para('pmdec',paras,paras_key,err_case=['PMRA' not in paras_key],err_exc=['Strong Warning: The parameter PMDEC is in parfile without PMRA.'])
-		self.deal_para('pmelong',paras,paras_key,err_case=['PMELAT' not in paras_key],err_exc=['Strong Warning: The parameter PMELONG is in parfile without PMELAT.'])
-		self.deal_para('pmelat',paras,paras_key,err_case=['PMELONG' not in paras_key],err_exc=['Strong Warning: The parameter PMELAT is in parfile without PMELONG.'])
-		self.deal_para('pmra2',paras,paras_key,err_case=['pmra' not in self.paras,'PMDEC2' not in paras_key],err_exc=['The parameter PM2 is in parfile without PM.','The parameter PMRA2 is in parfile without PMDEC2.'])
-		self.deal_para('pmdec2',paras,paras_key,err_case=['pmdec' not in self.paras,'PMRA2' not in paras_key],err_exc=['The parameter PM2 is in parfile without PM.','The parameter PMDEC2 is in parfile without PMRA2.'])
-		self.deal_para('pmelong2',paras,paras_key,err_case=['pmelong' not in self.paras,'PMELAT2' not in paras_key],err_exc=['The parameter PM2 is in parfile without PM.','The parameter PMELONG2 is in parfile without PMELAT2.'])
-		self.deal_para('pmelat2',paras,paras_key,err_case=['pmelat' not in self.paras,'PMELONG2' not in paras_key],err_exc=['The parameter PM2 is in parfile without PM.','The parameter PMELAT2 is in parfile without PMELONG2.'])
+		self.deal_para('dm_s1yr',paras,paras_key,err_case=['DM_C1YR' not in paras_key],err_exc=[text.error_pnp % ('DM_S1YR','DM_C1YR')])
+		self.deal_para('dm_c1yr',paras,paras_key,err_case=['DM_S1YR' not in paras_key],err_exc=[text.error_pnp % ('DM_C1YR','DM_S1YR')])
+		self.deal_para('fddc',paras,paras_key,err_case=['FDDI' not in paras_key],err_exc=[text.error_pnp % ('FDDC','FDDI')])
+		self.deal_para('fddi',paras,paras_key,err_case=['FDDC' not in paras_key],err_exc=[text.error_pnp % ('FDDI','FDDC')])
+		self.deal_para('fd',paras,paras_key,err_case=['FDDI' not in paras_key],err_exc=[text.error_pnp % ('FD','FDDI')])
+		self.deal_para('cm1',paras,paras_key,err_case=['CMIDX' not in paras_key],err_exc=[text.error_pnp % ('CM','CMIDX')])
+		self.deal_para('cmidx',paras,paras_key,err_case=['CM' not in paras_key],err_exc=[text.error_pnp % ('CMIDX','CM')])
+		self.deal_para('cm2',paras,paras_key,err_case=['cm1' not in self.paras],err_exc=[text.error_pnp % ('CM2','CM1')])
+		self.deal_para('cm3',paras,paras_key,err_case=['cm2' not in self.paras],err_exc=[text.error_pnp % ('CM3','CM2')])
+		self.deal_para('dmepoch',paras,paras_key,exce=text.warning_ndmep,value=self.pepoch.mjd)
+		self.deal_para('pmra',paras,paras_key,err_case=['PMDEC' not in paras_key],err_exc=[text.warning_spnp % ('PMRA','PMDEC')])
+		self.deal_para('pmdec',paras,paras_key,err_case=['PMRA' not in paras_key],err_exc=[text.warning_spnp % ('PMDEC','PMRA')])
+		self.deal_para('pmelong',paras,paras_key,err_case=['PMELAT' not in paras_key],err_exc=[text.warning_spnp % ('PMELONG','PMELAT')])
+		self.deal_para('pmelat',paras,paras_key,err_case=['PMELONG' not in paras_key],err_exc=[text.warning_spnp % ('PMELAT','PMELONG')])
+		self.deal_para('pmra2',paras,paras_key,err_case=['pmra' not in self.paras,'PMDEC2' not in paras_key],err_exc=[text.error_pnp % ('PM2','PM'),text.error_pnp % ('PMRA2','PMDEC2')])
+		self.deal_para('pmdec2',paras,paras_key,err_case=['pmdec' not in self.paras,'PMRA2' not in paras_key],err_exc=[text.error_pnp % ('PM2','PM'),text.error_pnp % ('PMDEC2','PMRA2')])
+		self.deal_para('pmelong2',paras,paras_key,err_case=['pmelong' not in self.paras,'PMELAT2' not in paras_key],err_exc=[text.error_pnp % ('PM2','PM'),text.error_pnp % ('PMELONG2','PMELAT2')])
+		self.deal_para('pmelat2',paras,paras_key,err_case=['pmelat' not in self.paras,'PMELONG2' not in paras_key],err_exc=[text.error_pnp % ('PM2','PM'),text.error_pnp % ('PMELAT2','PMELONG2')])
 		self.deal_para('pmrv',paras,paras_key)
 		self.deal_para('px',paras,paras_key)
-		self.deal_para('posepoch',paras,paras_key,exce='Warning: No POSEPOCH in the parfile, using PEPOCH instead.',value=self.pepoch.mjd)
+		self.deal_para('posepoch',paras,paras_key,exce=text.warning_nposep,value=self.pepoch.mjd)
 		self.deal_para('binary',paras,paras_key)
 		if self.binary:
 			if self.binary=='BT2P' or self.binary=='BT1P': self.binary='T2'
 			elif self.binary=='T2-PTA': self.binary='T2_PTA'
 			for i in eval('paras_'+self.binary)['necessary']:
-				self.deal_para(i,paras,paras_key, exce='Strong Warning: No '+i.upper()+' parameter for '+self.binary+'model.')
+				self.deal_para(i,paras,paras_key, exce=text.warning_nnbp % (i.upper(),self.binary))
 			for i in eval('paras_'+self.binary)['optional']:
 				self.deal_para(i,paras,paras_key)
 			if not (self.pb or self.fb0):
-				raise Exception('The binary orbit period is not given in par file.')
+				raise Exception(text.error_nbpb)
 			if self.binary in ['BTX', 'ELL1']:
 				if not self.fb0:
 					self.fb0=1/(self.pb*86400)
@@ -667,41 +671,41 @@ class psr:
 					self.pbdot_err=np.sqrt((self.fb1_err*self.pb**2)**2+(2*self.fb1*self.pb*self.pb_err)**2)/86400**2
 			if self.binary[:2]=='BT' or self.binary[:2]=='DD' or self.binary=='MSS':
 				if not (('om' in self.paras) and ('t0' in self.paras)): 
-					if ('tasc' in self.paras): raise Exception('There is no T0 and OM parameters for '+self.binary+' binary model, please use ELL type binary model.')
-					else: raise Exception('There is no T0 and OM parameters for '+self.binary+' binary model.')
+					if ('tasc' in self.paras): raise Exception(text.error_nt0om0 % self.binary)
+					else: raise Exception(text.error_nt0om1 % self.binary)
 				if self.binary=='DD':
-					if 'H3' in paras_key: print('Waring: The parameter H3 is found in parfile, maybe DDH model can be adopted.')
-					if 'KOM' in paras_key: print('Waring: The parameter KOM is found in parfile, maybe DDK model can be adopted.')
+					if 'H3' in paras_key: print(text.warning_nbpma % ('H3','DDH'))
+					if 'KOM' in paras_key: print(text.warning_nbpma % ('KOM','DDK'))
 				elif self.binary=='DDK':
 					if 'KOM' not in paras_key: 
 						self.binary='DD'
 						self.sini=0
-						print('Waring: The parameter KOM for DDK model is not found in parfile, use DD model instead.')
+						print(text.warning_nbpui % ('KOM','DDK','DD'))
 				elif self.binary=='DDH':
 					if 'H3' not in paras_key: 
 						self.binary='DD'
 						self.sini=0
 						self.m2=0
-						print('Waring: The parameter H3 for DDH model is not found in parfile, use DD model instead.')
+						print(text.warning_nbpui % ('H3','DDH','DD'))
 				elif self.binary=='DDGR':
 					if 'M2' not in paras_key: 
 						self.binary='DD'
 						self.gamma=0
 						self.omdot=0
-						print('Waring: The parameter M2 for DDGR model is not found in parfile, use DD model instead.')
+						print(text.warning_nbpui % ('M2','DDGR','DD'))
 			if self.binary[:3]=='ELL':
 				if not (self.tasc): 
-					if (self.om and self.t0): raise Exception('There is no TASC parameter in parfile for ELL type binary model, please use another binary model.')
-					else: raise Exception('There is no T0 and OM parameters for ELL type binary model.')
+					if (self.om and self.t0): raise Exception(text.error_ntasc0)
+					else: raise Exception(text.error_ntasc1)
 				if self.binary=='ELL1' or self.binary=='ELL1k':
-					if 'H3' in paras_key: print('Waring: The parameter H3 is found in parfile, maybe ELL1H model can be adopted.')
+					if 'H3' in paras_key: print(text.warning_nbpma % ('H3','ELL1H'))
 				elif self.binary=='ELL1H':
 					if 'H3' not in paras_key: 
 						self.binary='ELL1k'
-						print('Waring: The parameter H3 for ELL1H model is not found in parfile, use ELL1k model instead.')
+						print(text.warning_nbpui % ('H3','ELL1H','ELL1k'))
 			if self.binary=='T2':
 				if not (('T0' in paras_key) or ('TASC' in paras_key)): 
-					raise Exception('No T0 or T0ASC in pulsar paras.')
+					raise Exception(text.error_nt0)
 		self.deal_para('rm',paras,paras_key)
 		self.deal_para('dshk',paras,paras_key)
 		#
@@ -769,12 +773,12 @@ class psr:
 		else:
 			self.deal_paralist('glitch',paras,paras_key)
 		#
-		self.deal_para('ephver',paras,paras_key,exce='Warning: No parameter version in the parfile.', value='2')
-		self.deal_para('ephem',paras,paras_key,exce='Warning: No ephemris version in the parfile.', value='DE405')
+		self.deal_para('ephver',paras,paras_key,exce=text.warning_npv, value='2')
+		self.deal_para('ephem',paras,paras_key,exce=text.warning_nev, value='DE405')
 		self.deal_para('clk',paras,paras_key,value='TT')
 		self.unused_paras=set(paras_key)-set(map(lambda x: x.upper(),self.paras))-set(['PSRJ'])
-		if len(self.unused_paras)>=2: print('Warning: The parameters '+', '.join(list(self.unused_paras))+' in the parfile are not used.')
-		elif len(self.unused_paras)==1: print('Warning: The parameter '+', '.join(list(self.unused_paras))+' in the parfile is not used.')
+		if len(self.unused_paras)>=2: print(text.warning_nps % ', '.join(list(self.unused_paras)))
+		elif len(self.unused_paras)==1: print(text.warning_nps % ', '.join(list(self.unused_paras)))
 	#
 	def deal_para(self,paraname,paras,paras_key,exce=False,value=0,err_case=[],err_exc=[]):	# analyze parameter
 		paraname0=paraname.upper()
@@ -804,7 +808,7 @@ class psr:
 				if len(i)==2:
 					self.__setattr__(paraname+'_err',i[1])
 				else:
-					print('Warning: The parameter '+paraname+' has no error.')
+					print(text.warning_ne % paraname)
 					self.__setattr__(paraname+'_err',0)
 			self.paras.append(paraname)
 		elif exce:
@@ -850,7 +854,7 @@ class psr:
 					if paraname in paras_float_array: para[k]=data[0]
 					elif paraname in paras_time_array: para[k]=te.time(data[0],0,scale=self.units.lower())
 					if data.size==2: para_err[k]==data[1]
-					elif paraname in para_with_err: print('Warning: The parameter '+paraname0+' has no error.')
+					elif paraname in para_with_err: print(text.warning_ne % paraname0)
 					para_count+=1
 			self.__setattr__(paraname,para)
 			if paraname in para_with_err: self.__setattr__(paraname+'_err',para_err)
