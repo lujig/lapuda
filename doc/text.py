@@ -5,10 +5,19 @@ wn.filterwarnings('ignore')
 #
 dirname=os.path.split(os.path.realpath(__file__))[0]
 filename='text.txt'
+plotname='text.txt'
 #
 class output_text():
 	def __init__(self,prog):
 		f=np.loadtxt(open(dirname+'/'+filename, encoding='utf8'),dtype=str,delimiter='\t')
-		f=f[f[:,0]==prog]
-		for i in f:
+		f0=f[f[:,0]==prog]
+		for i in f0:
 			self.__setattr__(str(i[1]),str(i[2]))
+		if plotname==filename:
+			f1=f[f[:,0]==prog+'_plot']
+		else:
+			f=np.loadtxt(open(dirname+'/'+plotname, encoding='utf8'),dtype=str,delimiter='\t')
+			f1=f[f[:,0]==prog+'_plot']
+		for i in f1:
+			self.__setattr__(str(i[1]),str(i[2]))
+		

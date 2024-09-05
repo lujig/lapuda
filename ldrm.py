@@ -10,9 +10,11 @@ import psr_model as pm
 import warnings as wn
 import adfunc as af
 wn.filterwarnings('ignore')
+import matplotlib as mpl
 import matplotlib.pyplot as plt
-plt.rcParams['font.family']='Serif'
 dirname=os.path.split(os.path.realpath(__file__))[0]
+plt.rcParams['mathtext.fontset']='stix'
+font=mpl.font_manager.FontProperties(fname=dirname+'/doc/gb.ttf',size=17)
 sys.path.append(dirname+'/doc')
 import text
 #
@@ -172,7 +174,7 @@ for psr_name in psrlist:
 		if args.base:	# the baseline should be removed
 			if len(base)==1:
 				nbase=int(np.float64(base)*nbin)
-				pn,bn=af.radipos(i.mean(0),base=True,base_nbin=nbase)
+				pn,bn=af.radipos(i.mean(0),base0=True,base_nbin=nbase)
 				bn=np.arange(bn,bn+nbase)
 			elif len(base)==2:
 				bn=np.arange(tuple(np.int64(np.float64(base)*nbin)))
@@ -182,7 +184,7 @@ for psr_name in psrlist:
 				parser.error(text.error_npr)
 		else:
 			nbase=int(nbin/10)
-			pn,bn=af.radipos(i.mean(0),base=True,base_nbin=nbase)
+			pn,bn=af.radipos(i.mean(0),base0=True,base_nbin=nbase)
 			bn=np.arange(bn,bn+nbase)
 		bn=bn%nbin
 		q-=q[:,bn].mean(1).reshape(-1,1)
@@ -279,20 +281,20 @@ for psr_name in psrlist:
 			ax=fig.add_axes([x0,y0,x1-x0,y1-y0])
 			ax1=fig.add_axes([x1,y0,x2-x1,y1-y0])
 			ax.patch.set_facecolor('w')
-			ax1.set_xlabel('Pulse Phase',fontsize=30)
+			ax1.set_xlabel(text.plot_pp,fontsize=30,fontproperties=font)
 			ax1.set_yticks([])
 			ax1.patch.set_facecolor('w')
-			ax.set_ylabel('Polarization Angle',fontsize=30)
-			ax.set_xlabel('Wavelength (m)',fontsize=30)
+			ax.set_ylabel(text.plot_pa,fontsize=30,fontproperties=font)
+			ax.set_xlabel(text.plot_wl,fontsize=30,fontproperties=font)
 			ax1=ax1.twinx()
-			ax1.set_ylabel('Intensity (arbi.)',fontsize=30)
+			ax1.set_ylabel(text.plot_int,fontsize=30,fontproperties=font)
 			y=phi+rot(lam2[jj],rm,0)
 			dphi0=rot(lam**2,rm,0)*2
 			ax.errorbar(np.sqrt(lam2[jj]),y,yerr=ephi,fmt='b.')
 			ax.plot(lam,dphi0/2,'r-')
 			ymax,ymin=(y+ephi).max(),(y-ephi).min()
 			ax.set_ylim(ymin*1.2-ymax*0.2,ymax*1.05-ymin*0.05)
-			ax.text(lam.mean(),ymin*1.1-ymax*0.1,'Best RM='+str(np.round(best_rm,ndigit))+'$\pm$'+str(np.round(rmerr,ndigit)),horizontalalignment='center',verticalalignment='center',fontsize=25)
+			ax.text(lam.mean(),ymin*1.1-ymax*0.1,'Best RM='+str(np.round(best_rm,ndigit))+'$\\pm$'+str(np.round(rmerr,ndigit)),horizontalalignment='center',verticalalignment='center',fontsize=25,family='Serif')
 			#
 			phase=np.arange(nbin)/nbin
 			q0=q*np.cos(dphi0).reshape(-1,1)+u*np.sin(dphi0).reshape(-1,1)
@@ -309,10 +311,10 @@ for psr_name in psrlist:
 			l2=np.sqrt(q2**2+u2**2)
 			l2/=l1.max()
 			l1/=l1.max()
-			ax1.plot(phase,l2,'k',label='Lin. Polar. (before modifying RM)')
-			ax1.plot(phase,l1,'r',label='Lin. Polar. (after modifying RM)')
+			ax1.plot(phase,l2,'k',label=text.plot_lbm)
+			ax1.plot(phase,l1,'r',label=text.plot_lam)
 			ax1.set_xlim(0,1)
-			ax1.legend(fontsize=20,frameon=False)
+			ax1.legend(fontsize=20,frameon=False,prop=font,loc=1)
 			#
 			def save_fig():
 				figname=input(text.input_fn)
@@ -346,6 +348,8 @@ for psr_name in psrlist:
 				mpl.use('TkAgg')
 				ax.tick_params(axis='x',labelsize=15)
 				ax.tick_params(axis='y',labelsize=15)
+				ax1.tick_params(axis='x',labelsize=15)
+				ax1.tick_params(axis='y',labelsize=15)
 				root=tk.Tk()
 				root.title(args.filename)
 				root.geometry('1250x600+100+100')

@@ -272,6 +272,11 @@ lddm	info_ana	Analyse for %s:
 lddm	info_save	Figure file %s has been saved.
 lddm	warning_ilf	Warning: %s is/are not valid ld file
 lddm	input_fn	Please input figure name:
+lddm_plot	plot_freq	$\mathrm{Frequency\;(MHz)}$
+lddm_plot	plot_dm	$\mathrm{DM}$
+lddm_plot	plot_relm	$\mathrm{Relative\;Maxima}$
+lddm_plot	plot_pp	$\mathrm{Pulse\;Phase}$
+lddm_plot	plot_nf	$\mathrm{The\;best\;DM\;cannot\;be\;found}$
 # ldpara.py
 ldpara	help	Show the parameters of ld file.
 ldpara	help_filename	input ld file
@@ -378,6 +383,12 @@ ldrm	info_ana	Analyse for %s:
 ldrm	info_save	Figure file %s has been saved.
 ldrm	warning_ilf	Warning: %s is/are not valid ld file
 ldrm	input_fn	Please input figure name:
+ldrm_plot	plot_pp	$\mathrm{Pulse\; Phase}$
+ldrm_plot	plot_pa	$\mathrm{Polarization\; Angle}$
+ldrm_plot	plot_wl	$\mathrm{Wavelength\; (m)}$
+ldrm_plot	plot_int	$\mathrm{Intensity\; (arbi.)}$
+ldrm_plot	plot_lbm	$\mathrm{Lin.\; Polar.\; (before modifying RM)}$
+ldrm_plot	plot_lam	$\mathrm{Lin.\; Polar.\; (after modifying RM)}$
 # ldslc.py
 ldslc	help	Slice the ld file.
 ldslc	help_h	show this help message and exit

@@ -272,6 +272,11 @@ lddm	info_ana	提示：正在分析%s：
 lddm	info_save	提示：已保存为图像文件%s。
 lddm	warning_ilf	Warning: 文件%s不是有效的LD文件。
 lddm	input_fn	请输入图像文件名：
+lddm_plot	plot_freq	频率 $\mathrm{(MHz)}$
+lddm_plot	plot_dm	$\mathrm{DM}$
+lddm_plot	plot_relm	相对极大值
+lddm_plot	plot_pp	脉冲相位
+lddm_plot	plot_nf	最优$\mathrm{DM}$无法找到
 # ldpara.py
 ldpara	help	展示LD文件的参数信息。
 ldpara	help_filename	输入LD格式文件名或文件名列表
@@ -378,6 +383,12 @@ ldrm	info_ana	提示：正在分析%s：
 ldrm	info_save	提示：已保存为图像文件%s。
 ldrm	warning_ilf	Warning: 文件%s不是有效的LD文件。
 ldrm	input_fn	请输入图像文件名：
+ldrm_plot	plot_pp	脉冲相位
+ldrm_plot	plot_pa	线偏振位置角
+ldrm_plot	plot_wl	波长 $\mathrm{(m)}$
+ldrm_plot	plot_int	辐射强度 $\mathrm{(arbi.)}$
+ldrm_plot	plot_lbm	线偏振强度（修正$\mathrm{RM}$之前）
+ldrm_plot	plot_lam	线偏振强度（修正$\mathrm{RM}$之后）
 # ldslc.py
 ldslc	help	将LD格式文件进行切片。
 ldslc	help_h	显示本帮助信息并退出

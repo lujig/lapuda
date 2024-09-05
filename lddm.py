@@ -10,9 +10,11 @@ import psr_model as pm
 import psr_read as pr
 import adfunc as af
 import time
+import matplotlib as mpl
 import matplotlib.pyplot as plt
-plt.rcParams['font.family']='Serif'
 dirname=os.path.split(os.path.realpath(__file__))[0]
+plt.rcParams['mathtext.fontset']='stix'
+font=mpl.font_manager.FontProperties(fname=dirname+'/doc/gb.ttf')
 sys.path.append(dirname+'/doc')
 import text
 #
@@ -179,20 +181,23 @@ for psr_name in psrlist:
 			ax=fig.add_axes([x0,y0,x1-x0,y1-y0])
 			ax.patch.set_facecolor('w')
 			ax1=fig.add_axes([x1,y0,x2-x1,(y1-y0)/2])
-			ax1.set_xlabel('Pulse Phase',fontsize=25)
+			ax1.set_xlabel(text.plot_pp,fontproperties=font,fontsize=25)
 			ax.set_yticks([])
 			ax1.set_yticks([])
+			ax1.tick_params(axis='x',labelsize=10,labelfontfamily='Serif')
 			ax1=ax1.twinx()
+			ax1.tick_params(axis='y',labelsize=10,labelfontfamily='Serif')
 			ax2=fig.add_axes([x1,(y1+y0)/2,x2-x1,(y1-y0)/2])
 			ax2.set_xticks([])
 			ax2.set_yticks([])
 			ax2=ax2.twinx()
+			ax2.tick_params(axis='y',labelsize=10,labelfontfamily='Serif')
 			ax1.patch.set_facecolor('w')
 			ax2.patch.set_facecolor('w')
-			ax.set_xlabel('DM',fontsize=30)
-			ax.set_ylabel('Relative Maxima',fontsize=30)
-			ax1.set_ylabel('Frequency (MHz)',fontsize=25)
-			ax2.set_ylabel('Frequency (MHz)',fontsize=25)
+			ax.set_xlabel(text.plot_dm,fontproperties=font,fontsize=30)
+			ax.set_ylabel(text.plot_relm,fontproperties=font,fontsize=30)
+			ax1.set_ylabel(text.plot_freq,fontproperties=font,fontsize=25)
+			ax2.set_ylabel(text.plot_freq,fontproperties=font,fontsize=25)
 		#
 		zchan1=np.where(info['data_info']['chan_weight']==0)[0]
 		zchan=set(zchan0).union(zchan1)
@@ -295,7 +300,7 @@ for psr_name in psrlist:
 			#
 			if not args.text:
 				ax.plot([dm0+dmmax,dm0+dmmax],[y0,y1],'k:')
-				ax.text(dm0+ddm,y0*0.95+y1*0.05,'DM$_0$='+str(dm0)+'\nBest DM='+str(np.round(dmmax+dm0,3))+'$\\pm$'+str(np.round(dmerr,3)),horizontalalignment='center',verticalalignment='bottom',fontsize=25)
+				ax.text(dm0+ddm,y0*0.95+y1*0.05,'DM$_0$='+str(dm0)+'\nBest DM='+str(np.round(dmmax+dm0,3))+'$\\pm$'+str(np.round(dmerr,3)),horizontalalignment='center',verticalalignment='bottom',fontsize=25,family='Serif')
 				fftdata0=fft.rfft(data0,axis=1)
 				tmp=np.shape(fftdata)[-1]
 				frac=1/(frequency*psr.vchange)**2*pm.dm_const/period*dmmax
@@ -311,7 +316,7 @@ for psr_name in psrlist:
 			else:
 				print(psr_para.name+'  '+filename+' DM_0='+str(dm0)+', Best DM='+str(np.round(dmmax+dm0,ndigit))+'+-'+str(np.round(dmerr,ndigit)))
 		else:
-			if not args.text: ax.text(dm0+ddm,y0*0.95+y1*0.05,'The best DM cannot be found',horizontalalignment='center',verticalalignment='bottom',fontsize=25)
+			if not args.text: ax.text(dm0+ddm,y0*0.95+y1*0.05,text.plot_nf, horizontalalignment='center',verticalalignment='bottom',fontsize=25,fontproperties=font)
 			else: print(text.info_bdm % (filename,psr_para.name))
 		#
 		if not args.text:
@@ -350,8 +355,8 @@ for psr_name in psrlist:
 				from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 				import tkinter as tk
 				mpl.use('TkAgg')
-				ax.tick_params(axis='x',labelsize=15)
-				ax.tick_params(axis='y',labelsize=15)
+				ax.tick_params(axis='x',labelsize=15,labelfontfamily='Serif')
+				ax.tick_params(axis='y',labelsize=15,labelfontfamily='Serif')
 				root=tk.Tk()
 				root.title(args.filename)
 				root.geometry('1000x600+100+100')
