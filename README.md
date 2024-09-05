@@ -2,13 +2,13 @@
 **LAPUDA**: 简洁的脉冲星数据分析程序包（LAconic Program Units for pulsar Data Analysis）
 
 ## Table of Contents
-- [编写背景](#background)
-- [安装方法](#install)
-- [使用方法](#usage)
-- [维护人员](#maintainers)
-- [贡献](#contributing)
-	- [作出贡献者](#contributors)
-- [许可](#license)
+- [编写背景](#编写背景)
+- [安装方法](#安装方法)
+- [使用方法](#使用方法)
+- [维护人员](#维护人员)
+- [贡献](#贡献)
+	- [作出贡献者](#作出贡献者)
+- [许可](#许可)
 
 ## 编写背景
 
