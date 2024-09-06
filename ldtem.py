@@ -316,7 +316,6 @@ else:
 for s in np.arange(nchan_res):
 	result=result0[s]
 	if np.all(result.mean(1)==0): continue
-	import matplotlib.pyplot as plt
 	#print(result.std(1))
 	result-=result.mean(1).reshape(-1,1)
 	jj=((result**2).sum(1))>0
@@ -512,9 +511,10 @@ if args.peakfit:
 	import matplotlib.pyplot as plt
 	import matplotlib as mpl
 	mpl.use('TkAgg')
-	plt.rcParams['font.family']='Serif'
+	plt.rcParams['mathtext.fontset']='stix'
+	font=mpl.font_manager.FontProperties(fname=dirname+'/doc/gb.ttf')
 	root=tk.Tk()
-	root.title('Peak Fit')
+	root.title(text.plot_pf)
 	root.geometry('800x600+100+100')
 	#
 	fig=Figure(figsize=(40,30),dpi=80)
@@ -556,9 +556,13 @@ if args.peakfit:
 			fprof+=ftmp
 		ax2.plot(phase,fprof,'r--')
 		ax2.plot(phase,prof1,'b-')
-		ax1.set_xlabel('Pulse Phase',fontsize=30)
-		ax2.set_ylabel('Intensity (a.u.)',fontsize=30)
-		ax1.set_ylabel('resi.',fontsize=30)
+		ax1.set_xlabel(text.plot_pp,fontsize=30,fontproperties=font)
+		ax2.set_ylabel(text.plot_int,fontsize=30,fontproperties=font)
+		ax1.set_ylabel(text.plot_res,fontsize=30,fontproperties=font)
+		ax2.set_xticks([])
+		ax1.set_xticklabels(ax1.get_xticklabels(),fontsize=15,family='Serif')
+		ax1.set_yticklabels(ax1.get_yticklabels(),fontsize=15,family='Serif')
+		ax2.set_yticklabels(ax2.get_yticklabels(),fontsize=15,family='Serif')
 	#
 	def keymotion(event):	# press a key
 		global fitmark,xymark,paras,h0,prof1,tmppara,savemark

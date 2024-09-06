@@ -17,6 +17,8 @@ import warnings
 from scipy import ndimage
 import psutil
 dirname=os.path.split(os.path.realpath(__file__))[0]
+plt.rcParams['mathtext.fontset']='stix'
+font=mpl.font_manager.FontProperties(fname=dirname+'/doc/gb.ttf')
 sys.path.append(dirname+'/doc')
 import text
 #
@@ -261,7 +263,7 @@ else:
 		heightmg=int(sh*0.1)
 fonts=min(height/row/20,22)
 root.geometry(str(int(width+labelsize))+'x'+str(int(height+labelsize))+'+'+str(widthmg)+'+'+str(heightmg))
-if nfile>1: root.title('Multiple Figure')
+if nfile>1: root.title(text.plot_mf)
 else: root.title(filelist[0])
 figures=[]
 for i in np.arange(nout): figures.append(Figure(figsize=((width+labelsize)/dpi,(height+labelsize)/dpi),dpi=dpi))
@@ -339,7 +341,7 @@ for i in np.arange(nfile):
 		else: data=data[:,bins]
 		#
 		ax.imshow(data,origin='lower',aspect='auto',interpolation='nearest',extent=(filer[8],filer[9],filer[0],filer[1]),cmap='jet')
-		ylabel,xlabel,suffix='Frequency (MHz)','Pulse Phase','_fdomain',
+		ylabel,xlabel,suffix=text.plot_freq,text.plot_phase,'_fdomain',
 	elif args.tdomain:
 		data=d.chan_scrunch(select_chan=np.arange(filer[2],filer[3]),start_period=filer[6],end_period=filer[7],weighted=wmark,pol=filer[-1])
 		data=data.reshape(filer[7]-filer[6],nbin)
@@ -355,7 +357,7 @@ for i in np.arange(nfile):
 		else: data=data[:,bins]
 		#
 		ax.imshow(data,origin='lower',aspect='auto',interpolation='nearest',extent=(filer[8],filer[9],filer[4],filer[5]),cmap='jet')
-		ylabel,xlabel,suffix='Time (Second)','Pulse Phase','_tdomain'
+		ylabel,xlabel,suffix=text.plot_time,text.plot_phase,'_tdomain'
 	elif args.profile:
 		data=d.profile(select_chan=np.arange(filer[2],filer[3]),start_period=filer[6],end_period=filer[7],weighted=wmark).reshape(-1,npol)
 		base_nbin = int(nbin/10)
@@ -369,7 +371,7 @@ for i in np.arange(nfile):
 		else: data=data[bins]
 		#
 		ax.plot(phasex,data,'k-')
-		ylabel,xlabel,suffix='Intensity (arbi.)','Pulse Phase','_tdomain'
+		ylabel,xlabel,suffix=text.plot_int,text.plot_phase,'_tdomain'
 	elif args.dysp:
 		template=d.profile(select_chan=np.arange(filer[2],filer[3]),start_period=filer[6],end_period=filer[7],weighted=wmark,pol=0).reshape(-1)
 		# determine the on- and off- pulse areas.
@@ -387,7 +389,7 @@ for i in np.arange(nfile):
 			data-=np.min(data)
 			data/=np.max(data)
 		ax.imshow(data,aspect='auto',cmap='jet',origin='lower',extent=[filer[4],filer[5],filer[0],filer[1]],interpolation='nearest')
-		ylabel,xlabel,suffix='Frequency (MHz)','Time (Second)','_dysp'
+		ylabel,xlabel,suffix=text.plot_freq,text.plot_time,'_dysp'
 	elif args.second:
 		template=d.profile(select_chan=np.arange(filer[2],filer[3]),start_period=filer[6],end_period=filer[7],weighted=wmark,pol=0).reshape(-1)
 		# determine the on- and off- pulse areas.
@@ -398,7 +400,7 @@ for i in np.arange(nfile):
 		on_gates=np.argwhere(SN>7.).squeeze()
 		data=d.bin_scrunch(select_chan=np.arange(filer[2],filer[3]),start_period=filer[6],end_period=filer[7],select_bin=on_gates,pol=filer[-1]).reshape(filer[3]-filer[2],filer[7]-filer[6])
 		data*=weight[filer[2]:filer[3],filer[6]:filer[7]]
-		data=ma.masked_where(data==0,data)
+		#data=ma.masked_where(data==0,data)
 		if sublen!=sublen_last:
 			nsub_u=nsub-1
 			data=data[:,:nsub_u]
@@ -430,7 +432,7 @@ for i in np.arange(nfile):
 		mean = np.mean(sec)
 		std = np.std(sec)
 		ax.imshow(sec, aspect='auto', extent=[-1.0*Nyquist_time,Nyquist_time, 0, Nyquist_freq], vmin=mean-1.0*std, vmax = mean+3.0*std, origin='lower', cmap = 'viridis')
-		ylabel,xlabel,suffix='Delay ($\\mu$s)','Fringe Frequency (mHz)','_secondary'
+		ylabel,xlabel,suffix=text.plot_delay,text.plot_frif,'_secondary'
 	elif args.polarization:
 		data=d.profile(select_chan=np.arange(filer[2],filer[3]),start_period=filer[6],end_period=filer[7],weighted=wmark).reshape(-1,npol)
 		base_nbin = int(nbin/10)
@@ -456,22 +458,22 @@ for i in np.arange(nfile):
 		jj=ppae<0.5
 		ax1.errorbar(phasex[jj],-ppa[jj], yerr=ppae[jj]/np.pi*180, fmt='.')
 		ax1.set_xticks([])
-		ax.legend()
-		ylabel,xlabel,suffix='Intensity (arbi.) ; PPA ($\\degree$)','Pulse Phase','_polarization'
-		ax1.tick_params(axis='x',labelsize=fonts/1.5)
-		ax1.tick_params(axis='y',labelsize=fonts/1.5)
+		ax.legend(prop=mpl.font_manager.FontProperties(family='Serif'))
+		ylabel,xlabel,suffix=text.plot_intppa,text.plot_phase,'_polarization'
+		ax1.set_xticklabels(ax1.get_xticklabels(),fontsize=fonts/1.5,family='Serif')
+		ax1.set_yticklabels(ax1.get_yticklabels(),fontsize=fonts/1.5,family='Serif')
 		if nfile>1: ax1.set_title(filelist[i],fontsize=fonts/1.5)
-		ax.tick_params(axis='x',labelsize=fonts/1.5)
-		ax.tick_params(axis='y',labelsize=fonts/1.5)
+		ax.set_xticklabels(ax.get_xticklabels(),fontsize=fonts/1.5,family='Serif')
+		ax.set_yticklabels(ax.get_yticklabels(),fontsize=fonts/1.5,family='Serif')
 	if not args.polarization:
 		if irow!=row-1: ax.set_xticks([])
 		if nfile>1: ax.set_title(filelist[i],fontsize=fonts)
-		ax.tick_params(axis='x',labelsize=fonts)
-		ax.tick_params(axis='y',labelsize=fonts)
+		ax.set_xticklabels(ax.get_xticklabels(),fontsize=fonts,family='Serif')
+		ax.set_yticklabels(ax.get_yticklabels(),fontsize=fonts,family='Serif')
 #
 for i in np.arange(nout):
-	figures[i].text(x1*0.5,0.5,ylabel,fontsize=30,va='center',ha='center',rotation='vertical')
-	figures[i].text(0.5,y1*0.5,xlabel,fontsize=30,va='center',ha='center')
+	figures[i].text(x1*0.5,0.5,ylabel,fontsize=30,va='center',ha='center',rotation='vertical',fontproperties=font)
+	figures[i].text(0.5,y1*0.5,xlabel,fontsize=30,va='center',ha='center',fontproperties=font)
 #
 ifig=0
 def cont(event):

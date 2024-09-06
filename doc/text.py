@@ -6,6 +6,7 @@ wn.filterwarnings('ignore')
 dirname=os.path.split(os.path.realpath(__file__))[0]
 filename='text.txt'
 plotname='text.txt'
+tkname='text.txt'
 #
 class output_text():
 	def __init__(self,prog):
@@ -20,4 +21,12 @@ class output_text():
 			f1=f[f[:,0]==prog+'_plot']
 		for i in f1:
 			self.__setattr__(str(i[1]),str(i[2]))
-		
+		if prog=='ldtimi':
+			if tkname==plotname:
+				f1=f[f[:,0]=='ldtimi_tk']
+			else:
+				f=np.loadtxt(open(dirname+'/'+tkname, encoding='utf8'),dtype=str,delimiter='\t')
+				f1=f[f[:,0]=='ldtimi_tk']
+			for i in f1:
+				self.__setattr__(str(i[1]),str(i[2]))
+			

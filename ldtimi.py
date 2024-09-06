@@ -11,6 +11,10 @@ import matplotlib.patches as mp
 import ld,os,copy,sys
 wn.filterwarnings('ignore')
 dirname=os.path.split(os.path.realpath(__file__))[0]
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+plt.rcParams['mathtext.fontset']='stix'
+font=mpl.font_manager.FontProperties(fname=dirname+'/doc/gb.ttf')
 sys.path.append(dirname+'/doc')
 import text
 #
@@ -41,15 +45,15 @@ if args.trange:
 	time_start0,time_end0=np.float64(args.trange.split(','))
 	if time_end0<=time_start0: parser.error(text.error_slte)
 	mjdtime=data[:,0]+data[:,1]/86400
-	jj_list=[-1,['Time limit',(mjdtime>time_start0)&(mjdtime<time_end0)]]
+	jj_list=[-1,[text.tk_tl,(mjdtime>time_start0)&(mjdtime<time_end0)]]
 else:
-	jj_list=[-1,['No Delete',np.ones(len(data),dtype=bool)]]	# the list which records the reserved ToAs
+	jj_list=[-1,[text.tk_nd,np.ones(len(data),dtype=bool)]]	# the list which records the reserved ToAs
 #
 fileinfo=info['original_data_info']['filenames']
 filenames=np.array(list(map(lambda x:x[0],fileinfo)))
 uniqf=np.unique(filenames)
-select_list=[-1,['All points',np.ones(len(data),dtype=bool)]]	# the list which records the ToAs in zoom in region
-jump_list=[-1,['No jumps',np.zeros(len(data),dtype=np.int64)]]	# the list which records the time-jump for each ToAs
+select_list=[-1,[text.tk_ap,np.ones(len(data),dtype=bool)]]	# the list which records the ToAs in zoom in region
+jump_list=[-1,[text.tk_nj,np.zeros(len(data),dtype=np.int64)]]	# the list which records the time-jump for each ToAs
 merge_mark,zoom_mark,profwindow=False,False,False	# the marks for merging ToAs, zooming region and plotting profile
 err_limit=1.0
 dtunit='phase'
@@ -194,20 +198,20 @@ def plot():	# plot the figure with options
 	if xax=='orbit':
 		xaxis=psrt.orbits%1
 		xlim=0,1
-		xlabel='Orbital Phase'
+		xlabel=text.plot_op
 	elif xax=='lst':
 		lst=psrt.time.lst
 		lst[(lst-psr.raj/np.pi/2)>0.5]-=1
 		lst[(lst-psr.raj/np.pi/2)<-0.5]+=1
 		xaxis=lst*24
-		xlabel='Sidereal Time (h)'
+		xlabel=text.plot_st
 	elif xax=='mjd':
 		xaxis=psrt.time.local.mjd
-		xlabel='MJD (d)'
+		xlabel=text.plot_mjd
 	elif xax=='year':
 		xaxis=te.mjd2datetime(psrt.time.local.mjd)[4]
 		xlim=0,366
-		xlabel='Day in a Year (d)'
+		xlabel=text.plot_year
 	#
 	if len(xaxis)>len(jj):
 		xaxtmp=np.zeros(mergej[-1])
@@ -224,7 +228,7 @@ def plot():	# plot the figure with options
 		xlim=xaxis[jlim][0]*1.05-xaxis[jlim][-1]*0.05,-xaxis[jlim][0]*0.05+xaxis[jlim][-1]*1.05	
 	#
 	if dtunit=='time':
-		yunit=' ($\\mu$s)'
+		yunit=' $(\\mu\\mathrm{s})$'
 	elif dtunit=='phase':
 		yunit=''
 	if yax=='prepost':
@@ -247,11 +251,14 @@ def plot():	# plot the figure with options
 		points2.set_color(marker_colors)
 		lines2.set_color(marker_colors)
 		ax1.set_xlim(*xlim)
-		ax1.set_xlabel(xlabel,fontsize=25,family='serif')
-		ax2.set_ylabel('Phase Resi.'+yunit,fontsize=25,family='serif')
-		ax1.set_ylabel('Fit Resi.'+yunit,fontsize=25,family='serif')
-		ax2.set_xticks([])
-		mark_text='Pre-fit and Post-fit'
+		ax1.set_xlabel(xlabel,fontsize=25,fontproperties=font)
+		ax2.set_ylabel(text.plot_pr+yunit,fontsize=25,fontproperties=font)
+		ax1.set_ylabel(text.plot_fr+yunit,fontsize=25,fontproperties=font)
+		ax1.set_xticks([])
+		ax2.set_xticklabels(ax1.get_xticklabels(),fontsize=15,family='Serif')
+		ax1.set_yticklabels(ax1.get_yticklabels(),fontsize=15,family='Serif')
+		ax2.set_yticklabels(ax2.get_yticklabels(),fontsize=15,family='Serif')
+		mark_text=text.plot_ppf
 	else:
 		ax1=fig.add_axes((x1,y1,x2-x1,y3-y1))
 		if yax=='post':
@@ -260,8 +267,8 @@ def plot():	# plot the figure with options
 				period_tmp=period*1e6
 				yaxis*=period_tmp
 				yerr*=period_tmp
-			ax1.set_ylabel('Fit Resi.'+yunit,fontsize=25,family='serif')
-			mark_text='Post-fit'
+			ax1.set_ylabel(text.plot_fr+yunit,fontsize=25,fontproperties=font)
+			mark_text=text.plot_post
 		if yax=='pre':
 			if len(fit_list)>1:
 				yaxis,yerr=fit_list[-2][0].copy(),fit_list[-2][1].copy()
@@ -271,15 +278,17 @@ def plot():	# plot the figure with options
 				period_tmp=period*1e6
 				yaxis*=period_tmp
 				yerr*=period_tmp
-			ax1.set_ylabel('Phase Resi.'+yunit,fontsize=25,family='serif')
-			mark_text='Pre-fit'
+			ax1.set_ylabel(text.plot_pr+yunit,fontsize=25,fontproperties=font)
+			mark_text=text.plot_pre
 		elif yax=='dm':
 			yaxis,yerr=dm,dmerr
-			ax1.set_ylabel('DM',fontsize=25,family='serif')
-			mark_text='DM'
+			ax1.set_ylabel(text.plot_dm,fontsize=25,fontproperties=font)
+			mark_text=text.plot_dm
 		lines=ax1.errorbar(xaxis,yaxis,yerr,fmt='none').get_children()[0]
 		points=ax1.scatter(xaxis,yaxis,marker='.')
-		ax1.set_xlabel(xlabel,fontsize=25,family='serif')
+		ax1.set_xlabel(xlabel,fontsize=25,fontproperties=font)
+		ax1.set_xticklabels(ax1.get_xticklabels(),fontsize=15,family='Serif')
+		ax1.set_yticklabels(ax1.get_yticklabels(),fontsize=15,family='Serif')
 	lines.set_color(marker_colors)
 	points.set_color(marker_colors)
 	ymax,ymin=np.max((yaxis+yerr)[jj]),np.min((yaxis-yerr)[jj])
@@ -287,7 +296,7 @@ def plot():	# plot the figure with options
 	ax1.set_xlim(*xlim)
 	ax1.set_ylim(ylim)
 	point0,=ax1.plot(-10000,10000,'o',c='#00FF00',zorder=-1)
-	fig.text(x2-0.05,y3-0.05,mark_text,fontsize=25,family='serif',color='green',va='top',ha='right')
+	fig.text(x2-0.05,y3-0.05,mark_text,fontsize=25,family='serif',color='green',va='top',ha='right',fontproperties=font)
 	rect=mp.Rectangle((0,0),0,0,ec='k',fill=False,linestyle='--')
 	ax1.add_patch(rect)
 	canvas.draw()
@@ -353,17 +362,17 @@ def select(cur_x0,cur_x,cur_y0,cur_y,reset=False):	# set the zoom in region
 		else:
 			change=np.ones_like(se)
 			change[jj]=0
-		sinfo='Cancel '
+		sinfo=text.tk_cc
 	else:
 		change=np.zeros_like(se)
 		if key_on in ['Shift_L','v']:
 			change[jj&(se==1)]=1
-			sinfo='Cancel '
+			sinfo=text.tk_cc
 		else:
 			change[jj&(se==0)]=1
-			sinfo='Add '
+			sinfo=text.tk_add
 	if change.sum()==0: return
-	sinfo+=str(change.sum())+' points'
+	sinfo+=str(change.sum())+text.tk_pts
 	se[change]=np.logical_not(se[change])
 	select_list.append([sinfo,se])
 	if merge_mark: plot()
@@ -403,12 +412,12 @@ def delete(cur_x0,cur_x,cur_y0,cur_y,reset=False):	# delete ToAs in set of ToA t
 	change=np.zeros_like(jj)
 	if key_on in ['Shift_L','v']:
 		change[jj0&(jj==0)]=1
-		jinfo='Cancel '
+		jinfo=text.tk_cc
 	else:
 		change[jj0&(jj==1)]=1
-		jinfo='Delete '
+		jinfo=text.tk_del
 	if change.sum()==0: return
-	jinfo+=str(change.sum())+' points'
+	jinfo+=str(change.sum())+text.tk_pts
 	jj[change]=np.logical_not(jj[change])
 	jj_list.append([jinfo,jj])
 	if zoom_mark: update_fig()
@@ -554,8 +563,10 @@ def middleclick(event):
 		profwindow=True
 	profax.cla()
 	profax.plot(np.arange(nbin1)/nbin1,profdata)
-	profax.set_xlabel('Phase',fontsize=20)
-	profax.set_ylabel('Flux (arbi.)',fontsize=20)
+	profax.set_xlabel(text.plot_ph,fontsize=20,fontproperties=font)
+	profax.set_ylabel(text.plot_int,fontsize=20,fontproperties=font)
+	profax.set_xticklabels(profax.get_xticklabels(),fontsize=15,family='Serif')
+	profax.set_yticklabels(profax.get_yticklabels(),fontsize=15,family='Serif')
 	profcanvas.draw()
 	prof.focus_set()
 #
@@ -612,7 +623,7 @@ def add_jump(a):	# add or minus a one-period jump for the ToAs of the right side
 	else:
 		time_jump=jump
 	time_jump0=jump_list[jump_list[0]][1].copy()
-	jinfo=str(int(np.abs(time_jump.sum())))+' points '+jinfo
+	jinfo=str(int(np.abs(time_jump.sum())))+text.tk_pts+jinfo
 	time_jump+=time_jump0
 	jump_list.append([jinfo,time_jump])
 	if merge_mark: mfit=merge()
@@ -814,8 +825,8 @@ def ymode(mode):	# choose the y-axis mode
 	if mode==yax: return
 	select_list=select_list[0:2]
 	if mode=='time':
-		if dtunit=='time': dtunit,tmp='phase','Y-Unit\nPhase'
-		else: dtunit,tmp='time','Y-Unit\nTime'
+		if dtunit=='time': dtunit,tmp='phase',text.tk_yup.replace('\\n','\n')
+		else: dtunit,tmp='time',text.tk_yut.replace('\\n','\n')
 		y5bttn.config(text=tmp)
 		plot()
 	else:
@@ -853,7 +864,7 @@ def submit_err(event):	# screen the large noise ToAs
 		tk.messagebox.showwarning('Error!',text.tk_niel)
 		return
 	jj=jj_list[jj_list[0]][1]&(dterr<err_limit0)
-	if np.any(jj_list[jj_list[0]][1]!=jj): jj_list.append(['Error_limit',jj])
+	if np.any(jj_list[jj_list[0]][1]!=jj): jj_list.append([text.tk_el,jj])
 	errentry.delete(0,uintsize)
 	errentry.insert(0,str(err_limit0))
 	combo1['value']=list(map(lambda x,y:str(y)+' '+x[0],jj_list[1:],np.arange(len(jj_list)-1)))[::-1]
@@ -930,7 +941,7 @@ from tkinter import ttk
 import matplotlib as mpl
 mpl.use('TkAgg')
 root=tk.Tk()
-root.title('Timing of PSR '+psr0.name)
+root.title(text.tk_tim % psr0.name)
 root.geometry('950x750+100+100')
 root.configure(bg='white')
 root.resizable(False,False)
@@ -960,7 +971,7 @@ combowidth=int((950-2-10-(8*font0width+2)*3-(13+2)*3)/3//font0width)
 listboxheight=int((750-2-10-4*(2+font0height)-2)//(font1height+1))
 listboxwidth=int((950-2-10-800-13-2)//font1width)
 #
-tk.Label(sframe,text='PARA List:',bg='white',font=('serif',20)).grid(row=0,column=0)
+tk.Label(sframe,text=text.tk_pl,bg='white',font=('serif',20)).grid(row=0,column=0)
 pboxframe=tk.Frame(sframe,bg='white')
 pboxframe.grid(row=1,column=0)
 pbox=tk.Listbox(pboxframe,height=listboxheight,width=listboxwidth,selectmode=tk.MULTIPLE,font=('serif',17),exportselection=0)
@@ -973,31 +984,31 @@ sbar1= tk.Scrollbar(pboxframe,command=pbox.yview)
 sbar1.pack(side=tk.RIGHT,fill='y')
 pbox.pack(fill='both',anchor='w',expand='no')
 pbox.config(yscrollcommand = sbar1.set)
-tk.Label(sframe,text='Err limit:',bg='white',font=('serif',20)).grid(row=2,column=0)
+tk.Label(sframe,text=text.tk_err,bg='white',font=('serif',20)).grid(row=2,column=0)
 errentry=tk.Entry(sframe,width=listboxwidth,font=('serif',17))
 errentry.grid(row=3,column=0)
 errentry.insert(0,str(err_limit))
 errentry.bind('<Return>',submit_err)
 pframe=tk.Frame(root,bg='white')
 pframe.grid(row=2,column=0)
-tk.Label(pframe,text='Plot mode: ',bg='white',font=('serif',20)).grid(row=0,column=0)
-y1bttn=tk.Button(pframe,text='Pre-fit',command=lambda: ymode('pre'),bg='white',activebackground='#E5E35B',font=('serif',20))
+tk.Label(pframe,text=text.tk_pm,bg='white',font=('serif',20)).grid(row=0,column=0)
+y1bttn=tk.Button(pframe,text=text.tk_pre,command=lambda: ymode('pre'),bg='white',activebackground='#E5E35B',font=('serif',20))
 y1bttn.grid(row=0,column=1)
 y1bttn.config(width=5)
-y2bttn=tk.Button(pframe,text='Post-fit',command=lambda: ymode('post'),bg='white',activebackground='#E5E35B',font=('serif',20))
+y2bttn=tk.Button(pframe,text=text.tk_post,command=lambda: ymode('post'),bg='white',activebackground='#E5E35B',font=('serif',20))
 y2bttn.grid(row=0,column=2)
 y2bttn.config(width=6)
-y3bttn=tk.Button(pframe,text='Pre&Post',command=lambda: ymode('prepost'),bg='white',activebackground='#E5E35B',font=('serif',20))
+y3bttn=tk.Button(pframe,text=text.tk_pp,command=lambda: ymode('prepost'),bg='white',activebackground='#E5E35B',font=('serif',20))
 y3bttn.grid(row=0,column=3)
 y3bttn.config(width=7)
 y4bttn=tk.Button(pframe,text='DM',command=lambda: ymode('dm'),bg='white',activebackground='#E5E35B',font=('serif',20))
 y4bttn.grid(row=0,column=4)
 y4bttn.config(width=3)
 tk.Label(pframe,width=1,text=' ',bg='white',font=('serif',20)).grid(row=0,column=5,rowspan=2)
-y5bttn=tk.Button(pframe,text='Y-Unit\nPhase',command=lambda: ymode('time'),bg='white',activebackground='#E5E35B',font=('serif',20))
+y5bttn=tk.Button(pframe,text=text.tk_yup.replace('\\n','\n'),command=lambda: ymode('time'),bg='white',activebackground='#E5E35B',font=('serif',20))
 y5bttn.grid(row=0,column=6,rowspan=2)
 y5bttn.config(width=5)
-tk.Label(pframe,text='X-axis ',bg='white',font=('serif',20)).grid(row=1,column=0)
+tk.Label(pframe,text=text.tk_xa,bg='white',font=('serif',20)).grid(row=1,column=0)
 x1bttn=tk.Button(pframe,text='MJD',command=lambda: xmode('mjd'),bg='white',activebackground='#E5E35B',font=('serif',20))
 x1bttn.grid(row=1,column=1)
 x1bttn.config(width=5)
@@ -1012,19 +1023,19 @@ x4bttn.grid(row=1,column=4)
 x4bttn.config(width=3)
 pframe1=tk.Frame(root,bg='white')
 pframe1.grid(row=0,column=0,columnspan=2)
-tk.Label(pframe1,width=8,text='Delete:',bg='white',font=('serif',20)).grid(row=0,column=0)
+tk.Label(pframe1,width=8,text=text.tk_dl,bg='white',font=('serif',20)).grid(row=0,column=0)
 combo1=ttk.Combobox(pframe1,width=combowidth,font=('serif',20),state="readonly")
 combo1['value']=list(map(lambda x,y:str(y)+' '+x[0],jj_list[1:],np.arange(len(jj_list)-1)))[::-1]
 combo1.current(0)
 combo1.grid(row=0,column=1)
 combo1.bind("<<ComboboxSelected>>",jjcombo)
-tk.Label(pframe1,width=8,text='Select:',bg='white',font=('serif',20)).grid(row=0,column=2)
+tk.Label(pframe1,width=8,text=text.tk_sel,bg='white',font=('serif',20)).grid(row=0,column=2)
 combo2=ttk.Combobox(pframe1,width=combowidth,font=('serif',20),state="readonly")
 combo2['value']=list(map(lambda x,y:str(y)+' '+x[0],select_list[1:],np.arange(len(select_list)-1)))[::-1]
 combo2.current(0)
 combo2.grid(row=0,column=3)
 combo2.bind("<<ComboboxSelected>>",selcombo)
-tk.Label(pframe1,width=8,text='Jump:',bg='white',font=('serif',20)).grid(row=0,column=4)
+tk.Label(pframe1,width=8,text=text.tk_jump,bg='white',font=('serif',20)).grid(row=0,column=4)
 combo3=ttk.Combobox(pframe1,width=combowidth,font=('serif',20),state="readonly")
 combo3['value']=list(map(lambda x,y:str(y)+' '+x[0],jump_list[1:],np.arange(len(jump_list)-1)))[::-1]
 combo3.current(0)

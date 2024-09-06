@@ -277,16 +277,16 @@ for psr_name in psrlist:
 			fig=Figure(figsize=(50,24),dpi=80)
 			fig.set_facecolor('white')
 			x0,x1,x2=0.09,0.5,0.93
-			y0,y1=0.11,0.96
+			y0,y1=0.15,0.96
 			ax=fig.add_axes([x0,y0,x1-x0,y1-y0])
-			ax1=fig.add_axes([x1,y0,x2-x1,y1-y0])
+			ax1t=fig.add_axes([x1,y0,x2-x1,y1-y0])
 			ax.patch.set_facecolor('w')
-			ax1.set_xlabel(text.plot_pp,fontsize=30,fontproperties=font)
-			ax1.set_yticks([])
-			ax1.patch.set_facecolor('w')
+			ax1t.set_xlabel(text.plot_pp,fontsize=30,fontproperties=font)
+			ax1t.set_yticks([])
+			ax1t.patch.set_facecolor('w')
 			ax.set_ylabel(text.plot_pa,fontsize=30,fontproperties=font)
 			ax.set_xlabel(text.plot_wl,fontsize=30,fontproperties=font)
-			ax1=ax1.twinx()
+			ax1=ax1t.twinx()
 			ax1.set_ylabel(text.plot_int,fontsize=30,fontproperties=font)
 			y=phi+rot(lam2[jj],rm,0)
 			dphi0=rot(lam**2,rm,0)*2
@@ -314,6 +314,7 @@ for psr_name in psrlist:
 			ax1.plot(phase,l2,'k',label=text.plot_lbm)
 			ax1.plot(phase,l1,'r',label=text.plot_lam)
 			ax1.set_xlim(0,1)
+			ax1.set_ylim(-0.1,1.25)
 			ax1.legend(fontsize=20,frameon=False,prop=font,loc=1)
 			#
 			def save_fig():
@@ -346,10 +347,10 @@ for psr_name in psrlist:
 				from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 				import tkinter as tk
 				mpl.use('TkAgg')
-				ax.tick_params(axis='x',labelsize=15)
-				ax.tick_params(axis='y',labelsize=15)
-				ax1.tick_params(axis='x',labelsize=15)
-				ax1.tick_params(axis='y',labelsize=15)
+				ax.set_xticklabels(ax.get_xticklabels(),fontsize=15,family='Serif')
+				ax.set_yticklabels(ax1.get_yticklabels(),fontsize=15,family='Serif')
+				ax1t.set_xticklabels(ax1t.get_xticklabels(),fontsize=15,family='Serif')
+				ax1.set_yticklabels(ax1.get_yticklabels(),fontsize=15,family='Serif')
 				root=tk.Tk()
 				root.title(args.filename)
 				root.geometry('1250x600+100+100')

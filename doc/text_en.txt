@@ -349,6 +349,14 @@ ldplot	error_mfs	At most one of flags -f, -t, -p, -d, -l and --sec is required.
 ldplot	error_lfs	At least one of flags -f, -t, -p, -d, -l and --sec is required.
 ldplot	error_mpl	The multi-plot parameters is too large.
 ldplot	error_noe	The name of output figure file already existed. Please provide a new name.
+ldplot_plot	plot_mf	Multiple Figure
+ldplot_plot	plot_freq	$\mathrm{Frequency\; (MHz)}$
+ldplot_plot	plot_time	$\mathrm{Time\; (Second)}$
+ldplot_plot	plot_phase	$\mathrm{Pulse\; Phase}$
+ldplot_plot	plot_int	$\mathrm{Intensity\; (arbi.)}$
+ldplot_plot	plot_delay	$\mathrm{Delay\; (}\mu\mathrm{s)}$
+ldplot_plot	plot_frif	$\mathrm{Fringe\; Frequency\; (mHz)}$
+ldplot_plot	plot_intppa	$\mathrm{Intensity\; (arbi.)\; ;\; PPA\; (\degree)}$
 # ldrm.py
 ldrm	help	Calculate the best RM value. Press 's' in figure window to save figure
 ldrm	help_h	show this help message and exit
@@ -478,6 +486,10 @@ ldtem	info_pnl	The peak number is too large, and the fitting has stopped.
 ldtem	info_fpf	The fiting for the peak %s failed.
 ldtem	info_zeb	The produced template is zero on every phase bin, and it will not be saved.
 ldtem	info_help	\nldtem interactive commands\n\nBlack solid curve       :   processed pulse profile\nYellow dotted curve     :   fitted peak\nRed dashed curve        :   fitting curve for pulse profile\nGreen dash-dotted curve :   a new peak to be fitted\nBlue solid curve        :   fitting residuals\n\nMouse:\n  Left-click to select the centre of a peak\n    then left-click again to select a width of a peak.\n    then left-click again to select a height of a peak.\nKeyboard:\n  h  Show this help\n  f  fit the profile with appending the green dash-dotted peak\n  r  Reset a peak\n  q  Exit peak fitting and save the template.\n  b  Exit peak fitting without saving.\n\n
+ldtem_plot	plot_pf	Peak Fit
+ldtem_plot	plot_pp	$\mathrm{Pulse Phase}$
+ldtem_plot	plot_int	$\mathrm{Intensity (a.u.)}$
+ldtem_plot	plot_res	$\mathrm{resi.}$
 # ldtim.py
 ldtim	help	Get the timing solution the ToA.
 ldtim	help_filename	input ToA file with ld or txt format
@@ -500,6 +512,13 @@ ldtim	error_ndr	A valid date range is required.
 ldtim	error_nsfn	The number of save files cannot be more than 2.
 ldtim	error_pfe	The file to save pulsar parameters has been existed.
 ldtim	error_rfe	tThe file to save residuals has been existed.
+ldtim_plot	plot_op	$\mathrm{Orbital\; Phase}$
+ldtim_plot	plot_st	$\mathrm{Sidereal\; Time\; (h)}$
+ldtim_plot	plot_mjd	$\mathrm{MJD\; (d)}$
+ldtim_plot	plot_year	$\mathrm{Day\; in\; a\; Year\; (d)}$
+ldtim_plot	plot_fr	$\mathrm{Fit\; Resi.}$
+ldtim_plot	plot_dm	$\mathrm{DM}$
+ldtim_plot	plot_ppr	$\mathrm{Pulse\; Phase\; Resi.}$
 # ldtimi.py
 ldtimi	help	Get the timing solution with the ToAs interactively.
 ldtimi	help_filename	input ToA file with ld or txt format
@@ -518,6 +537,40 @@ ldtimi	info_rms	RMS of the fit residuals (s):
 ldtimi	info_ndf	The corresponding file does not exist.
 ldtimi	info_pp	Pulsar parameters:
 ldtimi	info_help	\nldtimi interactive commands\n\nMouse:\n  Left-click and drag to select or unselect (with the key 'v' or left Shift holded on) ToAs in a rectangle region. \n    --Left-click on a single ToA to select or unselect (with the key 'v' or left Shift holded on) it. \n    --Hold on the key 'z' or left-Ctrl and left-drag to select a rectangle region to zoom in. \n  Right-click and drag to delete or undelete (with the key 'v' or left Shift holded on) ToAs in a rectangle region.\n    --Right-click on a single ToA to delete or undelete (with the key 'v' or left Shift holded on) it.\n  Middle-click on a single ToA to check the corresponding pulse profile of it.\n    --Left-click on the figure or press ESC to close the figure.\n\nKeyboard:\n  h    Show this help\n  u    Undo last delete command\n  y    Redo last undo command\n  r    Reset zoom to the initial region\n  e    Reset selection\n  b    Restart the fitting\n  m    Merge the neighboring ToAs\n  a/d  Add/substract one period for the selected ToAs or the ToAs on the right side of the cursor\n  f    Fit the ToAs displayed currently\n  p    Print the selected parameters\n  s    Save parfile to a specified file\n  x    Save the fit residuals to a specified file\n  q    Exit program\n\n
+ldtimi_plot	plot_op	$\mathrm{Orbital\; Phase}$
+ldtimi_plot	plot_st	$\mathrm{Sidereal\; Time\; (h)}$
+ldtimi_plot	plot_mjd	$\mathrm{MJD\; (d)}$
+ldtimi_plot	plot_year	$\mathrm{Day\; in\; a\; Year\; (d)}$
+ldtimi_plot	plot_fr	$\mathrm{Fit\; Resi.}$
+ldtimi_plot	plot_dm	$\mathrm{DM}$
+ldtimi_plot	plot_pr	$\mathrm{Phase\; Resi.}$
+ldtimi_plot	plot_pre	$\mathrm{Pre-fit}$
+ldtimi_plot	plot_post	$\mathrm{Post-fit}$
+ldtimi_plot	plot_ppf	$\mathrm{Pre-fit\; and\; Post-fit}$
+ldtimi_plot	plot_ph	$\mathrm{Phase}$
+ldtimi_plot	plot_int	$\mathrm{Intensity (arbi.)}$
+ldtimi_tk	tk_tl	Time limit
+ldtimi_tk	tk_nd	No Delete
+ldtimi_tk	tk_ap	All points
+ldtimi_tk	tk_nj	No jumps
+ldtimi_tk	tk_cc	Cancel 
+ldtimi_tk	tk_add	Add 
+ldtimi_tk	tk_pts	 points
+ldtimi_tk	tk_del	Delete 
+ldtimi_tk	tk_yup	Y-Unit\nPhase
+ldtimi_tk	tk_yut	Y-Unit\nTime
+ldtimi_tk	tk_el	Error_limit
+ldtimi	tk_tim	Timing of PSR %s
+ldtimi_tk	tk_pl	PARA List:
+ldtimi_tk	tk_err	Err limit:
+ldtimi_tk	tk_pm	Plot mode: 
+ldtimi_tk	tk_dl	Delete:
+ldtimi_tk	tk_sel	Select:
+ldtimi_tk	tk_jump	Jump:
+ldtimi_tk	tk_pre	Pre-fit
+ldtimi_tk	tk_post	Post-fit
+ldtimi_tk	tk_pp	Pre&Post
+ldtimi_tk	tk_xa	X-axis 
 # ldtoa.py
 ldtoa	help	Get the relative pulse rotating phase and DM of the ld file.
 ldtoa	help_h	show this help message and exit
@@ -581,6 +634,11 @@ ldzap	info_save	Saved the zapping matrix in the %s_zap.txt.
 ldzap	info_saved	Created a new ld file: %s to save data.
 ldzap	info_savew	Re-wrote the data weight in file %s.
 ldzap	info_help	\nldzap interactive commands\n\nMouse:\n  Left-click selects the start of a range\n    then left-click again to zoom, or right-click to zap.\n  Right-click zaps current cursor location.\n\n  mid-click plot the pulse profile at the channel (or sub integration) current cursor location.\n\nKeyboard:\n  h  Show this help\n  f  Switch into frequency-vs-phase domain \n  t  Switch into time-vs-phase domain\n  d  Switch into frequency-vs-time domain (dynamic spectra)\n  c  Switch between the spectrum and calibration parameters in the vertical subplot for frequency domain\n  u  Undo the last zap command\n  r  Reset zoom and update figure\n  z  Zap distinct noise or rise the noise critical level\n  x  Withdraw zappping distinct noise or lower the noise critical level\n  o  Switch between the on-pulse and off-pulse mode for frequency-vs-time domain (Default: off-pulse)\n  s  Save zapped version as the specified output or change the weight in the data information and quit\n  w  Rewrite the weight in the data information and quit\n  q  Exit program\n
+ldzap_plot	plot_ph	$\mathrm{Phase}$
+ldzap_plot	plot_pp	$\mathrm{Pulse\; Phase}$
+ldzap_plot	plot_t	$\mathrm{Time\; (s)}$
+ldzap_plot	plot_f	$\mathrm{Frequency\; (MHz)}$
+ldzap_plot	plot_s	$\mathrm{Selected}$
 # psr_model.py
 psr_model	warning_h4s	Warning: Both H4 and STIG in par file, then ignoring STIG
 psr_model	warning_nmp	Strong Warning: The mass of the pulsar is not given in parfile, use 1.4 times of solarmass in calculation.

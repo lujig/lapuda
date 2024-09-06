@@ -11,6 +11,9 @@ import argparse as ap
 import ld
 wn.filterwarnings('ignore')
 dirname=os.path.split(os.path.realpath(__file__))[0]
+import matplotlib as mpl
+plt.rcParams['mathtext.fontset']='stix'
+font=mpl.font_manager.FontProperties(fname=dirname+'/doc/gb.ttf')
 sys.path.append(dirname+'/doc')
 import text
 #
@@ -201,7 +204,7 @@ if args.time:
 	res=res*period
 	dt=(dt-dt.mean())*period
 	dterr*=period
-	yunit=' ($\mu$s)'
+	yunit=' $(\\mu\\mathrm{s})$'
 else:
 	yunit=''
 	j1=np.abs(res)<args.crit
@@ -218,14 +221,14 @@ if type(args.save) is list:
 	np.savetxt(resisave,np.array([time.local.date,time.local.second,dt_tmp,dterr_tmp]).T)
 	print(text.info_save % (parsave, resisave))
 #
-fig=plt.figure(3)
+fig=plt.figure(1)
 plt.clf()
 x1,x2=0.18,0.95
 y1,y2,y3=0.16,0.3,0.95
 if args.x=='orbit':
 	xaxis=psrt.orbits[j1]%1
 	xlim=0,1
-	xlabel='Orbital Phase'
+	xlabel=text.plot_op
 elif args.x=='lst':
 	lst=psrt.time.lst[j1]
 	lst[(lst-psr.raj/np.pi/2)>0.5]-=1
@@ -233,28 +236,32 @@ elif args.x=='lst':
 	xaxis=lst*24
 	xmax,xmin=np.max(xaxis),np.min(xaxis)
 	xlim=xmin*1.05-xmax*0.05,-xmin*0.05+xmax*1.05
-	xlabel='Sidereal Time (h)'
+	xlabel=text.plot_st
 elif args.x=='mjd':
 	xaxis=time.local.mjd[j1]
 	xlim=xaxis[0]*1.05-xaxis[-1]*0.05,-xaxis[0]*0.05+xaxis[-1]*1.05
-	xlabel='MJD (d)'
+	xlabel=text.plot_mjd
 elif args.x=='year':
 	xaxis=te.mjd2datetime(time.local.mjd)[4][j1]
 	xlim=0,366
-	xlabel='Day in a Year (d)'
+	xlabel=text.plot_year
 #
 if args.illu=='post':
 	ax1=fig.add_axes((x1,y1,x2-x1,y3-y1))
 	ax1.errorbar(xaxis,res[j1],dterr[j1],fmt='.')
 	ax1.set_xlim(*xlim)
-	ax1.set_xlabel(xlabel,fontsize=25,family='serif')
-	ax1.set_ylabel('Fit Resi.'+yunit,fontsize=25,family='serif')
+	ax1.set_xlabel(xlabel,fontsize=25,fontproperties=font)
+	ax1.set_ylabel(text.plot_fr+yunit,fontsize=25,fontproperties=font)
+	ax1.set_xticklabels(ax1.get_xticklabels(),fontsize=15,family='Serif')
+	ax1.set_yticklabels(ax1.get_yticklabels(),fontsize=15,family='Serif')
 elif args.illu=='dm':
 	ax1=fig.add_axes((x1,y1,x2-x1,y3-y1))
 	ax1.errorbar(xaxis,dm[j1],yerr=dmerr[j1],fmt='.')
 	ax1.set_xlim(*xlim)
-	ax1.set_xlabel(xlabel,fontsize=25,family='serif')
-	ax1.set_ylabel('DM',fontsize=25,family='serif')
+	ax1.set_xlabel(xlabel,fontsize=25,fontproperties=font)
+	ax1.set_ylabel(text.plot_dm,fontsize=25,fontproperties=font)
+	ax1.set_xticklabels(ax1.get_xticklabels(),fontsize=15,family='Serif')
+	ax1.set_yticklabels(ax1.get_yticklabels(),fontsize=15,family='Serif')
 elif args.illu=='prepost':
 	ax1=fig.add_axes((x1,y2,x2-x1,y3-y2))
 	ax2=fig.add_axes((x1,y1,x2-x1,y2-y1))
@@ -262,9 +269,12 @@ elif args.illu=='prepost':
 	ax2.errorbar(xaxis,res[j1],dterr[j1],fmt='.')
 	ax1.set_xlim(*xlim)
 	ax2.set_xlim(*xlim)
-	ax2.set_xlabel(xlabel,fontsize=25,family='serif')
-	ax1.set_ylabel('Pulse Phase Resi.'+yunit,fontsize=25,family='serif')
-	ax2.set_ylabel('Fit Resi.'+yunit,fontsize=25,family='serif')
+	ax2.set_xlabel(xlabel,fontsize=25,fontproperties=font)
+	ax1.set_ylabel(text.plot_ppr+yunit,fontsize=25,fontproperties=font)
+	ax2.set_ylabel(text.plot_fr+yunit,fontsize=25,fontproperties=font)
 	ax1.set_xticks([])
+	ax2.set_xticklabels(ax2.get_xticklabels(),fontsize=15,family='Serif')
+	ax2.set_yticklabels(ax2.get_yticklabels(),fontsize=15,family='Serif')
+	ax1.set_yticklabels(ax1.get_yticklabels(),fontsize=15,family='Serif')
 plt.show()
 #

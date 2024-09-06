@@ -7,12 +7,14 @@ from matplotlib.figure import Figure
 import matplotlib.lines as ln
 import ld,os,copy,sys,shutil,time
 import adfunc as af
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import psutil as pu
 import asyncio as ai
 import threading as th
-plt.rcParams['font.family']='Serif'
 dirname=os.path.split(os.path.realpath(__file__))[0]
+plt.rcParams['mathtext.fontset']='stix'
+font=mpl.font_manager.FontProperties(fname=dirname+'/doc/gb.ttf')
 sys.path.append(dirname+'/doc')
 import text
 #
@@ -576,7 +578,7 @@ x3,x4=0.65,0.97
 yt1,yt2=0.48,0.55
 axs=fig.add_axes([x3,y0,x4-x3,yt1-y0])
 axp=fig.add_axes([x3,yt2,x4-x3,y1-yt2])
-axs.set_xlabel('Phase',fontsize=20)
+axs.set_xlabel(text.plot_ph,fontsize=20,fontproperties=font)
 axs.set_yticks([])
 ly=ln.Line2D([0,(x2+x3)/2],[0.5,0.5],color='k',transform=fig.transFigure,figure=fig)
 lx=ln.Line2D([0,0],[0,1],color='k',transform=fig.transFigure,figure=fig)
@@ -597,21 +599,25 @@ def plotimage(xlim,ylim):
 			ax1.plot(spec0,yaxis0,'k-')
 			ax1.set_xlim(0,np.max(spec0)*1.1)
 		ax1.set_ylim(ylim[0],ylim[1])
-		ax.set_xlabel('Pulse Phase',fontsize=20)
+		ax.set_xlabel(text.plot_pp,fontsize=20,fontproperties=font)
 		if state=='freq':
-			ax.set_ylabel('Frequency (MHz)',fontsize=20)
+			ax.set_ylabel(text.plot_f,fontsize=20,fontproperties=font)
 		else:
-			ax.set_ylabel('Time (s)',fontsize=20)
+			ax.set_ylabel(text.plot_t,fontsize=20,fontproperties=font)
 	else:
-		ax.set_ylabel('Frequency (MHz)',fontsize=20)
-		ax.set_xlabel('Time (s)',fontsize=20)
+		ax.set_ylabel(text.plot_f,fontsize=20,fontproperties=font)
+		ax.set_xlabel(text.plot_t,fontsize=20,fontproperties=font)
+	ax.set_xticklabels(ax.get_xticklabels(),fontsize=15,family='Serif')
+	ax.set_yticklabels(ax.get_yticklabels(),fontsize=15,family='Serif')
 	axp.cla()
-	axp.set_xlabel('Phase',fontsize=20)
+	axp.set_xlabel(text.plot_ph,fontsize=20,fontproperties=font)
 	if state in ['freq','time'] or args.dprof or mem=='mem0':
 		base=af.baseline(profile,pos=False)
 		profile0=profile-base
 		if profile0.max()>0: profile0/=profile0.max()
 		axp.plot(np.arange(nbin)/nbin,profile0,'k')
+		axp.set_xticklabels(axp.get_xticklabels(),fontsize=10,family='Serif')
+		axp.set_yticklabels(axp.get_yticklabels(),fontsize=10,family='Serif')
 	ax1.set_xticks([])
 	ax1.set_yticks([])
 	canvas.draw()
@@ -809,9 +815,11 @@ def midclick(event):
 		#if zapn[ybin,xbin]==True: return
 		prof0=d.read_data(select_chan=[ybin],start_period=xbin,end_period=xbin+1,pol=0)[0,0,:,0]
 	else: return
-	axs.plot(np.arange(0,1,1/nbin),prof0,label='Selected')
-	axs.set_xlabel('Phase',fontsize=20)
-	axs.legend(loc='upper right')
+	axs.plot(np.arange(0,1,1/nbin),prof0,label=text.plot_s)
+	axs.set_xlabel(text.plot_ph,fontsize=20,fontproperties=font)
+	axs.legend(loc='upper right',prop=font)
+	axs.set_xticklabels(axs.get_xticklabels(),fontsize=10,family='Serif')
+	axs.set_yticklabels(axs.get_yticklabels(),fontsize=10,family='Serif')
 	canvas.draw()
 #
 def xcal(x):
@@ -835,12 +843,12 @@ def move(event):
 	y=(fig.bbox.extents[3]-event.y)/fig.bbox.extents[3]
 	ly.set_ydata([y,y])
 	pos_now_y= round(ycal(event.y),2)
-	showposy=fig.text(0.005,y+0.01,pos_now_y,fontsize=12)
+	showposy=fig.text(0.005,y+0.01,pos_now_y,fontsize=12,family='Serif')
 	if state=='dyn':
 		x=event.x/fig.bbox.extents[2]
 		lx.set_xdata([x,x])
 		pos_now_x=round(xcal(event.x),2)
-		showposx=fig.text(x+0.005,0.99,pos_now_x,fontsize=12,va='top')
+		showposx=fig.text(x+0.005,0.99,pos_now_x,fontsize=12,va='top',family='Serif')
 	canvas.draw()  
 	mpl.artist.Artist.remove(showposy)
 	if state=='dyn':

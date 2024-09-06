@@ -10,9 +10,9 @@ import psr_model as pm
 import psr_read as pr
 import adfunc as af
 import time
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 dirname=os.path.split(os.path.realpath(__file__))[0]
+import matplotlib as mpl
 plt.rcParams['mathtext.fontset']='stix'
 font=mpl.font_manager.FontProperties(fname=dirname+'/doc/gb.ttf')
 sys.path.append(dirname+'/doc')
@@ -184,14 +184,11 @@ for psr_name in psrlist:
 			ax1.set_xlabel(text.plot_pp,fontproperties=font,fontsize=25)
 			ax.set_yticks([])
 			ax1.set_yticks([])
-			ax1.tick_params(axis='x',labelsize=10,labelfontfamily='Serif')
 			ax1=ax1.twinx()
-			ax1.tick_params(axis='y',labelsize=10,labelfontfamily='Serif')
 			ax2=fig.add_axes([x1,(y1+y0)/2,x2-x1,(y1-y0)/2])
 			ax2.set_xticks([])
 			ax2.set_yticks([])
 			ax2=ax2.twinx()
-			ax2.tick_params(axis='y',labelsize=10,labelfontfamily='Serif')
 			ax1.patch.set_facecolor('w')
 			ax2.patch.set_facecolor('w')
 			ax.set_xlabel(text.plot_dm,fontproperties=font,fontsize=30)
@@ -355,8 +352,10 @@ for psr_name in psrlist:
 				from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 				import tkinter as tk
 				mpl.use('TkAgg')
-				ax.tick_params(axis='x',labelsize=15,labelfontfamily='Serif')
-				ax.tick_params(axis='y',labelsize=15,labelfontfamily='Serif')
+				ax1.set_xticklabels(ax1.get_xticklabels(),fontsize=10,family='Serif')
+				ax1.set_yticklabels(ax1.get_yticklabels(),fontsize=10,family='Serif')
+				ax2.set_yticklabels(ax2.get_yticklabels(),fontsize=10,family='Serif')
+				ax.set_xticklabels(ax.get_xticklabels(),fontsize=15,family='Serif')
 				root=tk.Tk()
 				root.title(args.filename)
 				root.geometry('1000x600+100+100')

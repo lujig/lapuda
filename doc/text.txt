@@ -349,6 +349,14 @@ ldplot	error_mfs	-f，-t，-p，-d，-l与--sec至多指定其中之一。
 ldplot	error_lfs	-f，-t，-p，-d，-l与--sec至少需要指定其中之一。
 ldplot	error_mpl	一张图上不能绘制太多的子图。
 ldplot	error_noe	输出图像文件名已存在，请指定其它文件名。
+ldplot_plot	plot_mf	多图模式
+ldplot_plot	plot_freq	频率 $\mathrm{(MHz)}$
+ldplot_plot	plot_time	时间（秒）
+ldplot_plot	plot_phase	脉冲相位
+ldplot_plot	plot_int	辐射强度 $\mathrm{(arbi.)}$
+ldplot_plot	plot_delay	延迟（微秒）
+ldplot_plot	plot_frif	条纹频率 $\mathrm{(mHz)}$
+ldplot_plot	plot_intppa	辐射强度 $\mathrm{(arbi.)}$；偏振位置角 $(\degree)$
 # ldrm.py
 ldrm	help	计算数据的最佳RM值。在图像窗口下按's'可以保存图片。
 ldrm	help_h	显示本帮助信息并退出
@@ -385,7 +393,7 @@ ldrm	warning_ilf	Warning: 文件%s不是有效的LD文件。
 ldrm	input_fn	请输入图像文件名：
 ldrm_plot	plot_pp	脉冲相位
 ldrm_plot	plot_pa	线偏振位置角
-ldrm_plot	plot_wl	波长 $\mathrm{(m)}$
+ldrm_plot	plot_wl	波长（米）
 ldrm_plot	plot_int	辐射强度 $\mathrm{(arbi.)}$
 ldrm_plot	plot_lbm	线偏振强度（修正$\mathrm{RM}$之前）
 ldrm_plot	plot_lam	线偏振强度（修正$\mathrm{RM}$之后）
@@ -478,6 +486,10 @@ ldtem	info_pnl	提示：峰数目过多，拟合程序已停止。
 ldtem	info_fpf	提示：新增峰%s后拟合失败。
 ldtem	info_zeb	提示：生成的脉冲轮廓模板在所有相位点上均为零，因此它将不会被保存。
 ldtem	info_help	\nldtem交互命令\n\n黑色实线：待拟合脉冲轮廓\n黄色点线：拟合的多个峰\n红色虚线：拟合产生的多峰曲线\n绿色点虚线：一个新增的待拟合峰\n蓝色实线：拟合残差\n\n鼠标：\n  左键点选一个峰的中心位置，再次点击确定峰宽度，再次点击确定峰高度。\n键盘：\n  h  展示此帮助信息\n  f  利用新增绿色点虚线峰拟合脉冲轮廓\n  r  重新点选绿色点虚线峰\n  q  退出多峰拟合并保存脉冲轮廓模板\n  b  退出多峰拟合，不保存\n\n
+ldtem_plot	plot_pf	多峰拟合
+ldtem_plot	plot_pp	脉冲相位
+ldtem_plot	plot_int	辐射强度 $\mathrm{(a.u.)}$
+ldtem_plot	plot_res	残差
 # ldtim.py
 ldtim	help	拟合ToA获得最佳的脉冲星星历参数。
 ldtim	help_filename	输入LD格式或TXT格式ToA文件
@@ -500,6 +512,13 @@ ldtim	error_ndr	指定日期范围无效。
 ldtim	error_nsfn	保存文件名不能多于2个。
 ldtim	error_pfe	指定的保存脉冲星参数的文件已存在，请指定其它文件名。
 ldtim	error_rfe	指定的保存脉冲星测时残差的文件已存在，请指定其它文件名。
+ldtim_plot	plot_op	轨道相位
+ldtim_plot	plot_st	本地恒星时 $\mathrm{(h)}$
+ldtim_plot	plot_mjd	$\mathrm{MJD\; (d)}$
+ldtim_plot	plot_year	一年中的天数 $\mathrm{(d)}$
+ldtim_plot	plot_fr	拟合残差
+ldtim_plot	plot_dm	$\mathrm{DM}$
+ldtim_plot	plot_ppr	脉冲相位残差
 # ldtimi.py
 ldtimi	help	交互式拟合ToA获得最佳的脉冲星星历参数。
 ldtimi	help_filename	输入LD格式或TXT格式ToA文件
@@ -518,6 +537,40 @@ ldtimi	info_rms	提示：拟合残差的RMS（秒）：
 ldtimi	info_ndf	提示：相应文件不存在。
 ldtimi	info_pp	脉冲星参数：
 ldtimi	info_help	\nldtimi交互命令\n\n鼠标：\n  左键拖拽一个矩形区域，用于选择或反选（选择区域时按住v键或左侧Shift键进行反选）区域内的ToA；单击某一ToA可进行单点选择或反选。\n    --拖拽一个矩形区域时，如按住z键或左侧Ctrl键可对所选区域进行放大。\n  右键拖拽一个矩形区域，删除或取消删除（选择区域时按住v键或左侧Shift键进行取消删除）区域中的ToA；单击某一ToA可进行单点删除或取消删除。\n  中键单击某一ToA可查看对应脉冲轮廓图，左键单击图像或按ESC键关闭图像。\n\n键盘：\n  h    展示帮助信息\n  u    撤消上一步操作（不包括选点与缩放）\n  y    重做上一步撤销的操作\n  r    从放大后区域返回初始区域\n  e    重置选点\n  b    重新进行拟合\n  m    将邻近脉冲到达时间合并/取消合并\n  a/d  对选中的点或鼠标右侧区域的脉冲到达时间增加/扣减1个脉冲周期\n  f    拟合所选脉冲到达时间，同时在命令行中输出拟合残差标准差\n  p    在命令行中输出当前选中的脉冲星参数值\n  s    将当前拟合的脉冲星测时模型保存到指定文件\n  x    将当前脉冲星测时残差保存到指定文件\n  q    退出程序\n\n
+ldtimi_plot	plot_op	轨道相位
+ldtimi_plot	plot_st	本地恒星时 $\mathrm{(h)}$
+ldtimi_plot	plot_mjd	$\mathrm{MJD\; (d)}$
+ldtimi_plot	plot_year	一年中的天数 $\mathrm{(d)}$
+ldtimi_plot	plot_fr	拟合残差
+ldtimi_plot	plot_dm	$\mathrm{DM}$
+ldtimi_plot	plot_pr	相位残差
+ldtimi_plot	plot_pre	拟合前
+ldtimi_plot	plot_post	拟合后
+ldtimi_plot	plot_ppf	拟合前与拟合后
+ldtimi_plot	plot_ph	脉冲相位
+ldtimi_plot	plot_int	辐射强度 $\mathrm{(arbi.)}$
+ldtimi_tk	tk_tl	时间限制
+ldtimi_tk	tk_nd	无删点
+ldtimi_tk	tk_ap	所有点
+ldtimi_tk	tk_nj	无跳变
+ldtimi_tk	tk_cc	取消
+ldtimi_tk	tk_add	增选
+ldtimi_tk	tk_pts	个点
+ldtimi_tk	tk_del	删减
+ldtimi_tk	tk_yup	Y轴单位\n相位
+ldtimi_tk	tk_yut	Y轴单位\n时间
+ldtimi_tk	tk_el	误差限制
+ldtimi	tk_tim	脉冲星%s的测时
+ldtimi_tk	tk_pl	参数列表：
+ldtimi_tk	tk_err	误差上限：
+ldtimi_tk	tk_pm	绘图模式：
+ldtimi_tk	tk_dl	删减：
+ldtimi_tk	tk_sel	选点：
+ldtimi_tk	tk_jump	跳变：
+ldtimi_tk	tk_pre	拟合前
+ldtimi_tk	tk_post	拟合后
+ldtimi_tk	tk_pp	拟合前后
+ldtimi_tk	tk_xa	X轴
 # ldtoa.py
 ldtoa	help	利用脉冲轮廓模板获得多个脉冲星数据对应的ToA。
 ldtoa	help_h	显示本帮助信息并退出
@@ -581,6 +634,11 @@ ldzap	info_save	提示：消干扰矩阵已保存在%s_zap.txt文件中。
 ldzap	info_saved	提示：创建新LD格式文件%s用以保存数据。
 ldzap	info_savew	提示：数据权重已写入%s文件中。
 ldzap	info_help	\nldzap交互式命令\n\n鼠标：\n  左键       选中一个范围的起点，继续左键选择终点则放大起点与终点之间区域，或右键选择终点则消除起点与终点之间的区域\n  右键       消除鼠标所在位置对应数据通道\n  中键       在右下面板中绘制鼠标所在位置对应数据通道的脉冲轮廓\n\n键盘：\n  h          展示帮助信息\n  f          切换到频域模式\n  t          切换到时域模式\n  d          切换到动态谱模式\n  c          在频域模式下将辐射信息在频谱与定标参数间进行切换\n  u          撤消上一步消除操作\n  r          返回上一步放大区间\n  z          消除明显噪声或放宽噪声判据等级（最高5级）\n  x          降低噪声判据等级\n  o          在动态谱模式中切换显示数据为脉冲区或无脉冲区\n  s          按指定文件名保存消除噪声后的数据或修改原始数据中的权重，退出程序\n  w          修改原始数据中的权重，退出程序\n  q          退出程序
+ldzap_plot	plot_ph	脉冲相位
+ldzap_plot	plot_pp	脉冲相位
+ldzap_plot	plot_t	时间（秒）
+ldzap_plot	plot_f	频率 $\mathrm{(MHz)}$
+ldzap_plot	plot_s	被选中的
 # psr_model.py
 psr_model	warning_h4s	Warning: 由于在星历表中同时存在H4与STIG参数，所以STIG参数被忽略。
 psr_model	warning_nmp	Strong Warning: 脉冲星质量在星历表中未给出，因此在计算时采用1.4倍太阳质量作为脉冲星质量。
