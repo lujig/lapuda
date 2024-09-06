@@ -532,7 +532,7 @@ ldtimi	warning_ndfni	Warning: the pulse data file is not found, and use the file
 ldtimi	warning_nb	Warning: this pulsar is not a binary, and the X-Axis cannot be Orbit phase.
 ldtimi	error_nfn	ToA file name is invalid.
 ldtimi	error_slte	Starting time latter than ending time.
-ldtimi	tk_niel	The inputing error limit is invalid!
+ldtimi_tk	tk_niel	The inputing error limit is invalid!
 ldtimi	info_rms	RMS of the fit residuals (s):
 ldtimi	info_ndf	The corresponding file does not exist.
 ldtimi	info_pp	Pulsar parameters:
@@ -560,7 +560,7 @@ ldtimi_tk	tk_del	Delete
 ldtimi_tk	tk_yup	Y-Unit\nPhase
 ldtimi_tk	tk_yut	Y-Unit\nTime
 ldtimi_tk	tk_el	Error_limit
-ldtimi	tk_tim	Timing of PSR %s
+ldtimi_tk	tk_tim	Timing of PSR %s
 ldtimi_tk	tk_pl	PARA List:
 ldtimi_tk	tk_err	Err limit:
 ldtimi_tk	tk_pm	Plot mode: 

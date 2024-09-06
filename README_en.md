@@ -28,6 +28,8 @@ Dependence:
 
 For a better experience, the user can add the programme directory to the environment variable **PATH**, alternatively. 
 
+At present, the program supports Chinese and English, and the default is Chinese. The user can change the language in the output, figure, and interface respectively by changing the key-value of the dictionary variable **language** in doc/text.py.
+
 ## Usage
 
 dfpsr.py: 

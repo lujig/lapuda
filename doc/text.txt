@@ -532,7 +532,7 @@ ldtimi	warning_ndfni	Warning: 脉冲数据文件未找到，使用此文件夹�
 ldtimi	warning_nb	Warning: 脉冲星星历不包含双星参数，因此X轴不能设为轨道相位。
 ldtimi	error_nfn	ToA文件名无效。
 ldtimi	error_slte	起始时间晚于截止时间。
-ldtimi	tk_niel	输入误差上限值无效！
+ldtimi_tk	tk_niel	输入误差上限值无效！
 ldtimi	info_rms	提示：拟合残差的RMS（秒）：
 ldtimi	info_ndf	提示：相应文件不存在。
 ldtimi	info_pp	脉冲星参数：
@@ -560,7 +560,7 @@ ldtimi_tk	tk_del	删减
 ldtimi_tk	tk_yup	Y轴单位\n相位
 ldtimi_tk	tk_yut	Y轴单位\n时间
 ldtimi_tk	tk_el	误差限制
-ldtimi	tk_tim	脉冲星%s的测时
+ldtimi_tk	tk_tim	脉冲星%s的测时
 ldtimi_tk	tk_pl	参数列表：
 ldtimi_tk	tk_err	误差上限：
 ldtimi_tk	tk_pm	绘图模式：

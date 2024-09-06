@@ -3,10 +3,17 @@ import numpy as np
 import warnings as wn
 wn.filterwarnings('ignore')
 #
+language={	# Chinese or English
+'output'   :  'English',
+'figure'   :  'English',
+'interface':  'English'
+}
+#
 dirname=os.path.split(os.path.realpath(__file__))[0]
-filename='text.txt'
-plotname='text.txt'
-tkname='text.txt'
+filechoose={'Chinese':'text.txt','English':'text_en.txt'}
+filename=filechoose[language['output']]
+plotname=filechoose[language['figure']]
+tkname=filechoose[language['interface']]
 #
 class output_text():
 	def __init__(self,prog):
