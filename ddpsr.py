@@ -192,7 +192,7 @@ info={'data_info':{'freq_start':freq_start,'freq_end':freq_end,'nchan':1,'stt_ti
 if args.psr_name and args.par_file:	# check the conflict of dispersion flags
 	parser.error(text.error_nfm)
 elif args.psr_name or args.par_file:
-	if args.dm:
+	if args.dm>=0:
 		parser.error(text.error_ndm)
 	elif args.psr_name:
 		command.append('-n '+args.psr_name)
@@ -216,14 +216,14 @@ elif args.psr_name or args.par_file:
 			psr_name=elements[1].strip('\n')
 			info['pulsar_info']['psr_name']=psr_name
 		elif elements[0]=='DM':
-			if not args.dm:
+			if args.dm<0:
 				dm=np.float64(elements[1])
 			else:
 				dm=args.dm
 		elif elements[0]=='PEPOCH':
 			pepoch=True
 else:
-	if not args.dm:
+	if args.dm<0:
 		parser.error(text.error_dmp)
 	dm=args.dm
 	command.append(' -d '+str(args.dm))
@@ -268,13 +268,39 @@ if args.multi:
 command=' '.join(command)
 info['history_info']={'history':[command]}
 #
+def tmp_deal(n,noise_data,noise_cum,fsub,cumsub,n1,n2,multi,lock=0):
+	f=ps.open(noiselist[n],mmap=True)
+	for i in np.arange(fsub[n-n1]):
+		dtmp=f['SUBINT'].data[i]
+		data=np.int16(dtmp['DATA'].reshape(nsblk,npol,nchan)*dtmp['dat_scl'].reshape(1,npol,nchan)+dtmp['dat_offs'].reshape(1,npol,nchan))
+		del f['SUBINT'].data
+		if args.reverse or (not bw_sign):
+			data=data[:,:,::-1]
+		if args.subi:
+			noise_t=np.int64((cumsub[n-n1]+i)%noisen)
+			if multi: lock.acquire()
+			noise_data[noise_t]+=data.mean(0)
+			noise_cum[noise_t]+=1
+			if multi: lock.release()
+		else:
+			noise_t=np.int64((np.arange(nsblk)+(cumsub[n-n1]+i)*nsblk)*tsamp%args.cal_period//tsamp)
+			for k in np.arange(nsblk):
+				tmp_noise_t=noise_t[k]
+				if tmp_noise_t==noisen:
+					continue
+				if multi: lock.acquire()
+				noise_data[tmp_noise_t]+=data[k]
+				noise_cum[tmp_noise_t]+=1
+				if multi: lock.release()
+	f.close()
+#
 def deal_seg(n1,n2,multi=0):	# processing the noise data segments
 	cumsub=0
 	if multi:
-		manager=Manager()
+		manager=mp.Manager()
 		noise_data=manager.list([np.zeros([npol,nchan])]*noisen)
 		noise_cum=manager.list(np.zeros(noisen))
-		pool0=Pool(processes=multi)
+		pool0=mp.Pool(processes=multi)
 		lock=manager.Lock()
 	else:
 		noise_data=np.zeros([noisen,npol,nchan])
@@ -285,35 +311,10 @@ def deal_seg(n1,n2,multi=0):	# processing the noise data segments
 		fsub.append(f['SUBINT'].header['naxis2'])
 		f.close()
 	cumsub=np.cumsum(fsub)
-	def tmp_deal(n,lock=0):
-		f=ps.open(noiselist[n],mmap=True)
-		for i in np.arange(fsub[n-n1]):
-			dtmp=f['SUBINT'].data[i]
-			data=np.int16(dtmp['DATA'].reshape(nsblk,npol,nchan)*dtmp['dat_scl'].reshape(1,npol,nchan)+dtmp['dat_offs'].reshape(1,npol,nchan))
-			del f['SUBINT'].data
-			if args.reverse or (not bw_sign):
-				data=data[:,:,::-1]
-			if args.subi:
-				noise_t=np.int64((cumsub[n-n1]+i)%noisen)
-				if multi: lock.acquire()
-				noise_data[noise_t]+=data.mean(0)
-				noise_cum[noise_t]+=1
-				if multi: lock.release()
-			else:
-				noise_t=np.int64((np.arange(nsblk)+(cumsub[n-n1]+i)*nsblk)*tsamp%args.cal_period//tsamp)
-				for k in np.arange(nsblk):
-					tmp_noise_t=noise_t[k]
-					if tmp_noise_t==noisen:
-						continue
-					if multi: lock.acquire()
-					noise_data[tmp_noise_t]+=data[k]
-					noise_cum[tmp_noise_t]+=1
-					if multi: lock.release()
-		f.close()
 	#
 	for n in np.arange(n1,n2):
-		if multi: pool0.apply_async(tmp_deal,(n,lock))
-		else: tmp_deal(n)
+		if multi: pool0.apply_async(tmp_deal,(n,noise_data,noise_cum,fsub,cumsub,n1,n2,multi,lock),error_callback=lambda x:print(x))
+		else: tmp_deal(n,noise_data,noise_cum,fsub,cumsub,n1,n2,multi)
 	if multi:
 		pool0.close()
 		pool0.join()
@@ -371,8 +372,8 @@ if noise_mark=='fits':	# the calibration data can be original fits data of noise
 				if args.multi:
 					def trend_deal(i):
 						noise_data[i]=deal_seg(i,i+1)
-					noise_data=Manager().list([np.zeros([4,nchan])]*noisenum)
-					pool1=Pool(processes=args.multi)
+					noise_data=mp.Manager().list([np.zeros([4,nchan])]*noisenum)
+					pool1=mp.Pool(processes=args.multi)
 				else: noise_data=np.zeros([noisenum,4,nchan])
 				for i in np.arange(noisenum):
 					if args.multi: pool1.apply_async(trend_deal,(i,))
@@ -448,7 +449,7 @@ elif noise_mark=='ld':
 		parser.error(text.error_cfu)
 if args.cal:
 	info['calibration_info']={'cal_mode':cal_mode}
-	info['calibration_info']['cal']=noise_data.reshape(-1,npol,nchan).tolist()
+	info['calibration_info']['cal']=noise_data.reshape(-1,npol,nchan)[:,:,chanstart:chanend].tolist()
 	if cal_mode=='single':
 		noise_a12,noise_a22,noise_cos,noise_sin=noise_data
 		noise_a12=np.where(noise_a12>0,1./noise_a12,0)
@@ -516,7 +517,7 @@ def dealdata(filelist,n,lock=0):	# analyze the phase bin of the data
 	global noise_a12,noise_a22,noise_cos,noise_sin
 	if args.verbose:
 		if args.multi: lock.acquire()
-		print(text.info_pros %s str(n+1))
+		print(text.info_pros % str(n+1))
 		if args.multi: lock.release()
 		timemark=time.time()
 	tpsub=0
@@ -548,8 +549,8 @@ def dealdata(filelist,n,lock=0):	# analyze the phase bin of the data
 				aa0,bb0,cr0,ci0=noise_a12[i]*data[:,0],noise_a22[i]*data[:,1],noise_cos[i]*data[:,2]+noise_sin[i]*data[:,3],-noise_sin[i]*data[:,2]+noise_cos[i]*data[:,3]
 				ii,qq,uu,vv=aa0+bb0,aa0-bb0,2*cr0,2*ci0
 			elif pol_type=='IQUV':
-				noise_a1p2=(noise_a12+noise_a22)/2.0
-				noise_a1m2=(noise_a12-noise_a22)/2.0
+				noise_a1p2=(noise_a12[i]+noise_a22[i])/2.0
+				noise_a1m2=(noise_a12[i]-noise_a22[i])/2.0
 				ii,qq,uu,vv=noise_a1p2*data[:,0]-noise_a1m2*data[:,1],noise_a1p2*data[:,1]-noise_a1m2*data[:,0],noise_cos*data[:,2]+noise_sin*data[:,3],-noise_sin*data[:,2]+noise_cos*data[:,3]
 			data=np.array([ii,qq,uu,vv])
 		else:

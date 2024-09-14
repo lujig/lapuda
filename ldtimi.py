@@ -10,12 +10,12 @@ from matplotlib.figure import Figure
 import matplotlib.patches as mp
 import ld,os,copy,sys
 wn.filterwarnings('ignore')
-dirname=os.path.split(os.path.realpath(__file__))[0]
+dirname0=os.path.split(os.path.realpath(__file__))[0]
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 plt.rcParams['mathtext.fontset']='stix'
-font=mpl.font_manager.FontProperties(fname=dirname+'/doc/gb.ttf')
-sys.path.append(dirname+'/doc')
+font=mpl.font_manager.FontProperties(fname=dirname0+'/doc/gb.ttf')
+sys.path.append(dirname0+'/doc')
 import text
 #
 text=text.output_text('ldtimi')
@@ -961,6 +961,8 @@ root.bind('<Motion>',move_tk)
 sframe=tk.Frame(root,bg='white')
 sframe.grid(row=1,column=1,rowspan=2)
 #
+# style=ttk.style(root)
+# style.font_create('serif',font=dirname0+'/doc/gb.ttf')
 font0=tk.font.Font(root,font=('serif',20))
 font0width=font0.measure('0')
 font0height=font0.metrics('linespace')

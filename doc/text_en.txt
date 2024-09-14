@@ -159,7 +159,7 @@ ldaz	help_j	the criterion to screen the interfered channels on calibration param
 ldaz	help_p	numbers of Chebyshev polynomial coefficients on calibration parameters
 ldaz	help_cr	channel range without interference in form start_chan,end_chan
 ldaz	help_m	modify the zap parameter of the LD file
-ldaz	help_c	correct the data of the LD file
+ldaz	help_c	sceen the interference channel with calibration info
 ldaz	info_ana	Analyzing the arguments...
 ldaz	error_nld	File %s is not LD format.
 ldaz	error_nvn	Ld files name %s is invalid.
@@ -168,6 +168,7 @@ ldaz	error_npd	Ld files %s is not pulsar data file.
 ldaz	error_dcn	Ld files have different channel numbers.
 ldaz	error_ncn	Starting channel number larger than ending channel number.
 ldaz	error_ocr	Input channel range is overrange.
+ldaz	warning_nc	Warning: the data file has no calibration information.
 # ldcal.py
 ldcal	help	Process noise data in fits file to obtain calibration parameters, or merge multi-calibration-file to a large file.
 ldcal	help_h	show this help message and exit

@@ -91,6 +91,9 @@ if type(args.save) is list:
 		if os.path.isfile(resisave):
 			parser.error(text.error_rfe)
 #
+fileinfo=info['original_data_info']['filenames']
+filenames=np.array(list(map(lambda x:x[0],fileinfo)))
+uniqf=np.unique(filenames)
 date,sec,toae,dt,dterr,freq_start,freq_end,dm,dmerr,period=data[jj].T
 freq=(freq_start+freq_end)/2
 nt=len(date)
@@ -102,22 +105,6 @@ dterr=toae/period
 dt=(dt-args.zero)%1
 #
 def merge(date,sec,dt,dterr,freq,dm,period):	# merge adjacent ToAs
-	ttmp=time.local.mjd
-	jj=np.zeros(nt,dtype=np.int32)
-	j0=1
-	t0=ttmp[0]
-	if type(args.merge)!=np.float64:
-		merge_time=0.5
-	else:
-		merge_time=args.merge
-	for i in np.arange(nt):
-		if np.abs(ttmp[i]-t0)<merge_time:
-			jj[i]=j0
-		else:
-			t0=ttmp[i]
-			j0+=1
-			jj[i]=j0
-	#
 	dt2=[]
 	dt2err=[]
 	date2=[]
@@ -126,20 +113,29 @@ def merge(date,sec,dt,dterr,freq,dm,period):	# merge adjacent ToAs
 	dmerr2=[]
 	freq2=[]
 	period2=[]
-	for i in np.arange(jj[-1])+1:
-		setj=jj==i
-		t0=dt[setj][:-1]
-		ta=dterr[setj][:-1]
+	for i in np.arange(uniqf.size):
+		setj0=(filenames==uniqf[i])
+		setj1=setj0&jj
+		if not np.any(setj1):
+			setj=setj0
+		else:
+			setj=setj1
+		date2.append(date[setj].mean())
+		sec2.append(sec[setj].mean())
+		dm2.append(dm[setj].mean())
+		dmerr2.append(dmerr[setj].mean())
+		freq2.append(freq[setj].mean())
+		period2.append(period[setj].mean())
+		t0=dt[setj]
+		ta=dterr[setj]
 		errtmp=np.sqrt(1/(1/ta**2).sum())+t0.std()
-		if errtmp<args.err:
-			date2.append(date[setj].mean())
-			sec2.append(sec[setj].mean())
-			dm2.append(dm[setj].mean())
-			dmerr2.append(dmerr[setj].mean())
-			dt2.append((t0/ta**2).sum()/(1/ta**2).sum())
-			dt2err.append(np.sqrt(1/(1/ta**2).sum()))
-			freq2.append(freq[setj].mean())
-			period2.append(period[setj].mean())
+		if len(t0)==1:
+			dt2.append(t0[0])
+			dt2err.append(ta[0])
+		else:
+			t0a=(t0/ta**2).sum()/(1/ta**2).sum()
+			dt2.append(t0a)
+			dt2err.append(np.sqrt(((t0-t0a)**2/ta**2).sum()/(1/ta**2).sum()))
 	date2=np.array(date2)
 	sec2=np.array(sec2)
 	dt2=np.array(dt2)
@@ -194,7 +190,7 @@ def psrfit(psr,paras,time,dt,toae,freq):	# fit the ToAs with pulsar parameters
 	for i in np.arange(lpara):
 		psr1.modify(paras[i],popt[i])
 	psrt2=pm.psr_timing(psr1,time,np.inf)
-	#print(fit(popt),dt,x0)
+	#print(popt,fit(popt),dt,x0)
 	return popt,np.sqrt(pcov),fit(popt)+dt,resi(popt),psr1,psrt2
 #
 psrp,psrpe,res,rese,psr1,psrt=psrfit(psr,paras,time,dt,dterr,freq)

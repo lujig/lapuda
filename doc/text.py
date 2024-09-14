@@ -4,9 +4,9 @@ import warnings as wn
 wn.filterwarnings('ignore')
 #
 language={	# Chinese or English
-'output'   :  'English',
-'figure'   :  'English',
-'interface':  'English'
+'output'   :  'Chinese',
+'figure'   :  'Chinese',
+'interface':  'Chinese'
 }
 #
 dirname=os.path.split(os.path.realpath(__file__))[0]

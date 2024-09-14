@@ -159,7 +159,7 @@ ldaz	help_j	使用定标参数判断有干扰频率通道的标准
 ldaz	help_p	对定标参数进行切比雪夫多项式拟合的阶数
 ldaz	help_cr	指定频率通道范围：起始通道数,结束通道数
 ldaz	help_m	修改LD文件中相应参数
-ldaz	help_c	修改LD文件数据
+ldaz	help_c	使用数据中的定标信息筛选有干扰的频率通道
 ldaz	info_ana	提示：正在分析参数...
 ldaz	error_nld	文件%s不是LD格式。
 ldaz	error_nvn	文件%s不存在。
@@ -168,6 +168,7 @@ ldaz	error_npd	文件%不是脉冲星数据文件。
 ldaz	error_dcn	多个LD文件的通道数不一致。
 ldaz	error_ncn	起始通道数大于结束通道数。
 ldaz	error_ocr	输入频率通道范围超限。
+ldaz	warning_nc	Warning: 数据中不含定标信息。
 # ldcal.py
 ldcal	help	处理PSRFITS格式的噪声定标数据以获得定标参数，或者将多个LD定标参数文件合并为一个。
 ldcal	help_h	显示本帮助信息并退出

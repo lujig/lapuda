@@ -42,9 +42,12 @@ elif info['data_info']['mode']=='ToA' and args.mode=='tim':
 	result=d.read_chan(0)[:,:,0]
 	fout=open(output,'w')
 	fout.write('FORMAT 1\n')
-	nind=max(4,np.ceil(np.log10(len(result)+1)))
+	nind=max(5,np.ceil(np.log10(len(result)+1)))
 	for i in np.arange(len(result)):
-		ftmp='ToA_'+info['pulsar_info']['psr_name']+'_'+str(i).zfill(nind)+'.dat'
+		if 'original_data_info' in info.keys():
+			ftmp=info['original_data_info']['filenames'][i][0].split('/')[-1]
+		else:
+			ftmp='ToA_'+info['pulsar_info']['psr_name']+'_'+str(i).zfill(nind)+'.dat'
 		fout.write('{:26s} {:10.6f} {:28s} {:4f} {:8s}'.format(ftmp,(result[i,5]+result[i,6])/2,str(int(result[i,0]))+str(result[i,1]/86400)[1:],result[i,2]*1e6,info['telescope_info']['telename'])+'\n')
 	fout.close()
 else:

@@ -779,7 +779,7 @@ def dealdata(filelist,n,lock=0):
 	global noise_a12,noise_a22,noise_cos,noise_sin
 	if args.verbose:
 		if args.multi: lock.acquire()
-		print(text.info_pros %s str(n+1))
+		print(text.info_pros % str(n+1))
 		if args.multi: lock.release()
 		timemark=time.time()
 	if info['data_info']['mode']=='subint':
